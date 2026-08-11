@@ -48,27 +48,67 @@
     return next;
   }
 
-  // Treat icon + label as one annotation unit. Once typography reaches its
-  // screen-size cap, both size and spacing counter-scale around the label anchor.
-  function updateLayerAnnotationScale(clusterNode, k) {
+  function clipPolygonToRect(polygon, left, top, right, bottom) {
+    let output = polygon.map(p => [p[0], p[1]]);
+    const edges = [
+      { inside: p => p[0] >= left, intersect: (a,b) => { const t=(left-a[0])/(b[0]-a[0]); return [left,a[1]+(b[1]-a[1])*t]; } },
+      { inside: p => p[0] <= right, intersect: (a,b) => { const t=(right-a[0])/(b[0]-a[0]); return [right,a[1]+(b[1]-a[1])*t]; } },
+      { inside: p => p[1] >= top, intersect: (a,b) => { const t=(top-a[1])/(b[1]-a[1]); return [a[0]+(b[0]-a[0])*t,top]; } },
+      { inside: p => p[1] <= bottom, intersect: (a,b) => { const t=(bottom-a[1])/(b[1]-a[1]); return [a[0]+(b[0]-a[0])*t,bottom]; } }
+    ];
+    edges.forEach(edge => {
+      const input = output; output = [];
+      if (!input.length) return;
+      let previous = input[input.length - 1], previousInside = edge.inside(previous);
+      input.forEach(current => {
+        const currentInside = edge.inside(current);
+        if (currentInside !== previousInside) output.push(edge.intersect(previous, current));
+        if (currentInside) output.push(current);
+        previous = current; previousInside = currentInside;
+      });
+    });
+    return output.filter(p => Number.isFinite(p[0]) && Number.isFinite(p[1]));
+  }
+
+  // Annotation anchors are "sticky" inside the visible portion of their cell.
+  // When a cell is partly on-screen, its icon/title/score migrate toward the
+  // centroid of the visible polygon instead of disappearing with the true center.
+  function updateLayerAnnotations(clusterNode, view) {
+    const k = view.k;
     const maxScreenFont = width < 720 ? 22 : 24;
-    d3.select(clusterNode).selectAll("g.layer-content g.cell").each(function() {
+    const w = Number(clusterNode.dataset.layerWidth) || 1;
+    const h = Number(clusterNode.dataset.layerHeight) || 1;
+    const marginPx = width < 720 ? 18 : 24;
+    const left = (-view.x + marginPx) / k;
+    const top = (-view.y + marginPx) / k;
+    const right = (w - view.x - marginPx) / k;
+    const bottom = (h - view.y - marginPx) / k;
+
+    d3.select(clusterNode).selectAll("g.layer-content g.cell").each(function(d) {
       const cell = d3.select(this);
       const text = cell.select("text.cell-label");
-      if (text.empty()) return;
+      if (text.empty() || !d?.polygon?.length) return;
       const baseFont = parseFloat(text.style("font-size")) || 12;
       const localScale = Math.min(1, maxScreenFont / Math.max(baseFont * k, 1));
-      const x = Number(text.attr("x")) || 0;
-      const y = Number(text.attr("y")) || 0;
-      text.attr("transform", localScale < 0.999 ? `translate(${x},${y}) scale(${localScale}) translate(${-x},${-y})` : null);
+      const originalX = Number(text.attr("x")) || 0;
+      const originalY = Number(text.attr("y")) || 0;
+      const visiblePolygon = clipPolygonToRect(d.polygon, left, top, right, bottom);
+      const visibleArea = visiblePolygon.length >= 3 ? Math.abs(d3.polygonArea(visiblePolygon)) : 0;
+      let anchorX = originalX, anchorY = originalY;
+      if (visibleArea > 4 / (k * k)) {
+        const centroid = d3.polygonCentroid(visiblePolygon);
+        if (Number.isFinite(centroid[0]) && Number.isFinite(centroid[1])) {
+          anchorX = centroid[0]; anchorY = centroid[1];
+        }
+      }
+      const dx = anchorX - originalX, dy = anchorY - originalY;
+      text.attr("transform", `translate(${dx},${dy}) translate(${originalX},${originalY}) scale(${localScale}) translate(${-originalX},${-originalY})`);
 
       const icon = cell.select("g.semantic-kind-icon");
       if (!icon.empty()) {
         const iconX = Number(icon.attr("data-icon-x")) || 0;
         const iconY = Number(icon.attr("data-icon-y")) || 0;
-        icon.attr("transform", localScale < 0.999
-          ? `translate(${x},${y}) scale(${localScale}) translate(${iconX - x},${iconY - y})`
-          : `translate(${iconX},${iconY})`);
+        icon.attr("transform", `translate(${anchorX},${anchorY}) scale(${localScale}) translate(${iconX - originalX},${iconY - originalY})`);
       }
     });
   }
@@ -80,7 +120,7 @@
     const view = clampLayerView(layerViews.get(key) || fallback, w, h, minK);
     layerViews.set(key, view);
     d3.select(clusterNode).select("g.layer-content").attr("transform", `translate(${view.x},${view.y}) scale(${view.k})`);
-    updateLayerAnnotationScale(clusterNode, view.k);
+    updateLayerAnnotations(clusterNode, view);
   }
 
   function makeLayerViewport(rendered, options) {
