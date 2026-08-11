@@ -50,6 +50,8 @@ button { font: inherit; }
   overscroll-behavior-x: contain;
 }
 .breadcrumbs > * { direction: ltr; flex: 0 0 auto; }
+.breadcrumbs > button:first-child,
+.breadcrumbs > button:first-child + .crumb-separator { display: none; }
 .breadcrumbs button {
   border: 0;
   background: transparent;
