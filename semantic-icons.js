@@ -1,5 +1,6 @@
-// Adds redundant, color-independent semantic cues to every rendered cell
-// and a compact hierarchy depth indicator in the fixed UI.
+// Adds redundant, color-independent semantic cues to every rendered cell,
+// a compact hierarchy depth indicator, and keeps hierarchy connectors aimed
+// at selected cells rather than merely at the edge of their cluster.
 (() => {
   if (typeof renderCluster !== "function") return;
 
@@ -122,8 +123,63 @@
     updateDepthIndicator();
   };
 
+  // Return the selected cell's centroid in the stage's world coordinates.
+  function selectedPointForCluster(clusterNode) {
+    if (!clusterNode) return null;
+    const selectedCell = d3.select(clusterNode).select("g.cell.is-selected");
+    if (selectedCell.empty()) return null;
+    const datum = selectedCell.datum();
+    if (!datum?.polygon?.length) return null;
+
+    const [cx, cy] = d3.polygonCentroid(datum.polygon);
+    const transform = clusterNode.getAttribute("transform") || "";
+    const match = transform.match(/translate\(\s*([-+\d.eE]+)[,\s]+([-+\d.eE]+)\s*\)/);
+    const x = match ? Number(match[1]) : 0;
+    const y = match ? Number(match[2]) : 0;
+    return { x: x + cx, y: y + cy };
+  }
+
+  // The base renderer draws links to the top edge of every cluster. Once a
+  // cluster already has a selected node, retarget that connector to the node.
+  // The last connector into an unselected child cluster is intentionally left
+  // untouched because there is not yet a selected destination there.
+  function retargetHierarchyLinksToSelections() {
+    const contextClusters = stage.selectAll("g.context-cluster").nodes();
+    const links = stage.selectAll("path.hierarchy-link").nodes();
+    const dots = stage.selectAll("circle.link-dot").nodes();
+
+    for (let i = 1; i < contextClusters.length; i += 1) {
+      const source = selectedPointForCluster(contextClusters[i - 1]);
+      const target = selectedPointForCluster(contextClusters[i]);
+      const link = links[i - 1];
+      const dot = dots[i - 1];
+      if (!source || !target || !link) continue;
+
+      const sourceY = source.y + 22;
+      const targetY = target.y - 22;
+      const midY = (sourceY + targetY) / 2;
+      d3.select(link).attr(
+        "d",
+        `M${source.x},${sourceY} C${source.x},${midY} ${target.x},${midY} ${target.x},${targetY}`
+      );
+
+      if (dot) {
+        d3.select(dot)
+          .attr("cx", target.x)
+          .attr("cy", targetY);
+      }
+    }
+  }
+
+  const baseRenderWithSelectedConnectors = render;
+  render = function() {
+    const result = baseRenderWithSelectedConnectors();
+    retargetHierarchyLinksToSelections();
+    return result;
+  };
+
   updateDepthIndicator();
 
-  // Re-render once so icons and the current depth appear immediately.
+  // Re-render once so icons, depth, and selected-node connectors appear immediately.
   if (typeof render === "function") render();
 })();
