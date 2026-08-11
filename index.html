@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Semantic Zooming with Hierarchical Aggregation</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="toolbar">
+    <div>
+      <h1>Semantic Zooming</h1>
+      <p>Forest overview → hierarchical detail</p>
+    </div>
+    <div class="legend" aria-label="Legend">
+      <span><i class="swatch aggregate"></i> Aggregate</span>
+      <span><i class="swatch node"></i> Hierarchy node</span>
+      <span><i class="swatch relation"></i> Cross-tree relation</span>
+    </div>
+  </header>
+
+  <main id="viz" aria-label="Interactive hierarchy visualization"></main>
+
+  <div class="hint">
+    Scroll to zoom · drag the background to pan · click a bubble to focus · hover a node to trace relationships
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <script src="app.js"></script>
+</body>
+</html>
