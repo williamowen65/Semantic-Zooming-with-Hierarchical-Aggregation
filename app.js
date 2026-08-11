@@ -42,9 +42,7 @@ const forestData = [
   { id: "energy", name: "Energy", color: "#766ac6", votes: 4300, rating: 4.5 }
 ];
 
-// Dense root-level stress-test data. These intentionally span a wide range of
-// weights so the content-aware minimum cell size and per-layer camera can be
-// evaluated under realistic crowding without changing the existing hierarchy.
+// Dense root-level stress-test data.
 [
   ["water-access","Water Access",2900,4.4],["transport-access","Transport Access",2550,4.1],
   ["digital-access","Digital Access",2250,4.3],["workforce","Workforce",2100,4.2],
@@ -62,10 +60,38 @@ const forestData = [
   ["data-rights","Data Rights",450,4.4],["civic-trust","Civic Trust",395,4.3],
   ["local-media","Local Media",340,4.1],["language-access","Language Access",290,4.2],
   ["accessibility","Accessibility",245,4.6],["community-space","Community Space",205,4.0]
-].forEach(([id,name,votes,rating], index) => forestData.push({
-  id, name, votes, rating,
-  color: ["#71879a","#78909c","#6f8796","#7b8796"][index % 4]
-}));
+].forEach(([id,name,votes,rating], index) => forestData.push({ id, name, votes, rating, color: ["#71879a","#78909c","#6f8796","#7b8796"][index % 4] }));
+
+// Large, uneven branch populations for interaction/stress testing. These are
+// deterministic synthetic Atlas records: several non-climate roots get dozens
+// of siblings, with selected siblings branching two or three levels deeper.
+const bulkBranchSpecs = {
+  infrastructure: ["Bridge Maintenance","Road Safety","Transit Reliability","Freight Capacity","Port Congestion","Airport Access","Sidewalk Gaps","Bike Network Gaps","Stormwater Capacity","Sewer Reliability","Drinking Water Systems","Grid Hardening","Broadband Backhaul","Public Building Repair","School Facilities","Hospital Infrastructure","Rail Modernization","Traffic Safety","Construction Backlog","Asset Monitoring","Rural Roads","Dam Safety","Levee Maintenance","Emergency Communications","Street Lighting","Utility Coordination","Permitting Delays","Capital Planning"],
+  education: ["Early Childhood Access","Teacher Shortages","Special Education Capacity","School Attendance","Literacy Gaps","Math Achievement","Career Education","School Nutrition","Student Transportation","Counselor Capacity","School Safety","Digital Learning Access","College Affordability","Student Debt","Campus Housing","Adult Literacy","Credential Recognition","Apprenticeships","Workforce Alignment","Language Learners","Rural Schools","Arts Education","STEM Access","Library Access","Learning Recovery","Teacher Training","Class Size","Family Engagement"],
+  healthcare: ["Primary Care Shortage","Specialist Access","Emergency Department Crowding","Maternal Health","Infant Health","Mental Health Access","Substance Use Care","Dental Access","Vision Care","Prescription Costs","Insurance Gaps","Medical Debt","Nursing Shortage","Home Health Capacity","Long Term Care","Rural Hospitals","Telehealth Access","Preventive Screening","Vaccination Access","Chronic Disease","Disability Services","Care Coordination","Health Data Exchange","Language Access in Care","Transportation to Care","Public Health Staffing","Community Clinics","Hospital Capacity"],
+  economy: ["Wage Stagnation","Underemployment","Job Displacement","Small Business Closures","Credit Access","Regional Inequality","Supply Chain Fragility","Price Volatility","Household Debt","Retirement Security","Youth Employment","Worker Training","Benefits Portability","Informal Work","Seasonal Employment","Manufacturing Capacity","Export Barriers","Local Procurement","Entrepreneurship Access","Commercial Vacancies","Main Street Recovery","Childcare Costs","Productivity Gaps","Remote Work Access","Economic Mobility","Consumer Confidence","Business Succession","Cooperative Ownership"],
+  governance: ["Administrative Capacity","Public Records Access","Procurement Oversight","Ethics Enforcement","Election Administration","Civic Participation","Public Consultation","Interagency Coordination","Local Government Capacity","Budget Transparency","Tax Administration","Service Backlogs","Permit Processing","Benefits Delivery","Digital Identity","Public Data Quality","Cyber Resilience","Emergency Governance","Workforce Retention","Regulatory Complexity","Complaint Resolution","Ombudsman Access","Language Services","Rural Administration","Performance Measurement","Audit Capacity","Open Meetings","Public Trust"],
+  technology: ["Algorithmic Bias","AI Safety","Model Transparency","Data Privacy","Identity Theft","Online Fraud","Platform Accountability","Content Authenticity","Deepfake Detection","Child Online Safety","Cybersecurity Skills","Critical Systems Security","Software Supply Chain","Cloud Concentration","Digital Identity Risks","Biometric Governance","Facial Recognition","Automated Decisions","Data Portability","Interoperability","Open Standards","Digital Divide","Device Affordability","Broadband Adoption","Accessibility Technology","Quantum Readiness","Robotics Transition","Workplace Automation"],
+  energy: ["Transmission Congestion","Distribution Reliability","Transformer Shortage","Energy Storage","Peak Demand","Grid Interconnection","Renewable Integration","Building Efficiency","Industrial Efficiency","Heat Pump Access","Home Weatherization","Energy Burden","Utility Arrears","Community Solar","Rooftop Solar Access","Wind Siting","Geothermal Access","Hydropower Reliability","Nuclear Operations","Fuel Supply Risk","EV Charging","Fleet Electrification","Battery Recycling","Critical Minerals","Workforce Training","Microgrids","Demand Response","Grid Cybersecurity"]
+};
+function slug(value){return value.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");}
+Object.entries(bulkBranchSpecs).forEach(([rootId,names],rootIndex)=>{
+  const root=forestData.find(d=>d.id===rootId); if(!root)return;
+  const additions=names.map((name,index)=>{
+    const id=`bulk-${rootId}-${slug(name)}`;
+    const node={id,name,votes:Math.max(180,1900-index*47+rootIndex*31),rating:3.8+((index+rootIndex)%9)*0.1};
+    if(index%4===0){
+      node.children=Array.from({length:7+(index%3)},(_,j)=>({
+        id:`${id}-branch-${j+1}`,
+        name:["Access","Capacity","Cost","Quality","Coverage","Workforce","Reliability","Oversight","Local Delivery"][(j+index)%9]+` ${j+1}`,
+        votes:Math.max(90,720-j*61-index*5), rating:3.9+((j+index)%7)*0.1,
+        ...(j===1&&index%8===0?{children:Array.from({length:6},(_,k)=>({id:`${id}-branch-${j+1}-detail-${k+1}`,name:["Planning","Funding","Implementation","Training","Measurement","Feedback"][k],votes:260-k*27,rating:4.0+(k%5)*0.1}))}:{})
+      }));
+    }
+    return node;
+  });
+  root.children=[...(root.children||[]),...additions];
+});
 
 const host = document.querySelector("#viz");
 const breadcrumbHost = document.querySelector("#breadcrumbs");
