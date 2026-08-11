@@ -121,8 +121,10 @@ svg {
   dominant-baseline: middle;
   pointer-events: none;
   paint-order: stroke;
-  stroke: rgba(255,255,255,.86);
-  stroke-width: 3px;
+  /* Keep just enough halo to separate letters from the cell fill without making
+     the typography look outlined/bold, especially after pinch zoom. */
+  stroke: rgba(255,255,255,.72);
+  stroke-width: 1.35px;
   stroke-linejoin: round;
 }
 .score-label {
