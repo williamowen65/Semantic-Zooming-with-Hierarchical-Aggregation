@@ -1,10 +1,12 @@
 // Adds redundant, color-independent semantic cues to every rendered cell,
-// a viewport-aware hierarchy depth indicator, selected-cell connectors,
-// and keeps all-roots navigation inside the breadcrumb.
+// viewport-aware hierarchy depth, selected-cell connectors, all-roots breadcrumb
+// navigation, and independent pan/zoom cameras for each hierarchy layer.
 (() => {
   if (typeof renderCluster !== "function") return;
 
   const baseRenderClusterWithSemanticIcons = renderCluster;
+  const layerViews = new Map();
+  let clipSerial = 0;
 
   function appendSemanticIcon(cell, datum) {
     const item = datum?.data?.item;
@@ -65,6 +67,72 @@
     }
   }
 
+  function layerKey(options) {
+    return (options.items || []).map(item => item.id).join("|") || options.className || "layer";
+  }
+
+  function clampLayerView(view, w, h) {
+    view.k = Math.max(0.6, Math.min(5, view.k || 1));
+    if (view.k >= 1) {
+      view.x = Math.max(w * (1 - view.k), Math.min(0, view.x || 0));
+      view.y = Math.max(h * (1 - view.k), Math.min(0, view.y || 0));
+    } else {
+      view.x = (w - w * view.k) / 2;
+      view.y = (h - h * view.k) / 2;
+    }
+    return view;
+  }
+
+  function applyLayerView(clusterNode) {
+    if (!clusterNode) return;
+    const key = clusterNode.dataset.layerKey;
+    const w = Number(clusterNode.dataset.layerWidth) || 1;
+    const h = Number(clusterNode.dataset.layerHeight) || 1;
+    const view = clampLayerView(layerViews.get(key) || { x: 0, y: 0, k: 1 }, w, h);
+    layerViews.set(key, view);
+    d3.select(clusterNode).select("g.layer-content")
+      .attr("transform", `translate(${view.x},${view.y}) scale(${view.k})`);
+  }
+
+  function makeLayerViewport(rendered, options) {
+    const g = rendered.g;
+    const node = g.node();
+    const key = layerKey(options);
+    const clipId = `layer-clip-${++clipSerial}`;
+    node.dataset.layerKey = key;
+    node.dataset.layerWidth = options.w;
+    node.dataset.layerHeight = options.h;
+
+    const defs = g.append("defs");
+    defs.append("clipPath")
+      .attr("id", clipId)
+      .append("rect")
+      .attr("x", 0)
+      .attr("y", 0)
+      .attr("width", options.w)
+      .attr("height", options.h);
+
+    const viewport = g.append("g")
+      .attr("class", "layer-viewport")
+      .attr("clip-path", `url(#${clipId})`);
+    const content = viewport.append("g").attr("class", "layer-content");
+
+    g.selectAll(":scope > g.cell").nodes().forEach(cell => content.node().appendChild(cell));
+    applyLayerView(node);
+
+    g.append("rect")
+      .attr("class", "layer-interaction-border")
+      .attr("x", 0)
+      .attr("y", 0)
+      .attr("width", options.w)
+      .attr("height", options.h)
+      .attr("fill", "none")
+      .attr("stroke", "rgba(27,43,61,.10)")
+      .attr("stroke-width", 1)
+      .attr("vector-effect", "non-scaling-stroke")
+      .style("pointer-events", "none");
+  }
+
   renderCluster = function(options) {
     const rendered = baseRenderClusterWithSemanticIcons(options);
     rendered.g.selectAll("g.cell").each(function(d) {
@@ -72,6 +140,7 @@
       cell.selectAll(".semantic-kind-icon").remove();
       appendSemanticIcon(cell, d);
     });
+    makeLayerViewport(rendered, options);
     return rendered;
   };
 
@@ -157,16 +226,25 @@
 
   function selectedPointForCluster(clusterNode) {
     if (!clusterNode) return null;
-    const selectedCell = d3.select(clusterNode).select("g.cell.is-selected");
-    if (selectedCell.empty()) return null;
-    const datum = selectedCell.datum();
-    if (!datum?.polygon?.length) return null;
+    const selectedCellNode = d3.select(clusterNode).select("g.cell.is-selected").node();
+    const datum = selectedCellNode ? d3.select(selectedCellNode).datum() : null;
+    if (!selectedCellNode || !datum?.polygon?.length) return null;
+
     const [cx, cy] = d3.polygonCentroid(datum.polygon);
-    const transform = clusterNode.getAttribute("transform") || "";
-    const match = transform.match(/translate\(\s*([-+\d.eE]+)[,\s]+([-+\d.eE]+)\s*\)/);
-    const x = match ? Number(match[1]) : 0;
-    const y = match ? Number(match[2]) : 0;
-    return { x: x + cx, y: y + cy };
+    const svgNode = svg.node();
+    const stageNodeLocal = stage.node();
+    if (!svgNode || !stageNodeLocal || !selectedCellNode.getCTM || !stageNodeLocal.getCTM) return null;
+
+    const cellMatrix = selectedCellNode.getCTM();
+    const stageMatrix = stageNodeLocal.getCTM();
+    if (!cellMatrix || !stageMatrix) return null;
+
+    const point = svgNode.createSVGPoint();
+    point.x = cx;
+    point.y = cy;
+    const screenPoint = point.matrixTransform(cellMatrix);
+    const stagePoint = screenPoint.matrixTransform(stageMatrix.inverse());
+    return { x: stagePoint.x, y: stagePoint.y };
   }
 
   function retargetHierarchyLinksToSelections() {
@@ -187,6 +265,168 @@
       d3.select(link).attr("d", `M${source.x},${sourceY} C${source.x},${midY} ${target.x},${midY} ${target.x},${targetY}`);
       if (dot) d3.select(dot).attr("cx", target.x).attr("cy", targetY);
     }
+  }
+
+  function clusterFromTarget(target) {
+    return target?.closest?.("g.cluster") || null;
+  }
+
+  function localPoint(clusterNode, clientX, clientY) {
+    const svgNode = svg.node();
+    if (!svgNode || !clusterNode?.getCTM) return { x: 0, y: 0 };
+    const matrix = clusterNode.getCTM();
+    if (!matrix) return { x: 0, y: 0 };
+    const p = svgNode.createSVGPoint();
+    p.x = clientX;
+    p.y = clientY;
+    const local = p.matrixTransform(matrix.inverse());
+    return { x: local.x, y: local.y };
+  }
+
+  function setLayerView(clusterNode, next) {
+    if (!clusterNode) return;
+    const key = clusterNode.dataset.layerKey;
+    const w = Number(clusterNode.dataset.layerWidth) || 1;
+    const h = Number(clusterNode.dataset.layerHeight) || 1;
+    const view = clampLayerView(next, w, h);
+    layerViews.set(key, view);
+    applyLayerView(clusterNode);
+    retargetHierarchyLinksToSelections();
+  }
+
+  // Prevent the older touch-camera handlers from also consuming gestures that
+  // begin inside a layer. White space between layers still uses those handlers.
+  ["touchstart", "touchmove", "touchend", "touchcancel"].forEach(type => {
+    window.addEventListener(type, event => {
+      if (clusterFromTarget(event.target)) event.stopPropagation();
+    }, { capture: true, passive: false });
+  });
+
+  const pointers = new Map();
+  let activeCluster = null;
+  let dragStart = null;
+  let pinchState = null;
+
+  window.addEventListener("pointerdown", event => {
+    const cluster = clusterFromTarget(event.target);
+    if (!cluster) return;
+    activeCluster = cluster;
+    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (window.stopHierarchyMomentum) window.stopHierarchyMomentum();
+
+    const view = { ...(layerViews.get(cluster.dataset.layerKey) || { x: 0, y: 0, k: 1 }) };
+    if (pointers.size === 1) {
+      dragStart = { x: event.clientX, y: event.clientY, view, moved: false };
+      pinchState = null;
+    } else if (pointers.size === 2) {
+      const pts = Array.from(pointers.values());
+      const dx = pts[1].x - pts[0].x;
+      const dy = pts[1].y - pts[0].y;
+      const centerClient = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
+      pinchState = {
+        distance: Math.hypot(dx, dy) || 1,
+        centerClient,
+        view
+      };
+      dragStart = null;
+    }
+  }, { capture: true });
+
+  window.addEventListener("pointermove", event => {
+    if (!activeCluster || !pointers.has(event.pointerId)) return;
+    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+    if (pointers.size >= 2 && pinchState) {
+      event.preventDefault();
+      event.stopPropagation();
+      touchMoved = true;
+      const pts = Array.from(pointers.values()).slice(0, 2);
+      const dx = pts[1].x - pts[0].x;
+      const dy = pts[1].y - pts[0].y;
+      const distance = Math.hypot(dx, dy) || 1;
+      const centerClient = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
+      const startLocal = localPoint(activeCluster, pinchState.centerClient.x, pinchState.centerClient.y);
+      const currentLocal = localPoint(activeCluster, centerClient.x, centerClient.y);
+      const k = Math.max(0.6, Math.min(5, pinchState.view.k * distance / pinchState.distance));
+      const ratio = k / pinchState.view.k;
+      const x = currentLocal.x - (startLocal.x - pinchState.view.x) * ratio;
+      const y = currentLocal.y - (startLocal.y - pinchState.view.y) * ratio;
+      setLayerView(activeCluster, { x, y, k });
+      return;
+    }
+
+    if (pointers.size === 1 && dragStart) {
+      const dx = event.clientX - dragStart.x;
+      const dy = event.clientY - dragStart.y;
+      if (!dragStart.moved && Math.hypot(dx, dy) < 5) return;
+      dragStart.moved = true;
+      event.preventDefault();
+      event.stopPropagation();
+      touchMoved = true;
+      setLayerView(activeCluster, {
+        x: dragStart.view.x + dx,
+        y: dragStart.view.y + dy,
+        k: dragStart.view.k
+      });
+    }
+  }, { capture: true, passive: false });
+
+  function endPointer(event) {
+    pointers.delete(event.pointerId);
+    if (!pointers.size) {
+      activeCluster = null;
+      dragStart = null;
+      pinchState = null;
+      setTimeout(() => { touchMoved = false; }, 90);
+      return;
+    }
+    if (pointers.size === 1 && activeCluster) {
+      const remaining = Array.from(pointers.values())[0];
+      const view = { ...(layerViews.get(activeCluster.dataset.layerKey) || { x: 0, y: 0, k: 1 }) };
+      dragStart = { x: remaining.x, y: remaining.y, view, moved: true };
+      pinchState = null;
+    }
+  }
+
+  window.addEventListener("pointerup", endPointer, { capture: true });
+  window.addEventListener("pointercancel", endPointer, { capture: true });
+
+  // Horizontal wheel/trackpad movement pans the hovered layer. Ctrl/Command +
+  // wheel (including trackpad pinch gestures that surface as ctrl+wheel) zooms it.
+  window.addEventListener("wheel", event => {
+    const cluster = clusterFromTarget(event.target);
+    if (!cluster) return;
+    const key = cluster.dataset.layerKey;
+    const view = { ...(layerViews.get(key) || { x: 0, y: 0, k: 1 }) };
+
+    if (event.ctrlKey || event.metaKey) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      const local = localPoint(cluster, event.clientX, event.clientY);
+      const factor = Math.exp(-event.deltaY * 0.0024);
+      const k = Math.max(0.6, Math.min(5, view.k * factor));
+      const ratio = k / view.k;
+      setLayerView(cluster, {
+        x: local.x - (local.x - view.x) * ratio,
+        y: local.y - (local.y - view.y) * ratio,
+        k
+      });
+      return;
+    }
+
+    if (Math.abs(event.deltaX) > Math.abs(event.deltaY) * 0.65) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      setLayerView(cluster, { x: view.x - event.deltaX, y: view.y, k: view.k });
+    }
+  }, { capture: true, passive: false });
+
+  const visualKey = document.querySelector(".key");
+  if (visualKey && !visualKey.querySelector(".layer-camera-key")) {
+    const hint = document.createElement("span");
+    hint.className = "layer-camera-key";
+    hint.textContent = "drag layer = pan · pinch / Ctrl+wheel = zoom";
+    visualKey.appendChild(hint);
   }
 
   const baseRenderWithSelectedConnectors = render;
