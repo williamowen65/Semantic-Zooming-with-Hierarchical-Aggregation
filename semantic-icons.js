@@ -1,6 +1,6 @@
 // Adds redundant, color-independent semantic cues to every rendered cell,
 // viewport-aware hierarchy depth, selected-cell connectors, all-roots breadcrumb
-// navigation, and independent pan/zoom cameras for each hierarchy layer.
+// navigation, and independent content-aware pan/zoom cameras for each hierarchy layer.
 (() => {
   if (typeof renderCluster !== "function") return;
 
@@ -71,21 +71,46 @@
     return (options.items || []).map(item => item.id).join("|") || options.className || "layer";
   }
 
-  // Pan is intentionally allowed at every zoom level. At least 25% of the
-  // scaled layer must remain inside its rectangle so the user cannot lose it.
-  function clampLayerView(view, w, h) {
+  function minimumLayerScale(rendered) {
+    const areas = (rendered.leaves || [])
+      .map(leaf => Math.abs(d3.polygonArea(leaf.polygon || [])))
+      .filter(area => Number.isFinite(area) && area > 0);
+    if (!areas.length) return 1;
+
+    const smallestArea = Math.min(...areas);
+    // About a 52px square on phones and 44px on larger screens. This is a
+    // usability floor, not a new data weight: all cells keep their proportions.
+    const targetSide = width < 720 ? 52 : 44;
+    const targetArea = targetSide * targetSide;
+    return Math.max(1, Math.min(8, Math.sqrt(targetArea / smallestArea)));
+  }
+
+  function centeredView(w, h, k) {
+    return {
+      k,
+      x: (w - w * k) / 2,
+      y: (h - h * k) / 2
+    };
+  }
+
+  // The rectangle is the viewport; useful content is never allowed to drift away
+  // from it. At the fit/minimum scale a sparse layer is effectively locked. Once
+  // zoomed in, panning opens naturally but stops at the real content edges.
+  function clampLayerView(view, w, h, minK = 1) {
     const next = { ...view };
-    next.k = Math.max(0.35, Math.min(8, Number(next.k) || 1));
+    next.k = Math.max(minK, Math.min(8, Number(next.k) || minK));
+
     const scaledW = w * next.k;
     const scaledH = h * next.k;
-    const keepX = w * 0.25;
-    const keepY = h * 0.25;
-    const minX = -scaledW + keepX;
-    const maxX = w - keepX;
-    const minY = -scaledH + keepY;
-    const maxY = h - keepY;
-    next.x = Math.max(minX, Math.min(maxX, Number(next.x) || 0));
-    next.y = Math.max(minY, Math.min(maxY, Number(next.y) || 0));
+    const minX = w - scaledW;
+    const minY = h - scaledH;
+
+    if (scaledW <= w + 0.5) next.x = (w - scaledW) / 2;
+    else next.x = Math.max(minX, Math.min(0, Number(next.x) || 0));
+
+    if (scaledH <= h + 0.5) next.y = (h - scaledH) / 2;
+    else next.y = Math.max(minY, Math.min(0, Number(next.y) || 0));
+
     return next;
   }
 
@@ -94,7 +119,9 @@
     const key = clusterNode.dataset.layerKey;
     const w = Number(clusterNode.dataset.layerWidth) || 1;
     const h = Number(clusterNode.dataset.layerHeight) || 1;
-    const view = clampLayerView(layerViews.get(key) || { x: 0, y: 0, k: 1 }, w, h);
+    const minK = Number(clusterNode.dataset.layerMinScale) || 1;
+    const fallback = centeredView(w, h, minK);
+    const view = clampLayerView(layerViews.get(key) || fallback, w, h, minK);
     layerViews.set(key, view);
     d3.select(clusterNode).select("g.layer-content")
       .attr("transform", `translate(${view.x},${view.y}) scale(${view.k})`);
@@ -105,9 +132,12 @@
     const node = g.node();
     const key = layerKey(options);
     const clipId = `layer-clip-${++clipSerial}`;
+    const minK = minimumLayerScale(rendered);
+
     node.dataset.layerKey = key;
     node.dataset.layerWidth = options.w;
     node.dataset.layerHeight = options.h;
+    node.dataset.layerMinScale = minK;
 
     const defs = g.append("defs");
     defs.append("clipPath")
@@ -124,6 +154,8 @@
     const content = viewport.append("g").attr("class", "layer-content");
 
     g.selectAll(":scope > g.cell").nodes().forEach(cell => content.node().appendChild(cell));
+
+    if (!layerViews.has(key)) layerViews.set(key, centeredView(options.w, options.h, minK));
     applyLayerView(node);
 
     g.append("rect")
@@ -258,8 +290,6 @@
     return pointToStage(clusterNode, w / 2, 0);
   }
 
-  // Rebuild every connector from live transformed geometry. This keeps both ends
-  // attached while either selected layer is panned or zoomed.
   function retargetHierarchyLinksToSelections() {
     const contextClusters = stage.selectAll("g.context-cluster").nodes();
     const childCluster = stage.select("g.child-cluster").node();
@@ -289,9 +319,6 @@
     return target?.closest?.("g.cluster") || null;
   }
 
-  // Client coordinates must be converted with getScreenCTM (not getCTM). The
-  // previous implementation mixed browser pixels and SVG coordinates, which made
-  // pinch scaling and panning feel weak and inconsistent on phones.
   function localPoint(clusterNode, clientX, clientY) {
     const svgNode = svg.node();
     if (!svgNode || !clusterNode?.getScreenCTM) return { x: 0, y: 0 };
@@ -309,14 +336,13 @@
     const key = clusterNode.dataset.layerKey;
     const w = Number(clusterNode.dataset.layerWidth) || 1;
     const h = Number(clusterNode.dataset.layerHeight) || 1;
-    const view = clampLayerView(next, w, h);
+    const minK = Number(clusterNode.dataset.layerMinScale) || 1;
+    const view = clampLayerView(next, w, h, minK);
     layerViews.set(key, view);
     applyLayerView(clusterNode);
     retargetHierarchyLinksToSelections();
   }
 
-  // Keep the older vertical camera touch handlers out of layer gestures. Touches
-  // that begin in the whitespace between rectangles still reach those handlers.
   ["touchstart", "touchmove", "touchend", "touchcancel"].forEach(type => {
     window.addEventListener(type, event => {
       if (clusterFromTarget(event.target)) {
@@ -331,6 +357,13 @@
   let dragState = null;
   let pinchState = null;
 
+  function viewForCluster(cluster) {
+    const w = Number(cluster.dataset.layerWidth) || 1;
+    const h = Number(cluster.dataset.layerHeight) || 1;
+    const minK = Number(cluster.dataset.layerMinScale) || 1;
+    return { ...(layerViews.get(cluster.dataset.layerKey) || centeredView(w, h, minK)) };
+  }
+
   function startPinch(cluster) {
     const pts = Array.from(pointers.values()).slice(0, 2);
     if (pts.length < 2) return;
@@ -338,7 +371,7 @@
     const dy = pts[1].y - pts[0].y;
     const centerClient = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
     const centerLocal = localPoint(cluster, centerClient.x, centerClient.y);
-    const view = { ...(layerViews.get(cluster.dataset.layerKey) || { x: 0, y: 0, k: 1 }) };
+    const view = viewForCluster(cluster);
     pinchState = {
       distance: Math.hypot(dx, dy) || 1,
       view,
@@ -359,7 +392,7 @@
     try { event.target.setPointerCapture?.(event.pointerId); } catch (_) {}
     if (window.stopHierarchyMomentum) window.stopHierarchyMomentum();
 
-    const view = { ...(layerViews.get(cluster.dataset.layerKey) || { x: 0, y: 0, k: 1 }) };
+    const view = viewForCluster(cluster);
     if (pointers.size === 1) {
       dragState = {
         startLocal: localPoint(cluster, event.clientX, event.clientY),
@@ -389,11 +422,11 @@
       const distance = Math.hypot(dx, dy) || 1;
       const centerClient = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
       const centerLocal = localPoint(activeCluster, centerClient.x, centerClient.y);
+      const minK = Number(activeCluster.dataset.layerMinScale) || 1;
 
-      // Slightly amplify finger separation so zoom feels responsive on a phone.
       const rawRatio = distance / pinchState.distance;
       const zoomRatio = Math.pow(rawRatio, 1.45);
-      const k = Math.max(0.35, Math.min(8, pinchState.view.k * zoomRatio));
+      const k = Math.max(minK, Math.min(8, pinchState.view.k * zoomRatio));
       const x = centerLocal.x - pinchState.anchorContent.x * k;
       const y = centerLocal.y - pinchState.anchorContent.y * k;
       setLayerView(activeCluster, { x, y, k });
@@ -429,10 +462,9 @@
 
     if (pointers.size === 1 && activeCluster) {
       const remaining = Array.from(pointers.values())[0];
-      const view = { ...(layerViews.get(activeCluster.dataset.layerKey) || { x: 0, y: 0, k: 1 }) };
       dragState = {
         startLocal: localPoint(activeCluster, remaining.x, remaining.y),
-        view,
+        view: viewForCluster(activeCluster),
         moved: true
       };
       pinchState = null;
@@ -444,20 +476,18 @@
   window.addEventListener("pointerup", endPointer, { capture: true, passive: false });
   window.addEventListener("pointercancel", endPointer, { capture: true, passive: false });
 
-  // Horizontal wheel/trackpad movement pans a layer. Ctrl/Command + wheel (the
-  // usual browser representation of a trackpad pinch) zooms around the pointer.
   window.addEventListener("wheel", event => {
     const cluster = clusterFromTarget(event.target);
     if (!cluster) return;
-    const key = cluster.dataset.layerKey;
-    const view = { ...(layerViews.get(key) || { x: 0, y: 0, k: 1 }) };
+    const view = viewForCluster(cluster);
+    const minK = Number(cluster.dataset.layerMinScale) || 1;
 
     if (event.ctrlKey || event.metaKey) {
       event.preventDefault();
       event.stopImmediatePropagation();
       const local = localPoint(cluster, event.clientX, event.clientY);
       const factor = Math.exp(-event.deltaY * 0.0042);
-      const k = Math.max(0.35, Math.min(8, view.k * factor));
+      const k = Math.max(minK, Math.min(8, view.k * factor));
       const anchorX = (local.x - view.x) / view.k;
       const anchorY = (local.y - view.y) / view.k;
       setLayerView(cluster, {
