@@ -293,6 +293,7 @@
       const node = nodeById.get(id);
       if (!node) return;
 
+      if (window.stopHierarchyMomentum) window.stopHierarchyMomentum();
       focusPath = pathForNode(id);
       render();
 
@@ -306,6 +307,112 @@
         ? `${node.name} selected. Scrolled to its ${node.children.length} child issues. Scroll upward to revisit ancestors.`
         : `${node.name} selected. This is a leaf node in the prototype. Scroll upward to revisit ancestors.`;
     };
+
+    // Momentum-based camera scrolling. Capture-phase handlers replace the
+    // prototype's original direct wheel/touch handlers without changing the
+    // hierarchy renderer itself.
+    (() => {
+      let momentumFrame = 0;
+      let velocity = 0;
+      let lastTouchY = null;
+      let lastTouchTime = 0;
+      let touchOriginY = null;
+      let wheelTimer = 0;
+      const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      function stopMomentum() {
+        if (momentumFrame) cancelAnimationFrame(momentumFrame);
+        momentumFrame = 0;
+        velocity = 0;
+        clearTimeout(wheelTimer);
+      }
+      window.stopHierarchyMomentum = stopMomentum;
+
+      function startMomentum() {
+        if (reducedMotion() || Math.abs(velocity) < 0.35 || momentumFrame) return;
+        const tick = () => {
+          const before = cameraY;
+          cameraY += velocity;
+          applyCamera(false);
+          const hitBoundary = Math.abs(cameraY - before) < 0.01 && Math.abs(velocity) > 0.35;
+          velocity *= 0.92;
+
+          if (hitBoundary || Math.abs(velocity) < 0.35) {
+            momentumFrame = 0;
+            velocity = 0;
+            return;
+          }
+          momentumFrame = requestAnimationFrame(tick);
+        };
+        momentumFrame = requestAnimationFrame(tick);
+      }
+
+      host.addEventListener("wheel", event => {
+        if (!focusPath.length || worldHeight <= height) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (momentumFrame) cancelAnimationFrame(momentumFrame);
+        momentumFrame = 0;
+
+        const movement = -event.deltaY * 0.78;
+        cameraY += movement;
+        applyCamera(false);
+        velocity = Math.max(-42, Math.min(42, movement * 0.72));
+
+        clearTimeout(wheelTimer);
+        wheelTimer = setTimeout(startMomentum, 52);
+      }, { passive: false, capture: true });
+
+      host.addEventListener("touchstart", event => {
+        if (!focusPath.length || event.touches.length !== 1) return;
+        event.stopImmediatePropagation();
+        stopMomentum();
+        const touch = event.touches[0];
+        lastTouchY = touch.clientY;
+        touchOriginY = touch.clientY;
+        lastTouchTime = performance.now();
+        touchMoved = false;
+      }, { passive: true, capture: true });
+
+      host.addEventListener("touchmove", event => {
+        if (lastTouchY == null || event.touches.length !== 1 || !focusPath.length) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+
+        const now = performance.now();
+        const y = event.touches[0].clientY;
+        const dy = y - lastTouchY;
+        const dt = Math.max(8, now - lastTouchTime);
+        if (Math.abs(y - touchOriginY) > 6) touchMoved = true;
+
+        cameraY += dy;
+        applyCamera(false);
+
+        const instantaneous = dy * (16.667 / dt);
+        velocity = velocity * 0.55 + instantaneous * 0.45;
+        velocity = Math.max(-48, Math.min(48, velocity));
+        lastTouchY = y;
+        lastTouchTime = now;
+      }, { passive: false, capture: true });
+
+      host.addEventListener("touchend", event => {
+        if (lastTouchY == null) return;
+        event.stopImmediatePropagation();
+        lastTouchY = null;
+        lastTouchTime = 0;
+        touchOriginY = null;
+        startMomentum();
+        setTimeout(() => { touchMoved = false; }, 80);
+      }, { passive: true, capture: true });
+
+      host.addEventListener("touchcancel", () => {
+        lastTouchY = null;
+        lastTouchTime = 0;
+        touchOriginY = null;
+        stopMomentum();
+        touchMoved = false;
+      }, { passive: true, capture: true });
+    })();
 
     render();
   </script>
