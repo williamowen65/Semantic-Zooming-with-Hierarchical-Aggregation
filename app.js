@@ -102,6 +102,12 @@ const statusHost = document.querySelector("#status");
 let width = host.clientWidth;
 let height = host.clientHeight;
 let focusPath = [];
+let cameraY = 0;
+let worldHeight = height;
+let levelCenters = [];
+let touchStartY = null;
+let touchLastY = null;
+let touchMoved = false;
 
 const svg = d3.select(host).append("svg")
   .attr("role", "img")
@@ -216,7 +222,7 @@ function renderCluster({ items, x, y, w, h, selectedId = null, faded = false, in
     .attr("role", interactive ? "button" : null)
     .attr("aria-label", d => `${d.data.item.name}, ${compact(aggregateScore(d.data.item))} aggregate importance`)
     .on("click", (event, d) => {
-      if (!interactive) return;
+      if (!interactive || touchMoved) return;
       event.stopPropagation();
       focusNode(d.data.item.id);
     })
@@ -287,23 +293,56 @@ function pathForNode(id) {
   return path;
 }
 
+function cameraBounds() {
+  const toolbarAllowance = width < 720 ? 118 : 78;
+  const bottomAllowance = 54;
+  const min = Math.min(0, height - worldHeight - bottomAllowance);
+  const max = Math.max(0, toolbarAllowance - 20);
+  return { min, max };
+}
+
+function clampCamera(value) {
+  const { min, max } = cameraBounds();
+  return Math.max(min, Math.min(max, value));
+}
+
+function applyCamera(animate = false) {
+  cameraY = clampCamera(cameraY);
+  stage.interrupt();
+  if (animate && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    stage.transition()
+      .duration(520)
+      .ease(d3.easeCubicOut)
+      .attr("transform", `translate(0,${cameraY})`);
+  } else {
+    stage.attr("transform", `translate(0,${cameraY})`);
+  }
+}
+
+function scrollToDepth(index, animate = true) {
+  if (!levelCenters.length) return;
+  const safeIndex = Math.max(0, Math.min(levelCenters.length - 1, index));
+  const viewportTarget = height * (width < 720 ? 0.42 : 0.46);
+  cameraY = viewportTarget - levelCenters[safeIndex];
+  applyCamera(animate);
+}
+
 function focusNode(id) {
   const node = nodeById.get(id);
   if (!node) return;
   focusPath = pathForNode(id);
   render();
+  scrollToDepth(focusPath.length - 1, true);
   statusHost.textContent = node.children?.length
-    ? `${node.name} selected. ${node.children.length} child issues shown below.`
-    : `${node.name} selected. This is a leaf node in the prototype.`;
+    ? `${node.name} selected. ${node.children.length} child issues shown below. Scroll vertically to revisit ancestors.`
+    : `${node.name} selected. This is a leaf node in the prototype. Scroll upward to revisit ancestors.`;
 }
 
-function goToDepth(index) {
-  if (index < 0) {
-    focusPath = [];
-  } else {
-    focusPath = focusPath.slice(0, index + 1);
-  }
-  render();
+function panToBreadcrumb(index) {
+  if (!focusPath.length) return;
+  scrollToDepth(index, true);
+  const id = focusPath[Math.max(0, Math.min(focusPath.length - 1, index))];
+  statusHost.textContent = `${nodeById.get(id).name} brought back into view. The deeper branch remains expanded below.`;
 }
 
 function renderBreadcrumbs() {
@@ -311,7 +350,9 @@ function renderBreadcrumbs() {
   const all = document.createElement("button");
   all.type = "button";
   all.textContent = "All roots";
-  all.addEventListener("click", () => goToDepth(-1));
+  all.addEventListener("click", () => {
+    if (focusPath.length) panToBreadcrumb(0);
+  });
   breadcrumbHost.append(all);
 
   focusPath.forEach((id, index) => {
@@ -324,9 +365,16 @@ function renderBreadcrumbs() {
     button.type = "button";
     button.textContent = nodeById.get(id).name;
     button.className = index === focusPath.length - 1 ? "current" : "";
-    button.addEventListener("click", () => goToDepth(index));
+    button.addEventListener("click", () => panToBreadcrumb(index));
     breadcrumbHost.append(button);
   });
+}
+
+function selectedCentroid(rendered, id, x, y) {
+  const leaf = rendered.leaves.find(d => d.data.id === id);
+  if (!leaf) return null;
+  const [cx, cy] = d3.polygonCentroid(leaf.polygon);
+  return { x: x + cx, y: y + cy };
 }
 
 function render() {
@@ -334,14 +382,18 @@ function render() {
   height = host.clientHeight;
   svg.attr("viewBox", [0, 0, width, height]);
   stage.selectAll("*").remove();
+  levelCenters = [];
   renderBreadcrumbs();
 
   const compactMobile = width < 720;
-  const contentTop = compactMobile ? 128 : 100;
-  const usableHeight = Math.max(420, height - contentTop - 62);
+  const contentTop = compactMobile ? 132 : 98;
   const centerX = width / 2;
 
   if (!focusPath.length) {
+    cameraY = 0;
+    worldHeight = height;
+    stage.attr("transform", "translate(0,0)");
+    const usableHeight = Math.max(420, height - contentTop - 62);
     const clusterW = Math.min(width * (compactMobile ? .9 : .66), 780);
     const clusterH = Math.min(usableHeight * .8, clusterW * .72);
     const x = centerX - clusterW / 2;
@@ -364,82 +416,142 @@ function render() {
     return;
   }
 
-  const selected = currentNode();
-  const siblings = siblingSet(selected);
-  const hasChildren = !!selected.children?.length;
+  const clusterW = Math.min(width * (compactMobile ? .86 : .52), 620);
+  const clusterH = Math.max(230, Math.min(clusterW * .62, compactMobile ? 390 : 340));
+  const clusterX = centerX - clusterW / 2;
+  const levelGap = compactMobile ? 128 : 150;
+  const startY = contentTop + 18;
+  let previousSelectedPoint = null;
+  let cursorY = startY;
 
-  const upperW = Math.min(width * (compactMobile ? .82 : .48), 570);
-  const upperH = Math.min(usableHeight * .34, upperW * .62);
-  const upperX = centerX - upperW / 2;
-  const upperY = contentTop + 14;
+  focusPath.forEach((id, index) => {
+    const selected = nodeById.get(id);
+    const siblings = siblingSet(selected);
+    const rendered = renderCluster({
+      items: siblings,
+      x: clusterX,
+      y: cursorY,
+      w: clusterW,
+      h: clusterH,
+      selectedId: selected.id,
+      faded: true,
+      interactive: true,
+      className: `context-cluster depth-${index}`
+    });
 
-  const upper = renderCluster({
-    items: siblings,
-    x: upperX,
-    y: upperY,
-    w: upperW,
-    h: upperH,
-    selectedId: selected.id,
-    faded: true,
-    interactive: true,
-    className: "context-cluster"
+    const point = selectedCentroid(rendered, selected.id, clusterX, cursorY);
+    levelCenters.push(cursorY + clusterH / 2);
+
+    if (previousSelectedPoint && point) {
+      const topY = cursorY;
+      stage.insert("path", ".cluster")
+        .attr("class", "hierarchy-link")
+        .attr("d", `M${previousSelectedPoint.x},${previousSelectedPoint.y + 22} C${previousSelectedPoint.x},${previousSelectedPoint.y + 64} ${point.x},${topY - 48} ${point.x},${topY}`);
+      stage.insert("circle", ".cluster")
+        .attr("class", "link-dot")
+        .attr("cx", point.x)
+        .attr("cy", topY)
+        .attr("r", 3.5);
+    }
+
+    previousSelectedPoint = point;
+    cursorY += clusterH + levelGap;
   });
 
-  if (!hasChildren) {
+  const selected = currentNode();
+  if (selected?.children?.length) {
+    const childW = Math.min(width * (compactMobile ? .9 : .58), 690);
+    const childH = Math.max(250, Math.min(childW * .66, compactMobile ? 420 : 390));
+    const childX = centerX - childW / 2;
+    const childY = cursorY;
+
+    if (previousSelectedPoint) {
+      stage.insert("path", ".cluster")
+        .attr("class", "hierarchy-link")
+        .attr("d", `M${previousSelectedPoint.x},${previousSelectedPoint.y + 22} C${previousSelectedPoint.x},${previousSelectedPoint.y + 66} ${centerX},${childY - 48} ${centerX},${childY}`);
+      stage.insert("circle", ".cluster")
+        .attr("class", "link-dot")
+        .attr("cx", centerX)
+        .attr("cy", childY)
+        .attr("r", 3.5);
+    }
+
+    renderCluster({
+      items: selected.children,
+      x: childX,
+      y: childY,
+      w: childW,
+      h: childH,
+      selectedId: null,
+      faded: false,
+      interactive: true,
+      className: "child-cluster"
+    });
+
+    levelCenters.push(childY + childH / 2);
+    stage.append("text")
+      .attr("class", "canvas-caption")
+      .attr("x", centerX)
+      .attr("y", childY + childH + 30)
+      .attr("text-anchor", "middle")
+      .text(`Click a child of ${selected.name} to continue down`);
+    worldHeight = childY + childH + 86;
+  } else {
     stage.append("text")
       .attr("class", "leaf-message")
       .attr("x", centerX)
-      .attr("y", upperY + upperH + 58)
+      .attr("y", cursorY - levelGap + 58)
       .attr("text-anchor", "middle")
-      .text("Leaf node · choose a sibling above or use the breadcrumb to go back");
-    return;
+      .text("Leaf node · scroll upward or use a breadcrumb to revisit an ancestor");
+    worldHeight = cursorY - levelGap + 118;
   }
 
-  const selectedLeaf = upper.leaves.find(d => d.data.id === selected.id);
-  const [selectedCX, selectedCY] = d3.polygonCentroid(selectedLeaf.polygon);
-  const lineStartX = upperX + selectedCX;
-  const lineStartY = upperY + selectedCY + 22;
-
-  const lowerW = Math.min(width * (compactMobile ? .9 : .58), 690);
-  const lowerH = Math.min(usableHeight * .42, lowerW * .68);
-  const lowerX = centerX - lowerW / 2;
-  const lowerY = Math.min(height - lowerH - 46, upperY + upperH + 86);
-
-  stage.append("path")
-    .attr("class", "hierarchy-link")
-    .attr("d", `M${lineStartX},${lineStartY} C${lineStartX},${lineStartY + 34} ${centerX},${lowerY - 34} ${centerX},${lowerY}`);
-
-  stage.append("circle")
-    .attr("class", "link-dot")
-    .attr("cx", centerX)
-    .attr("cy", lowerY)
-    .attr("r", 3.5);
-
-  renderCluster({
-    items: selected.children,
-    x: lowerX,
-    y: lowerY,
-    w: lowerW,
-    h: lowerH,
-    selectedId: null,
-    faded: false,
-    interactive: true,
-    className: "child-cluster"
-  });
-
-  stage.append("text")
-    .attr("class", "canvas-caption")
-    .attr("x", centerX)
-    .attr("y", Math.min(height - 18, lowerY + lowerH + 28))
-    .attr("text-anchor", "middle")
-    .text(`Click a child of ${selected.name} to continue down`);
+  applyCamera(false);
 }
+
+host.addEventListener("wheel", event => {
+  if (!focusPath.length || worldHeight <= height) return;
+  event.preventDefault();
+  cameraY -= event.deltaY * 0.78;
+  applyCamera(false);
+}, { passive: false });
+
+host.addEventListener("touchstart", event => {
+  if (!focusPath.length || event.touches.length !== 1) return;
+  touchStartY = event.touches[0].clientY;
+  touchLastY = touchStartY;
+  touchMoved = false;
+}, { passive: true });
+
+host.addEventListener("touchmove", event => {
+  if (touchLastY == null || event.touches.length !== 1 || !focusPath.length) return;
+  const y = event.touches[0].clientY;
+  const dy = y - touchLastY;
+  if (Math.abs(y - touchStartY) > 6) touchMoved = true;
+  if (worldHeight > height) {
+    event.preventDefault();
+    cameraY += dy;
+    applyCamera(false);
+  }
+  touchLastY = y;
+}, { passive: false });
+
+host.addEventListener("touchend", () => {
+  touchStartY = null;
+  touchLastY = null;
+  window.setTimeout(() => { touchMoved = false; }, 0);
+}, { passive: true });
 
 resetButton.addEventListener("click", () => {
   focusPath = [];
+  cameraY = 0;
   render();
   statusHost.textContent = "Showing all root issues.";
 });
 
-window.addEventListener("resize", render);
+window.addEventListener("resize", () => {
+  render();
+  applyCamera(false);
+});
+
 render();
