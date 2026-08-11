@@ -70,9 +70,64 @@
     return output.filter(p => Number.isFinite(p[0]) && Number.isFinite(p[1]));
   }
 
-  // Annotation anchors are "sticky" inside the visible portion of their cell.
-  // When a cell is partly on-screen, its icon/title/score migrate toward the
-  // centroid of the visible polygon instead of disappearing with the true center.
+  // Test the annotation as a single icon + label unit against the actual cell.
+  // We deliberately do NOT clip annotations. If the unit cannot fit at all (for
+  // example a very small cell with a long title), it stays at its natural center.
+  function annotationFits(cell, polygon, originalX, originalY, anchorX, anchorY, localScale) {
+    const text = cell.select("text.cell-label");
+    const icon = cell.select("g.semantic-kind-icon");
+    let box;
+    try { box = text.node().getBBox(); } catch (_) { return true; }
+    let minX = box.x, minY = box.y, maxX = box.x + box.width, maxY = box.y + box.height;
+    if (!icon.empty()) {
+      const iconX = Number(icon.attr("data-icon-x")) || originalX;
+      const iconY = Number(icon.attr("data-icon-y")) || originalY;
+      const iconSize = Number(icon.attr("data-icon-size")) || 12;
+      const r = iconSize * 0.9;
+      minX = Math.min(minX, iconX - r); maxX = Math.max(maxX, iconX + r);
+      minY = Math.min(minY, iconY - r); maxY = Math.max(maxY, iconY + r);
+    }
+    // A small inset keeps glyphs from visually kissing the boundary.
+    const pad = 2 / Math.max(localScale, 0.001);
+    minX -= pad; minY -= pad; maxX += pad; maxY += pad;
+    const transformPoint = (x, y) => [
+      anchorX + (x - originalX) * localScale,
+      anchorY + (y - originalY) * localScale
+    ];
+    const mx = (minX + maxX) / 2, my = (minY + maxY) / 2;
+    const probes = [
+      [minX,minY],[maxX,minY],[maxX,maxY],[minX,maxY],
+      [mx,minY],[maxX,my],[mx,maxY],[minX,my]
+    ].map(([x,y]) => transformPoint(x,y));
+    return probes.every(point => d3.polygonContains(polygon, point));
+  }
+
+  function constrainedAnnotationAnchor(cell, polygon, originalX, originalY, desiredX, desiredY, localScale) {
+    if (!annotationFits(cell, polygon, originalX, originalY, originalX, originalY, localScale)) {
+      return [originalX, originalY];
+    }
+    if (annotationFits(cell, polygon, originalX, originalY, desiredX, desiredY, localScale)) {
+      return [desiredX, desiredY];
+    }
+    // Walk from the safe natural center toward the viewport-aware target and
+    // stop at the last position where the entire annotation remains in-cell.
+    let lo = 0, hi = 1;
+    for (let i = 0; i < 12; i += 1) {
+      const t = (lo + hi) / 2;
+      const x = originalX + (desiredX - originalX) * t;
+      const y = originalY + (desiredY - originalY) * t;
+      if (annotationFits(cell, polygon, originalX, originalY, x, y, localScale)) lo = t;
+      else hi = t;
+    }
+    return [
+      originalX + (desiredX - originalX) * lo,
+      originalY + (desiredY - originalY) * lo
+    ];
+  }
+
+  // Annotation anchors are sticky inside the visible portion of their cell, but
+  // movement is geometry-constrained so the annotation itself does not cross the
+  // cell boundary. No masking is used, so text is never chopped by this feature.
   function updateLayerAnnotations(clusterNode, view) {
     const k = view.k;
     const maxScreenFont = width < 720 ? 22 : 24;
@@ -94,13 +149,14 @@
       const originalY = Number(text.attr("y")) || 0;
       const visiblePolygon = clipPolygonToRect(d.polygon, left, top, right, bottom);
       const visibleArea = visiblePolygon.length >= 3 ? Math.abs(d3.polygonArea(visiblePolygon)) : 0;
-      let anchorX = originalX, anchorY = originalY;
+      let desiredX = originalX, desiredY = originalY;
       if (visibleArea > 4 / (k * k)) {
         const centroid = d3.polygonCentroid(visiblePolygon);
         if (Number.isFinite(centroid[0]) && Number.isFinite(centroid[1])) {
-          anchorX = centroid[0]; anchorY = centroid[1];
+          desiredX = centroid[0]; desiredY = centroid[1];
         }
       }
+      const [anchorX, anchorY] = constrainedAnnotationAnchor(cell, d.polygon, originalX, originalY, desiredX, desiredY, localScale);
       const dx = anchorX - originalX, dy = anchorY - originalY;
       text.attr("transform", `translate(${dx},${dy}) translate(${originalX},${originalY}) scale(${localScale}) translate(${-originalX},${-originalY})`);
 
