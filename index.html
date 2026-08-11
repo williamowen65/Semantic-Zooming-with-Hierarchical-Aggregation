@@ -102,6 +102,75 @@
       annotate(root);
     });
 
+    // Every Atlas content item is explicitly either an issue or a solution.
+    // The IDs remain stable, so semantic relabeling and recoloring do not change
+    // the Voronoi seed or spatial positions.
+    const solutionIds = new Set([
+      "adaptation", "resilience", "policy", "public-awareness", "finance",
+      "border-policy", "refugee-support", "legal-pathways", "integration",
+      "coastal", "water", "outreach", "media", "community", "behavior",
+      "citizen-science", "traditional-media", "storytelling", "misinformation",
+      "prevention", "jobs", "trade", "conservation", "institutions", "elections",
+      "transparency", "rights", "opportunity", "inclusion",
+      "content-moderation", "feed-controls", "source-diversity", "trust-signals",
+      "civic-response", "local-organizing", "public-comment", "institutional-response",
+      "public-consultation", "agency-coordination", "policy-feedback", "implementation",
+      "evaluation", "revision", "housing-supply", "housing-stability", "food-systems-food-access",
+      "food-systems-agriculture", "justice-legal-access", "public-safety-emergency-response",
+      "public-safety-prevention", "public-safety-community-safety", "science-research",
+      "science-science-literacy", "science-research-funding", "culture-arts",
+      "culture-heritage", "culture-civic-life"
+    ]);
+
+    const semanticNames = new Map([
+      ["infrastructure", "Infrastructure Gaps"],
+      ["education", "Education Access"],
+      ["healthcare", "Healthcare Access"],
+      ["economy", "Economic Instability"],
+      ["environment", "Environmental Degradation"],
+      ["governance", "Governance Challenges"],
+      ["social-equity", "Social Inequity"],
+      ["technology", "Technology Risks"],
+      ["energy", "Energy Transition Challenges"],
+      ["housing", "Housing Affordability"],
+      ["food-systems", "Food Insecurity"],
+      ["justice", "Justice Access"],
+      ["public-safety", "Public Safety Risks"],
+      ["science", "Science Trust"],
+      ["culture", "Cultural Access"],
+      ["transport", "Transportation Gaps"],
+      ["utilities", "Utility Reliability"],
+      ["housing-infra", "Housing Infrastructure Shortage"],
+      ["biodiversity", "Biodiversity Loss"],
+      ["social-media", "Social Media Harms"],
+      ["digital-platforms", "Digital Platform Effects"]
+    ]);
+
+    function applySemanticType(node) {
+      node.kind = solutionIds.has(node.id) ? "solution" : "issue";
+      if (semanticNames.has(node.id)) node.name = semanticNames.get(node.id);
+      (node.children || []).forEach(applySemanticType);
+    }
+    forestData.forEach(applySemanticType);
+
+    const ISSUE_COLOR = "#71879a";
+    const SOLUTION_COLOR = "#5f9864";
+    rootColor = function(node) {
+      return node.kind === "solution" ? SOLUTION_COLOR : ISSUE_COLOR;
+    };
+
+    const visualKey = document.querySelector(".key");
+    if (visualKey && !visualKey.querySelector(".issue-kind-key")) {
+      const issueKey = document.createElement("span");
+      issueKey.className = "issue-kind-key";
+      issueKey.innerHTML = `<i class="key-cell" style="background:${ISSUE_COLOR}"></i> issue`;
+      const solutionKey = document.createElement("span");
+      solutionKey.className = "solution-kind-key";
+      solutionKey.innerHTML = `<i class="key-cell" style="background:${SOLUTION_COLOR}"></i> solution`;
+      visualKey.prepend(solutionKey);
+      visualKey.prepend(issueKey);
+    }
+
     // Stable Voronoi geometry: selection changes visual emphasis only.
     layoutCluster = function(items, w, h) {
       const proxies = items.map(item => ({
