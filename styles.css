@@ -38,12 +38,18 @@ button { font: inherit; }
 
 .breadcrumbs {
   display: flex;
+  flex-direction: row-reverse;
+  direction: rtl;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 5px;
   min-width: 0;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  overscroll-behavior-x: contain;
 }
+.breadcrumbs > * { direction: ltr; flex: 0 0 auto; }
 .breadcrumbs button {
   border: 0;
   background: transparent;
@@ -52,9 +58,9 @@ button { font: inherit; }
   border-radius: 999px;
   cursor: pointer;
   white-space: nowrap;
-  max-width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
 }
 .breadcrumbs button:hover,
 .breadcrumbs button:focus-visible { background: rgba(27,43,61,.07); color: var(--ink); outline: none; }
@@ -191,13 +197,9 @@ svg { display: block; width: 100%; height: 100%; }
   .breadcrumbs {
     grid-column: 1 / -1;
     order: 3;
-    justify-content: flex-start;
-    overflow-x: auto;
-    scrollbar-width: none;
     padding-bottom: 2px;
   }
-  .breadcrumbs::-webkit-scrollbar { display: none; }
-  .breadcrumbs button { max-width: 150px; padding: 6px 7px; font-size: 12px; }
+  .breadcrumbs button { max-width: none; padding: 6px 7px; font-size: 12px; }
   .reset-button { padding: 7px 10px; font-size: 12px; }
   .key {
     bottom: 8px;
