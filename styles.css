@@ -70,11 +70,23 @@ button { font: inherit; }
 /* All-roots navigation now lives in the breadcrumb. */
 .reset-button { display: none; }
 
-#viz { width: 100vw; height: 100vh; }
-svg { display: block; width: 100%; height: 100%; }
+#viz {
+  width: 100vw;
+  height: 100vh;
+  touch-action: none;
+  overscroll-behavior: none;
+}
+svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
 
 /* Each rectangle owns its touch gestures for local pan/pinch. */
-.cluster { touch-action: none; }
+.cluster,
+.layer-viewport,
+.layer-content { touch-action: none; }
 .cluster-outline {
   fill: rgba(255,255,255,.28);
   stroke: rgba(30,48,67,.10);
