@@ -95,7 +95,7 @@
   };
 
   // The depth readout follows what is actually in the viewport rather than what
-  // was most recently selected.
+  // was most recently selected. The root level is always Depth 1.
   const toolbar = document.querySelector(".toolbar");
   const reset = document.querySelector("#reset");
   const depthIndicator = document.createElement("div");
@@ -125,7 +125,7 @@
   }
 
   function viewportDepth() {
-    if (!Array.isArray(focusPath) || !focusPath.length || !Array.isArray(levelCenters) || !levelCenters.length) return 0;
+    if (!Array.isArray(focusPath) || !focusPath.length || !Array.isArray(levelCenters) || !levelCenters.length) return 1;
     const viewportProbeY = height * (width < 720 ? 0.48 : 0.5);
     const worldProbeY = viewportProbeY - stageTranslateY();
     let nearestIndex = 0;
