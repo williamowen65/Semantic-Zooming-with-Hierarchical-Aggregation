@@ -71,16 +71,22 @@
     return (options.items || []).map(item => item.id).join("|") || options.className || "layer";
   }
 
+  // Pan is intentionally allowed at every zoom level. At least 25% of the
+  // scaled layer must remain inside its rectangle so the user cannot lose it.
   function clampLayerView(view, w, h) {
-    view.k = Math.max(0.6, Math.min(5, view.k || 1));
-    if (view.k >= 1) {
-      view.x = Math.max(w * (1 - view.k), Math.min(0, view.x || 0));
-      view.y = Math.max(h * (1 - view.k), Math.min(0, view.y || 0));
-    } else {
-      view.x = (w - w * view.k) / 2;
-      view.y = (h - h * view.k) / 2;
-    }
-    return view;
+    const next = { ...view };
+    next.k = Math.max(0.35, Math.min(8, Number(next.k) || 1));
+    const scaledW = w * next.k;
+    const scaledH = h * next.k;
+    const keepX = w * 0.25;
+    const keepY = h * 0.25;
+    const minX = -scaledW + keepX;
+    const maxX = w - keepX;
+    const minY = -scaledH + keepY;
+    const maxY = h - keepY;
+    next.x = Math.max(minX, Math.min(maxX, Number(next.x) || 0));
+    next.y = Math.max(minY, Math.min(maxY, Number(next.y) || 0));
+    return next;
   }
 
   function applyLayerView(clusterNode) {
@@ -163,8 +169,6 @@
     firstButton.replaceWith(cleanButton);
   };
 
-  // The depth readout follows what is actually in the viewport rather than what
-  // was most recently selected. The root level is always Depth 1.
   const toolbar = document.querySelector(".toolbar");
   const reset = document.querySelector("#reset");
   const depthIndicator = document.createElement("div");
@@ -224,57 +228,74 @@
     cameraObserver.observe(stageNode, { attributes: true, attributeFilter: ["transform"] });
   }
 
+  function pointToStage(element, x, y) {
+    const svgNode = svg.node();
+    const stageNodeLocal = stage.node();
+    if (!svgNode || !stageNodeLocal || !element?.getCTM || !stageNodeLocal.getCTM) return null;
+    const elementMatrix = element.getCTM();
+    const stageMatrix = stageNodeLocal.getCTM();
+    if (!elementMatrix || !stageMatrix) return null;
+    const p = svgNode.createSVGPoint();
+    p.x = x;
+    p.y = y;
+    const viewportPoint = p.matrixTransform(elementMatrix);
+    const stagePoint = viewportPoint.matrixTransform(stageMatrix.inverse());
+    return { x: stagePoint.x, y: stagePoint.y };
+  }
+
   function selectedPointForCluster(clusterNode) {
     if (!clusterNode) return null;
     const selectedCellNode = d3.select(clusterNode).select("g.cell.is-selected").node();
     const datum = selectedCellNode ? d3.select(selectedCellNode).datum() : null;
     if (!selectedCellNode || !datum?.polygon?.length) return null;
-
     const [cx, cy] = d3.polygonCentroid(datum.polygon);
-    const svgNode = svg.node();
-    const stageNodeLocal = stage.node();
-    if (!svgNode || !stageNodeLocal || !selectedCellNode.getCTM || !stageNodeLocal.getCTM) return null;
-
-    const cellMatrix = selectedCellNode.getCTM();
-    const stageMatrix = stageNodeLocal.getCTM();
-    if (!cellMatrix || !stageMatrix) return null;
-
-    const point = svgNode.createSVGPoint();
-    point.x = cx;
-    point.y = cy;
-    const screenPoint = point.matrixTransform(cellMatrix);
-    const stagePoint = screenPoint.matrixTransform(stageMatrix.inverse());
-    return { x: stagePoint.x, y: stagePoint.y };
+    return pointToStage(selectedCellNode, cx, cy);
   }
 
+  function clusterTopPoint(clusterNode) {
+    if (!clusterNode) return null;
+    const w = Number(clusterNode.dataset.layerWidth) || width;
+    return pointToStage(clusterNode, w / 2, 0);
+  }
+
+  // Rebuild every connector from live transformed geometry. This keeps both ends
+  // attached while either selected layer is panned or zoomed.
   function retargetHierarchyLinksToSelections() {
     const contextClusters = stage.selectAll("g.context-cluster").nodes();
+    const childCluster = stage.select("g.child-cluster").node();
     const links = stage.selectAll("path.hierarchy-link").nodes();
     const dots = stage.selectAll("circle.link-dot").nodes();
 
-    for (let i = 1; i < contextClusters.length; i += 1) {
-      const source = selectedPointForCluster(contextClusters[i - 1]);
-      const target = selectedPointForCluster(contextClusters[i]);
-      const link = links[i - 1];
-      const dot = dots[i - 1];
-      if (!source || !target || !link) continue;
+    links.forEach((link, i) => {
+      const sourceCluster = contextClusters[i];
+      if (!sourceCluster) return;
+      const source = selectedPointForCluster(sourceCluster);
+      let target = null;
+      if (i + 1 < contextClusters.length) target = selectedPointForCluster(contextClusters[i + 1]);
+      else if (childCluster) target = clusterTopPoint(childCluster);
+      if (!source || !target) return;
 
-      const sourceY = source.y + 22;
-      const targetY = target.y - 22;
-      const midY = (sourceY + targetY) / 2;
-      d3.select(link).attr("d", `M${source.x},${sourceY} C${source.x},${midY} ${target.x},${midY} ${target.x},${targetY}`);
-      if (dot) d3.select(dot).attr("cx", target.x).attr("cy", targetY);
-    }
+      const midY = (source.y + target.y) / 2;
+      d3.select(link).attr(
+        "d",
+        `M${source.x},${source.y} C${source.x},${midY} ${target.x},${midY} ${target.x},${target.y}`
+      );
+      const dot = dots[i];
+      if (dot) d3.select(dot).attr("cx", target.x).attr("cy", target.y);
+    });
   }
 
   function clusterFromTarget(target) {
     return target?.closest?.("g.cluster") || null;
   }
 
+  // Client coordinates must be converted with getScreenCTM (not getCTM). The
+  // previous implementation mixed browser pixels and SVG coordinates, which made
+  // pinch scaling and panning feel weak and inconsistent on phones.
   function localPoint(clusterNode, clientX, clientY) {
     const svgNode = svg.node();
-    if (!svgNode || !clusterNode?.getCTM) return { x: 0, y: 0 };
-    const matrix = clusterNode.getCTM();
+    if (!svgNode || !clusterNode?.getScreenCTM) return { x: 0, y: 0 };
+    const matrix = clusterNode.getScreenCTM();
     if (!matrix) return { x: 0, y: 0 };
     const p = svgNode.createSVGPoint();
     p.x = clientX;
@@ -294,79 +315,104 @@
     retargetHierarchyLinksToSelections();
   }
 
-  // Prevent the older touch-camera handlers from also consuming gestures that
-  // begin inside a layer. White space between layers still uses those handlers.
+  // Keep the older vertical camera touch handlers out of layer gestures. Touches
+  // that begin in the whitespace between rectangles still reach those handlers.
   ["touchstart", "touchmove", "touchend", "touchcancel"].forEach(type => {
     window.addEventListener(type, event => {
-      if (clusterFromTarget(event.target)) event.stopPropagation();
+      if (clusterFromTarget(event.target)) {
+        if (event.cancelable && type === "touchmove") event.preventDefault();
+        event.stopPropagation();
+      }
     }, { capture: true, passive: false });
   });
 
   const pointers = new Map();
   let activeCluster = null;
-  let dragStart = null;
+  let dragState = null;
   let pinchState = null;
+
+  function startPinch(cluster) {
+    const pts = Array.from(pointers.values()).slice(0, 2);
+    if (pts.length < 2) return;
+    const dx = pts[1].x - pts[0].x;
+    const dy = pts[1].y - pts[0].y;
+    const centerClient = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
+    const centerLocal = localPoint(cluster, centerClient.x, centerClient.y);
+    const view = { ...(layerViews.get(cluster.dataset.layerKey) || { x: 0, y: 0, k: 1 }) };
+    pinchState = {
+      distance: Math.hypot(dx, dy) || 1,
+      view,
+      anchorContent: {
+        x: (centerLocal.x - view.x) / view.k,
+        y: (centerLocal.y - view.y) / view.k
+      }
+    };
+    dragState = null;
+  }
 
   window.addEventListener("pointerdown", event => {
     const cluster = clusterFromTarget(event.target);
     if (!cluster) return;
+    if (activeCluster && cluster !== activeCluster) return;
     activeCluster = cluster;
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    try { event.target.setPointerCapture?.(event.pointerId); } catch (_) {}
     if (window.stopHierarchyMomentum) window.stopHierarchyMomentum();
 
     const view = { ...(layerViews.get(cluster.dataset.layerKey) || { x: 0, y: 0, k: 1 }) };
     if (pointers.size === 1) {
-      dragStart = { x: event.clientX, y: event.clientY, view, moved: false };
+      dragState = {
+        startLocal: localPoint(cluster, event.clientX, event.clientY),
+        view,
+        moved: false
+      };
       pinchState = null;
     } else if (pointers.size === 2) {
-      const pts = Array.from(pointers.values());
-      const dx = pts[1].x - pts[0].x;
-      const dy = pts[1].y - pts[0].y;
-      const centerClient = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
-      pinchState = {
-        distance: Math.hypot(dx, dy) || 1,
-        centerClient,
-        view
-      };
-      dragStart = null;
+      startPinch(cluster);
     }
-  }, { capture: true });
+  }, { capture: true, passive: false });
 
   window.addEventListener("pointermove", event => {
     if (!activeCluster || !pointers.has(event.pointerId)) return;
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
 
-    if (pointers.size >= 2 && pinchState) {
+    if (pointers.size >= 2) {
+      if (!pinchState) startPinch(activeCluster);
+      if (!pinchState) return;
       event.preventDefault();
-      event.stopPropagation();
+      event.stopImmediatePropagation();
       touchMoved = true;
+
       const pts = Array.from(pointers.values()).slice(0, 2);
       const dx = pts[1].x - pts[0].x;
       const dy = pts[1].y - pts[0].y;
       const distance = Math.hypot(dx, dy) || 1;
       const centerClient = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
-      const startLocal = localPoint(activeCluster, pinchState.centerClient.x, pinchState.centerClient.y);
-      const currentLocal = localPoint(activeCluster, centerClient.x, centerClient.y);
-      const k = Math.max(0.6, Math.min(5, pinchState.view.k * distance / pinchState.distance));
-      const ratio = k / pinchState.view.k;
-      const x = currentLocal.x - (startLocal.x - pinchState.view.x) * ratio;
-      const y = currentLocal.y - (startLocal.y - pinchState.view.y) * ratio;
+      const centerLocal = localPoint(activeCluster, centerClient.x, centerClient.y);
+
+      // Slightly amplify finger separation so zoom feels responsive on a phone.
+      const rawRatio = distance / pinchState.distance;
+      const zoomRatio = Math.pow(rawRatio, 1.45);
+      const k = Math.max(0.35, Math.min(8, pinchState.view.k * zoomRatio));
+      const x = centerLocal.x - pinchState.anchorContent.x * k;
+      const y = centerLocal.y - pinchState.anchorContent.y * k;
       setLayerView(activeCluster, { x, y, k });
       return;
     }
 
-    if (pointers.size === 1 && dragStart) {
-      const dx = event.clientX - dragStart.x;
-      const dy = event.clientY - dragStart.y;
-      if (!dragStart.moved && Math.hypot(dx, dy) < 5) return;
-      dragStart.moved = true;
+    if (pointers.size === 1 && dragState) {
+      const current = localPoint(activeCluster, event.clientX, event.clientY);
+      const dx = current.x - dragState.startLocal.x;
+      const dy = current.y - dragState.startLocal.y;
+      if (!dragState.moved && Math.hypot(dx, dy) < 4) return;
+      dragState.moved = true;
       event.preventDefault();
-      event.stopPropagation();
+      event.stopImmediatePropagation();
       touchMoved = true;
       setLayerView(activeCluster, {
-        x: dragStart.view.x + dx,
-        y: dragStart.view.y + dy,
-        k: dragStart.view.k
+        x: dragState.view.x + dx,
+        y: dragState.view.y + dy,
+        k: dragState.view.k
       });
     }
   }, { capture: true, passive: false });
@@ -375,24 +421,31 @@
     pointers.delete(event.pointerId);
     if (!pointers.size) {
       activeCluster = null;
-      dragStart = null;
+      dragState = null;
       pinchState = null;
-      setTimeout(() => { touchMoved = false; }, 90);
+      setTimeout(() => { touchMoved = false; }, 120);
       return;
     }
+
     if (pointers.size === 1 && activeCluster) {
       const remaining = Array.from(pointers.values())[0];
       const view = { ...(layerViews.get(activeCluster.dataset.layerKey) || { x: 0, y: 0, k: 1 }) };
-      dragStart = { x: remaining.x, y: remaining.y, view, moved: true };
+      dragState = {
+        startLocal: localPoint(activeCluster, remaining.x, remaining.y),
+        view,
+        moved: true
+      };
       pinchState = null;
+    } else if (pointers.size >= 2 && activeCluster) {
+      startPinch(activeCluster);
     }
   }
 
-  window.addEventListener("pointerup", endPointer, { capture: true });
-  window.addEventListener("pointercancel", endPointer, { capture: true });
+  window.addEventListener("pointerup", endPointer, { capture: true, passive: false });
+  window.addEventListener("pointercancel", endPointer, { capture: true, passive: false });
 
-  // Horizontal wheel/trackpad movement pans the hovered layer. Ctrl/Command +
-  // wheel (including trackpad pinch gestures that surface as ctrl+wheel) zooms it.
+  // Horizontal wheel/trackpad movement pans a layer. Ctrl/Command + wheel (the
+  // usual browser representation of a trackpad pinch) zooms around the pointer.
   window.addEventListener("wheel", event => {
     const cluster = clusterFromTarget(event.target);
     if (!cluster) return;
@@ -403,12 +456,13 @@
       event.preventDefault();
       event.stopImmediatePropagation();
       const local = localPoint(cluster, event.clientX, event.clientY);
-      const factor = Math.exp(-event.deltaY * 0.0024);
-      const k = Math.max(0.6, Math.min(5, view.k * factor));
-      const ratio = k / view.k;
+      const factor = Math.exp(-event.deltaY * 0.0042);
+      const k = Math.max(0.35, Math.min(8, view.k * factor));
+      const anchorX = (local.x - view.x) / view.k;
+      const anchorY = (local.y - view.y) / view.k;
       setLayerView(cluster, {
-        x: local.x - (local.x - view.x) * ratio,
-        y: local.y - (local.y - view.y) * ratio,
+        x: local.x - anchorX * k,
+        y: local.y - anchorY * k,
         k
       });
       return;
@@ -425,7 +479,7 @@
   if (visualKey && !visualKey.querySelector(".layer-camera-key")) {
     const hint = document.createElement("span");
     hint.className = "layer-camera-key";
-    hint.textContent = "drag layer = pan · pinch / Ctrl+wheel = zoom";
+    hint.textContent = "drag = pan layer · pinch = zoom layer";
     visualKey.appendChild(hint);
   }
 
