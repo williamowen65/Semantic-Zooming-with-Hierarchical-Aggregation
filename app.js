@@ -42,29 +42,6 @@ const forestData = [
   { id: "energy", name: "Energy", color: "#766ac6", votes: 4300, rating: 4.5 }
 ];
 
-// Dense root-level stress-test data.
-[
-  ["water-access","Water Access",2900,4.4],["transport-access","Transport Access",2550,4.1],
-  ["digital-access","Digital Access",2250,4.3],["workforce","Workforce",2100,4.2],
-  ["aging","Aging Population",1950,4.0],["childcare","Childcare",1850,4.5],
-  ["mental-health","Mental Health",1750,4.6],["public-health","Public Health",1680,4.4],
-  ["disaster-risk","Disaster Risk",1600,4.5],["cybersecurity","Cybersecurity",1510,4.3],
-  ["privacy","Privacy",1430,4.2],["ai-governance","AI Governance",1360,4.5],
-  ["labor-rights","Labor Rights",1280,4.2],["income-security","Income Security",1210,4.4],
-  ["small-business","Small Business",1140,4.0],["rural-access","Rural Access",1080,4.3],
-  ["urban-growth","Urban Growth",1010,4.1],["land-use","Land Use",950,4.0],
-  ["waste","Waste",890,4.2],["air-quality","Air Quality",835,4.5],
-  ["water-quality","Water Quality",780,4.5],["ocean-health","Ocean Health",725,4.4],
-  ["forests","Forests",670,4.3],["soil-health","Soil Health",615,4.2],
-  ["animal-welfare","Animal Welfare",560,4.1],["consumer-protection","Consumer Protection",505,4.0],
-  ["data-rights","Data Rights",450,4.4],["civic-trust","Civic Trust",395,4.3],
-  ["local-media","Local Media",340,4.1],["language-access","Language Access",290,4.2],
-  ["accessibility","Accessibility",245,4.6],["community-space","Community Space",205,4.0]
-].forEach(([id,name,votes,rating], index) => forestData.push({ id, name, votes, rating, color: ["#71879a","#78909c","#6f8796","#7b8796"][index % 4] }));
-
-// Large, uneven branch populations for interaction/stress testing. These are
-// deterministic synthetic Atlas records: several non-climate roots get dozens
-// of siblings, with selected siblings branching two or three levels deeper.
 const bulkBranchSpecs = {
   infrastructure: ["Bridge Maintenance","Road Safety","Transit Reliability","Freight Capacity","Port Congestion","Airport Access","Sidewalk Gaps","Bike Network Gaps","Stormwater Capacity","Sewer Reliability","Drinking Water Systems","Grid Hardening","Broadband Backhaul","Public Building Repair","School Facilities","Hospital Infrastructure","Rail Modernization","Traffic Safety","Construction Backlog","Asset Monitoring","Rural Roads","Dam Safety","Levee Maintenance","Emergency Communications","Street Lighting","Utility Coordination","Permitting Delays","Capital Planning"],
   education: ["Early Childhood Access","Teacher Shortages","Special Education Capacity","School Attendance","Literacy Gaps","Math Achievement","Career Education","School Nutrition","Student Transportation","Counselor Capacity","School Safety","Digital Learning Access","College Affordability","Student Debt","Campus Housing","Adult Literacy","Credential Recognition","Apprenticeships","Workforce Alignment","Language Learners","Rural Schools","Arts Education","STEM Access","Library Access","Learning Recovery","Teacher Training","Class Size","Family Engagement"],
@@ -92,6 +69,9 @@ Object.entries(bulkBranchSpecs).forEach(([rootId,names],rootIndex)=>{
   });
   root.children=[...(root.children||[]),...additions];
 });
+
+// The root overview only represents topics that actually have hierarchy below them.
+for (let i=forestData.length-1;i>=0;i-=1) if(!forestData[i].children?.length) forestData.splice(i,1);
 
 const host = document.querySelector("#viz");
 const breadcrumbHost = document.querySelector("#breadcrumbs");
