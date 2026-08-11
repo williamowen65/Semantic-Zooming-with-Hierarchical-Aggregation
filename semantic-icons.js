@@ -1,7 +1,5 @@
-// Adds a redundant, color-independent semantic cue to every rendered cell.
-// Issues use a warning triangle with an exclamation mark.
-// Solutions use a circle with a check mark.
-// This wraps the existing renderer without changing layout, interaction, or color logic.
+// Adds redundant, color-independent semantic cues to every rendered cell
+// and a compact hierarchy depth indicator in the fixed UI.
 (() => {
   if (typeof renderCluster !== "function") return;
 
@@ -85,6 +83,47 @@
     return rendered;
   };
 
-  // Re-render once so icons appear immediately on the current view.
+  // Depth 0 is the all-roots overview. Selecting a root is depth 1,
+  // and each selected descendant adds one more level.
+  const toolbar = document.querySelector(".toolbar");
+  const reset = document.querySelector("#reset");
+  const depthIndicator = document.createElement("div");
+  depthIndicator.id = "depth-indicator";
+  depthIndicator.setAttribute("role", "status");
+  depthIndicator.setAttribute("aria-live", "polite");
+  depthIndicator.style.cssText = [
+    "display:inline-flex",
+    "align-items:center",
+    "justify-content:center",
+    "white-space:nowrap",
+    "border:1px solid rgba(27,43,61,.12)",
+    "background:rgba(255,255,255,.78)",
+    "color:#526070",
+    "border-radius:999px",
+    "padding:7px 10px",
+    "font-size:12px",
+    "font-weight:650"
+  ].join(";");
+
+  if (toolbar) {
+    if (reset) toolbar.insertBefore(depthIndicator, reset);
+    else toolbar.appendChild(depthIndicator);
+  }
+
+  function updateDepthIndicator() {
+    const depth = Array.isArray(focusPath) ? focusPath.length : 0;
+    depthIndicator.textContent = `Depth ${depth}`;
+    depthIndicator.setAttribute("aria-label", `Hierarchy depth ${depth}`);
+  }
+
+  const baseRenderBreadcrumbsForDepth = renderBreadcrumbs;
+  renderBreadcrumbs = function() {
+    baseRenderBreadcrumbsForDepth();
+    updateDepthIndicator();
+  };
+
+  updateDepthIndicator();
+
+  // Re-render once so icons and the current depth appear immediately.
   if (typeof render === "function") render();
 })();
