@@ -103,8 +103,6 @@
     });
 
     // Every Atlas content item is explicitly either an issue or a solution.
-    // The IDs remain stable, so semantic relabeling and recoloring do not change
-    // the Voronoi seed or spatial positions.
     const solutionIds = new Set([
       "adaptation", "resilience", "policy", "public-awareness", "finance",
       "border-policy", "refugee-support", "legal-pathways", "integration",
@@ -191,6 +189,47 @@
       return { root, polygon };
     };
 
+    // Draw each shared Voronoi edge as a gentle deterministic cubic Bezier.
+    // Because the control points are derived from a canonical version of the
+    // edge, neighboring cells traverse the exact same curve in opposite directions.
+    function edgeKeyPoint(point) {
+      return `${point[0].toFixed(3)},${point[1].toFixed(3)}`;
+    }
+
+    function curvedEdgeControls(a, b) {
+      const keyA = edgeKeyPoint(a);
+      const keyB = edgeKeyPoint(b);
+      const forward = keyA <= keyB;
+      const p0 = forward ? a : b;
+      const p1 = forward ? b : a;
+      const dx = p1[0] - p0[0];
+      const dy = p1[1] - p0[1];
+      const length = Math.hypot(dx, dy) || 1;
+      const nx = -dy / length;
+      const ny = dx / length;
+      const hashText = `${edgeKeyPoint(p0)}|${edgeKeyPoint(p1)}`;
+      let hash = 2166136261;
+      for (const ch of hashText) hash = Math.imul(hash ^ ch.charCodeAt(0), 16777619) >>> 0;
+      const sign = (hash & 1) ? 1 : -1;
+      const variation = 0.72 + ((hash >>> 1) % 29) / 100;
+      const amplitude = Math.min(10, Math.max(2.5, length * 0.075)) * variation * sign;
+      const c1 = [p0[0] + dx * 0.33 + nx * amplitude, p0[1] + dy * 0.33 + ny * amplitude];
+      const c2 = [p0[0] + dx * 0.67 - nx * amplitude * 0.72, p0[1] + dy * 0.67 - ny * amplitude * 0.72];
+      return forward ? [c1, c2] : [c2, c1];
+    }
+
+    polygonPath = function(poly) {
+      if (!poly || poly.length < 2) return "";
+      let d = `M${poly[0][0]},${poly[0][1]}`;
+      for (let i = 0; i < poly.length; i += 1) {
+        const a = poly[i];
+        const b = poly[(i + 1) % poly.length];
+        const [c1, c2] = curvedEdgeControls(a, b);
+        d += `C${c1[0]},${c1[1]} ${c2[0]},${c2[1]} ${b[0]},${b[1]}`;
+      }
+      return `${d}Z`;
+    };
+
     // Preserve full breadcrumb labels and auto-scroll only the breadcrumb strip
     // to its newest/rightmost item after each rebuild.
     const baseRenderBreadcrumbs = renderBreadcrumbs;
@@ -217,7 +256,7 @@
       requestAnimationFrame(() => scrollToDepth(targetDepth, true));
 
       statusHost.textContent = node.children?.length
-        ? `${node.name} selected. Scrolled to its ${node.children.length} child issues. Scroll upward to revisit ancestors.`
+        ? `${node.name} selected. Scrolled to its ${node.children.length} child items. Scroll upward to revisit ancestors.`
         : `${node.name} selected. This is a leaf node in the prototype. Scroll upward to revisit ancestors.`;
     };
 
