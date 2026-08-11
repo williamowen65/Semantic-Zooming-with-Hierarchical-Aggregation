@@ -1,5 +1,5 @@
 // Adds redundant, color-independent semantic cues to every rendered cell,
-// a compact hierarchy depth indicator, and keeps hierarchy connectors aimed
+// a viewport-aware hierarchy depth indicator, and keeps hierarchy connectors aimed
 // at selected cells rather than merely at the edge of their cluster.
 (() => {
   if (typeof renderCluster !== "function") return;
@@ -84,8 +84,9 @@
     return rendered;
   };
 
-  // Depth 0 is the all-roots overview. Selecting a root is depth 1,
-  // and each selected descendant adds one more level.
+  // The depth readout follows what is actually in the viewport rather than what
+  // was most recently selected. Depth 0 is the all-roots overview. Once a branch
+  // is expanded, each rendered hierarchy level is depth 1, 2, 3, ...
   const toolbar = document.querySelector(".toolbar");
   const reset = document.querySelector("#reset");
   const depthIndicator = document.createElement("div");
@@ -111,17 +112,58 @@
     else toolbar.appendChild(depthIndicator);
   }
 
-  function updateDepthIndicator() {
-    const depth = Array.isArray(focusPath) ? focusPath.length : 0;
+  function stageTranslateY() {
+    const node = stage?.node?.();
+    if (!node) return 0;
+
+    const consolidated = node.transform?.baseVal?.consolidate?.();
+    if (consolidated?.matrix) return consolidated.matrix.f;
+
+    const transform = node.getAttribute("transform") || "";
+    const match = transform.match(/translate\(\s*[-+\d.eE]+[,\s]+([-+\d.eE]+)\s*\)/);
+    return match ? Number(match[1]) : 0;
+  }
+
+  function viewportDepth() {
+    if (!Array.isArray(focusPath) || !focusPath.length || !Array.isArray(levelCenters) || !levelCenters.length) {
+      return 0;
+    }
+
+    // Match the camera's own target line so a level becomes the active depth when
+    // it reaches the same visual position used by click-to-child auto-scrolling.
+    const viewportProbeY = height * (width < 720 ? 0.48 : 0.5);
+    const worldProbeY = viewportProbeY - stageTranslateY();
+
+    let nearestIndex = 0;
+    let nearestDistance = Infinity;
+    levelCenters.forEach((center, index) => {
+      const distance = Math.abs(center - worldProbeY);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestIndex = index;
+      }
+    });
+
+    return nearestIndex + 1;
+  }
+
+  let displayedDepth = null;
+  function updateDepthIndicatorFromViewport() {
+    const depth = viewportDepth();
+    if (depth === displayedDepth) return;
+    displayedDepth = depth;
     depthIndicator.textContent = `Depth ${depth}`;
     depthIndicator.setAttribute("aria-label", `Hierarchy depth ${depth}`);
   }
 
-  const baseRenderBreadcrumbsForDepth = renderBreadcrumbs;
-  renderBreadcrumbs = function() {
-    baseRenderBreadcrumbsForDepth();
-    updateDepthIndicator();
-  };
+  // D3 changes the stage transform for manual scrolling, momentum, breadcrumb
+  // movement, and animated click-to-child travel. Observing that transform makes
+  // the depth indicator follow the camera itself instead of selection state.
+  const stageNode = stage?.node?.();
+  if (stageNode && typeof MutationObserver !== "undefined") {
+    const cameraObserver = new MutationObserver(updateDepthIndicatorFromViewport);
+    cameraObserver.observe(stageNode, { attributes: true, attributeFilter: ["transform"] });
+  }
 
   // Return the selected cell's centroid in the stage's world coordinates.
   function selectedPointForCluster(clusterNode) {
@@ -175,11 +217,12 @@
   render = function() {
     const result = baseRenderWithSelectedConnectors();
     retargetHierarchyLinksToSelections();
+    updateDepthIndicatorFromViewport();
     return result;
   };
 
-  updateDepthIndicator();
+  updateDepthIndicatorFromViewport();
 
-  // Re-render once so icons, depth, and selected-node connectors appear immediately.
+  // Re-render once so icons, viewport depth, and selected-node connectors appear immediately.
   if (typeof render === "function") render();
 })();
