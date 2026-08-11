@@ -48,9 +48,8 @@
     return next;
   }
 
-  // Labels and semantic icons grow naturally with the map until they reach a
-  // comfortable screen size, then counter-scale together. This keeps the two
-  // semantic cues visually proportional during pinch zoom.
+  // Treat icon + label as one annotation unit. Once typography reaches its
+  // screen-size cap, both size and spacing counter-scale around the label anchor.
   function updateLayerAnnotationScale(clusterNode, k) {
     const maxScreenFont = width < 720 ? 22 : 24;
     d3.select(clusterNode).selectAll("g.layer-content g.cell").each(function() {
@@ -68,7 +67,7 @@
         const iconX = Number(icon.attr("data-icon-x")) || 0;
         const iconY = Number(icon.attr("data-icon-y")) || 0;
         icon.attr("transform", localScale < 0.999
-          ? `translate(${iconX},${iconY}) scale(${localScale})`
+          ? `translate(${x},${y}) scale(${localScale}) translate(${iconX - x},${iconY - y})`
           : `translate(${iconX},${iconY})`);
       }
     });
