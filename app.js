@@ -144,8 +144,7 @@ function rootColor(node) {
 function lighten(hex, amount = 0.2) {
   const c = d3.color(hex);
   if (!c) return hex;
-  const white = d3.rgb(255, 255, 255);
-  return d3.interpolateRgb(c, white)(amount);
+  return d3.interpolateRgb(c, d3.rgb(255, 255, 255))(amount);
 }
 
 function compact(value) {
@@ -158,13 +157,7 @@ function polygonPath(poly) {
 }
 
 function outerPolygon(w, h) {
-  const cx = w / 2, cy = h / 2;
-  const rx = w / 2, ry = h / 2;
-  const points = 14;
-  return d3.range(points).map(i => {
-    const a = -Math.PI / 2 + i / points * Math.PI * 2;
-    return [cx + Math.cos(a) * rx, cy + Math.sin(a) * ry];
-  });
+  return [[0, 0], [w, 0], [w, h], [0, h]];
 }
 
 function layoutCluster(items, w, h, seedKey) {
@@ -176,10 +169,9 @@ function layoutCluster(items, w, h, seedKey) {
   const root = d3.hierarchy({ children: proxies }).sum(d => d.weight || 0);
   const polygon = outerPolygon(w, h);
   const seed = Array.from(seedKey).reduce((a, c) => ((a * 31 + c.charCodeAt(0)) >>> 0), 2166136261) / 4294967296;
-  const layout = d3.voronoiTreemap()
+  d3.voronoiTreemap()
     .clip(polygon)
-    .prng(d3.randomLcg(seed || 0.42));
-  layout(root);
+    .prng(d3.randomLcg(seed || 0.42))(root);
   return { root, polygon };
 }
 
@@ -247,7 +239,7 @@ function renderCluster({ items, x, y, w, h, selectedId = null, faded = false, in
     const [cx, cy] = d3.polygonCentroid(d.polygon);
     const area = Math.abs(d3.polygonArea(d.polygon));
     const selected = item.id === selectedId;
-    const fontSize = Math.max(9, Math.min(17, Math.sqrt(area) / 8.5));
+    const fontSize = Math.max(9, Math.min(18, Math.sqrt(area) / 8.5));
     const maxChars = Math.max(9, Math.floor(Math.sqrt(area) / 5.6));
     const lines = wrapLabel(item.name, maxChars);
     const text = d3.select(this).append("text")
@@ -257,6 +249,7 @@ function renderCluster({ items, x, y, w, h, selectedId = null, faded = false, in
       .attr("text-anchor", "middle")
       .style("font-size", `${fontSize}px`)
       .style("font-weight", selected ? 750 : 620);
+
     lines.forEach((line, i) => {
       text.append("tspan")
         .attr("x", cx)
@@ -296,9 +289,10 @@ function pathForNode(id) {
 function cameraBounds() {
   const toolbarAllowance = width < 720 ? 118 : 78;
   const bottomAllowance = 54;
-  const min = Math.min(0, height - worldHeight - bottomAllowance);
-  const max = Math.max(0, toolbarAllowance - 20);
-  return { min, max };
+  return {
+    min: Math.min(0, height - worldHeight - bottomAllowance),
+    max: Math.max(0, toolbarAllowance - 20)
+  };
 }
 
 function clampCamera(value) {
@@ -347,6 +341,7 @@ function panToBreadcrumb(index) {
 
 function renderBreadcrumbs() {
   breadcrumbHost.replaceChildren();
+
   const all = document.createElement("button");
   all.type = "button";
   all.textContent = "All roots";
@@ -378,14 +373,13 @@ function selectedCentroid(rendered, id, x, y) {
 }
 
 function levelGeometry(compactMobile, contentTop) {
-  const sideGutter = compactMobile ? 8 : Math.max(12, Math.min(30, width * 0.018));
-  const w = Math.max(260, width - sideGutter * 2);
+  const w = width;
   const availableViewport = Math.max(360, height - contentTop - 72);
   const h = Math.max(
-    compactMobile ? 320 : 380,
-    Math.min(availableViewport * 0.88, w * (compactMobile ? 0.72 : 0.48))
+    compactMobile ? 340 : 420,
+    Math.min(availableViewport * 0.92, compactMobile ? width * 0.9 : width * 0.38)
   );
-  return { sideGutter, w, h };
+  return { x: 0, w, h };
 }
 
 function render() {
@@ -405,13 +399,14 @@ function render() {
     cameraY = 0;
     worldHeight = height;
     stage.attr("transform", "translate(0,0)");
-    const clusterW = geometry.w;
-    const clusterH = geometry.h;
-    const x = geometry.sideGutter;
-    const y = contentTop + 18;
+
+    const y = contentTop;
     renderCluster({
       items: forestData,
-      x, y, w: clusterW, h: clusterH,
+      x: 0,
+      y,
+      w: geometry.w,
+      h: geometry.h,
       selectedId: null,
       faded: false,
       interactive: true,
@@ -421,7 +416,7 @@ function render() {
     stage.append("text")
       .attr("class", "canvas-caption")
       .attr("x", centerX)
-      .attr("y", Math.min(height - 22, y + clusterH + 32))
+      .attr("y", Math.min(height - 22, y + geometry.h + 32))
       .attr("text-anchor", "middle")
       .text("Choose any root issue to focus its hierarchy");
     return;
@@ -429,15 +424,16 @@ function render() {
 
   const clusterW = geometry.w;
   const clusterH = geometry.h;
-  const clusterX = geometry.sideGutter;
-  const levelGap = compactMobile ? 150 : 180;
-  const startY = contentTop + 18;
+  const clusterX = 0;
+  const levelGap = compactMobile ? 160 : 190;
+  const startY = contentTop;
   let previousSelectedPoint = null;
   let cursorY = startY;
 
   focusPath.forEach((id, index) => {
     const selected = nodeById.get(id);
     const siblings = siblingSet(selected);
+
     const rendered = renderCluster({
       items: siblings,
       x: clusterX,
@@ -472,9 +468,6 @@ function render() {
 
   const selected = currentNode();
   if (selected?.children?.length) {
-    const childW = geometry.w;
-    const childH = geometry.h;
-    const childX = geometry.sideGutter;
     const childY = cursorY;
 
     if (previousSelectedPoint) {
@@ -491,32 +484,32 @@ function render() {
 
     renderCluster({
       items: selected.children,
-      x: childX,
+      x: 0,
       y: childY,
-      w: childW,
-      h: childH,
+      w: geometry.w,
+      h: geometry.h,
       selectedId: null,
       faded: false,
       interactive: true,
       className: "child-cluster"
     });
 
-    levelCenters.push(childY + childH / 2);
+    levelCenters.push(childY + geometry.h / 2);
     stage.append("text")
       .attr("class", "canvas-caption")
       .attr("x", centerX)
-      .attr("y", childY + childH + 32)
+      .attr("y", childY + geometry.h + 32)
       .attr("text-anchor", "middle")
       .text(`Click a child of ${selected.name} to continue down`);
-    worldHeight = childY + childH + 90;
+    worldHeight = childY + geometry.h + 90;
   } else {
     stage.append("text")
       .attr("class", "leaf-message")
       .attr("x", centerX)
-      .attr("y", cursorY - levelGap + 60)
+      .attr("y", cursorY - levelGap + 58)
       .attr("text-anchor", "middle")
       .text("Leaf node · scroll upward or use a breadcrumb to revisit an ancestor");
-    worldHeight = cursorY - levelGap + 120;
+    worldHeight = cursorY - levelGap + 118;
   }
 
   applyCamera(false);
