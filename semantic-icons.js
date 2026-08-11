@@ -3,7 +3,6 @@
 // navigation, and independent content-aware pan/zoom cameras for each hierarchy layer.
 (() => {
   if (typeof renderCluster !== "function") return;
-
   const baseRenderClusterWithSemanticIcons = renderCluster;
   const layerViews = new Map();
   let clipSerial = 0;
@@ -21,8 +20,7 @@
       icon.append("circle").attr("r", size * 0.62).attr("fill", "rgba(255,255,255,.94)").attr("stroke", "#1f2937").attr("stroke-width", Math.max(1.5, size * 0.11)).attr("vector-effect", "non-scaling-stroke");
       icon.append("path").attr("d", `M${-size * 0.28},${size * 0.02} L${-size * 0.06},${size * 0.26} L${size * 0.34},${-size * 0.24}`).attr("fill", "none").attr("stroke", "#1f2937").attr("stroke-width", Math.max(1.7, size * 0.13)).attr("stroke-linecap", "round").attr("stroke-linejoin", "round").attr("vector-effect", "non-scaling-stroke");
     } else {
-      const r = size * 0.72;
-      const points = [[0, -r], [r * 0.88, r * 0.64], [-r * 0.88, r * 0.64]];
+      const r = size * 0.72, points = [[0, -r], [r * 0.88, r * 0.64], [-r * 0.88, r * 0.64]];
       icon.append("path").attr("d", `M${points[0][0]},${points[0][1]} L${points[1][0]},${points[1][1]} L${points[2][0]},${points[2][1]} Z`).attr("fill", "rgba(255,255,255,.94)").attr("stroke", "#1f2937").attr("stroke-width", Math.max(1.5, size * 0.11)).attr("stroke-linejoin", "round").attr("vector-effect", "non-scaling-stroke");
       icon.append("line").attr("x1", 0).attr("x2", 0).attr("y1", -size * 0.29).attr("y2", size * 0.13).attr("stroke", "#1f2937").attr("stroke-width", Math.max(1.7, size * 0.13)).attr("stroke-linecap", "round").attr("vector-effect", "non-scaling-stroke");
       icon.append("circle").attr("cx", 0).attr("cy", size * 0.34).attr("r", Math.max(1.2, size * 0.08)).attr("fill", "#1f2937");
@@ -30,12 +28,7 @@
   }
 
   function layerKey(options) { return (options.items || []).map(item => item.id).join("|") || options.className || "layer"; }
-
-  // Scale 1 is always the true overview: the complete layer fits in its rectangle.
-  // Small cells may be visually tiny here; readability/touchability is gained by
-  // zooming in rather than by forcing the whole layer to start enlarged.
   function minimumLayerScale() { return 1; }
-
   function centeredView(w, h, k) { return { k, x: (w - w * k) / 2, y: (h - h * k) / 2 }; }
 
   function clampLayerView(view, w, h, minK = 1) {
@@ -43,11 +36,24 @@
     next.k = Math.max(minK, Math.min(8, Number(next.k) || minK));
     const scaledW = w * next.k, scaledH = h * next.k;
     const minX = w - scaledW, minY = h - scaledH;
-    if (scaledW <= w + 0.5) next.x = (w - scaledW) / 2;
-    else next.x = Math.max(minX, Math.min(0, Number(next.x) || 0));
-    if (scaledH <= h + 0.5) next.y = (h - scaledH) / 2;
-    else next.y = Math.max(minY, Math.min(0, Number(next.y) || 0));
+    if (scaledW <= w + 0.5) next.x = (w - scaledW) / 2; else next.x = Math.max(minX, Math.min(0, Number(next.x) || 0));
+    if (scaledH <= h + 0.5) next.y = (h - scaledH) / 2; else next.y = Math.max(minY, Math.min(0, Number(next.y) || 0));
     return next;
+  }
+
+  // Let labels grow with zoom until they reach a comfortable reading size, then
+  // counter-scale them around their own anchor point. This preserves the spatial
+  // zoom while preventing the giant, overlapping typography seen at high pinch zoom.
+  function updateLayerLabelScale(clusterNode, k) {
+    const maxScreenFont = width < 720 ? 22 : 24;
+    d3.select(clusterNode).selectAll("g.layer-content text.cell-label").each(function() {
+      const text = d3.select(this);
+      const baseFont = parseFloat(text.style("font-size")) || 12;
+      const localScale = Math.min(1, maxScreenFont / Math.max(baseFont * k, 1));
+      const x = Number(text.attr("x")) || 0;
+      const y = Number(text.attr("y")) || 0;
+      text.attr("transform", localScale < 0.999 ? `translate(${x},${y}) scale(${localScale}) translate(${-x},${-y})` : null);
+    });
   }
 
   function applyLayerView(clusterNode) {
@@ -57,6 +63,7 @@
     const view = clampLayerView(layerViews.get(key) || fallback, w, h, minK);
     layerViews.set(key, view);
     d3.select(clusterNode).select("g.layer-content").attr("transform", `translate(${view.x},${view.y}) scale(${view.k})`);
+    updateLayerLabelScale(clusterNode, view.k);
   }
 
   function makeLayerViewport(rendered, options) {
