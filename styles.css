@@ -73,13 +73,16 @@ button { font: inherit; }
 #viz { width: 100vw; height: 100vh; }
 svg { display: block; width: 100%; height: 100%; }
 
+/* Each rectangle owns its touch gestures for local pan/pinch. */
+.cluster { touch-action: none; }
 .cluster-outline {
   fill: rgba(255,255,255,.28);
   stroke: rgba(30,48,67,.10);
   stroke-width: 1.2;
   vector-effect: non-scaling-stroke;
 }
-.cell { cursor: pointer; }
+.cell { cursor: grab; }
+.cell:active { cursor: grabbing; }
 .cell-shape {
   stroke: rgba(255,255,255,.96);
   stroke-width: 4;
