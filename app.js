@@ -322,7 +322,7 @@ function applyCamera(animate = false) {
 function scrollToDepth(index, animate = true) {
   if (!levelCenters.length) return;
   const safeIndex = Math.max(0, Math.min(levelCenters.length - 1, index));
-  const viewportTarget = height * (width < 720 ? 0.42 : 0.46);
+  const viewportTarget = height * (width < 720 ? 0.48 : 0.5);
   cameraY = viewportTarget - levelCenters[safeIndex];
   applyCamera(animate);
 }
@@ -377,6 +377,17 @@ function selectedCentroid(rendered, id, x, y) {
   return { x: x + cx, y: y + cy };
 }
 
+function levelGeometry(compactMobile, contentTop) {
+  const sideGutter = compactMobile ? 8 : Math.max(12, Math.min(30, width * 0.018));
+  const w = Math.max(260, width - sideGutter * 2);
+  const availableViewport = Math.max(360, height - contentTop - 72);
+  const h = Math.max(
+    compactMobile ? 320 : 380,
+    Math.min(availableViewport * 0.88, w * (compactMobile ? 0.72 : 0.48))
+  );
+  return { sideGutter, w, h };
+}
+
 function render() {
   width = host.clientWidth;
   height = host.clientHeight;
@@ -388,16 +399,16 @@ function render() {
   const compactMobile = width < 720;
   const contentTop = compactMobile ? 132 : 98;
   const centerX = width / 2;
+  const geometry = levelGeometry(compactMobile, contentTop);
 
   if (!focusPath.length) {
     cameraY = 0;
     worldHeight = height;
     stage.attr("transform", "translate(0,0)");
-    const usableHeight = Math.max(420, height - contentTop - 62);
-    const clusterW = Math.min(width * (compactMobile ? .9 : .66), 780);
-    const clusterH = Math.min(usableHeight * .8, clusterW * .72);
-    const x = centerX - clusterW / 2;
-    const y = contentTop + Math.max(10, (usableHeight - clusterH) * .38);
+    const clusterW = geometry.w;
+    const clusterH = geometry.h;
+    const x = geometry.sideGutter;
+    const y = contentTop + 18;
     renderCluster({
       items: forestData,
       x, y, w: clusterW, h: clusterH,
@@ -410,16 +421,16 @@ function render() {
     stage.append("text")
       .attr("class", "canvas-caption")
       .attr("x", centerX)
-      .attr("y", y + clusterH + 34)
+      .attr("y", Math.min(height - 22, y + clusterH + 32))
       .attr("text-anchor", "middle")
       .text("Choose any root issue to focus its hierarchy");
     return;
   }
 
-  const clusterW = Math.min(width * (compactMobile ? .86 : .52), 620);
-  const clusterH = Math.max(230, Math.min(clusterW * .62, compactMobile ? 390 : 340));
-  const clusterX = centerX - clusterW / 2;
-  const levelGap = compactMobile ? 128 : 150;
+  const clusterW = geometry.w;
+  const clusterH = geometry.h;
+  const clusterX = geometry.sideGutter;
+  const levelGap = compactMobile ? 150 : 180;
   const startY = contentTop + 18;
   let previousSelectedPoint = null;
   let cursorY = startY;
@@ -444,9 +455,10 @@ function render() {
 
     if (previousSelectedPoint && point) {
       const topY = cursorY;
+      const midY = (previousSelectedPoint.y + topY) / 2;
       stage.insert("path", ".cluster")
         .attr("class", "hierarchy-link")
-        .attr("d", `M${previousSelectedPoint.x},${previousSelectedPoint.y + 22} C${previousSelectedPoint.x},${previousSelectedPoint.y + 64} ${point.x},${topY - 48} ${point.x},${topY}`);
+        .attr("d", `M${previousSelectedPoint.x},${previousSelectedPoint.y + 22} C${previousSelectedPoint.x},${midY} ${point.x},${midY} ${point.x},${topY}`);
       stage.insert("circle", ".cluster")
         .attr("class", "link-dot")
         .attr("cx", point.x)
@@ -460,15 +472,16 @@ function render() {
 
   const selected = currentNode();
   if (selected?.children?.length) {
-    const childW = Math.min(width * (compactMobile ? .9 : .58), 690);
-    const childH = Math.max(250, Math.min(childW * .66, compactMobile ? 420 : 390));
-    const childX = centerX - childW / 2;
+    const childW = geometry.w;
+    const childH = geometry.h;
+    const childX = geometry.sideGutter;
     const childY = cursorY;
 
     if (previousSelectedPoint) {
+      const midY = (previousSelectedPoint.y + childY) / 2;
       stage.insert("path", ".cluster")
         .attr("class", "hierarchy-link")
-        .attr("d", `M${previousSelectedPoint.x},${previousSelectedPoint.y + 22} C${previousSelectedPoint.x},${previousSelectedPoint.y + 66} ${centerX},${childY - 48} ${centerX},${childY}`);
+        .attr("d", `M${previousSelectedPoint.x},${previousSelectedPoint.y + 22} C${previousSelectedPoint.x},${midY} ${centerX},${midY} ${centerX},${childY}`);
       stage.insert("circle", ".cluster")
         .attr("class", "link-dot")
         .attr("cx", centerX)
@@ -492,18 +505,18 @@ function render() {
     stage.append("text")
       .attr("class", "canvas-caption")
       .attr("x", centerX)
-      .attr("y", childY + childH + 30)
+      .attr("y", childY + childH + 32)
       .attr("text-anchor", "middle")
       .text(`Click a child of ${selected.name} to continue down`);
-    worldHeight = childY + childH + 86;
+    worldHeight = childY + childH + 90;
   } else {
     stage.append("text")
       .attr("class", "leaf-message")
       .attr("x", centerX)
-      .attr("y", cursorY - levelGap + 58)
+      .attr("y", cursorY - levelGap + 60)
       .attr("text-anchor", "middle")
       .text("Leaf node · scroll upward or use a breadcrumb to revisit an ancestor");
-    worldHeight = cursorY - levelGap + 118;
+    worldHeight = cursorY - levelGap + 120;
   }
 
   applyCamera(false);
