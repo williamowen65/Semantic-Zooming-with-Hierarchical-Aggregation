@@ -32,5 +32,27 @@
   <script src="https://cdn.jsdelivr.net/npm/d3-voronoi-map@2.1.1/build/d3-voronoi-map.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/d3-voronoi-treemap@1.1.2/build/d3-voronoi-treemap.min.js"></script>
   <script src="app.js"></script>
+  <script>
+    // Keep a sibling cluster's geometry stable when focus changes.
+    // Selection is visual state only; it must not participate in the Voronoi seed.
+    layoutCluster = function(items, w, h) {
+      const proxies = items.map(item => ({
+        id: item.id,
+        item,
+        weight: Math.max(1, aggregateScore(item))
+      }));
+      const root = d3.hierarchy({ children: proxies }).sum(d => d.weight || 0);
+      const polygon = outerPolygon(w, h);
+      const stableKey = items.map(item => item.id).join("-");
+      const seed = Array.from(stableKey).reduce(
+        (a, c) => ((a * 31 + c.charCodeAt(0)) >>> 0),
+        2166136261
+      ) / 4294967296;
+      d3.voronoiTreemap()
+        .clip(polygon)
+        .prng(d3.randomLcg(seed || 0.42))(root);
+      return { root, polygon };
+    };
+  </script>
 </body>
 </html>
