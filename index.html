@@ -53,6 +53,27 @@
         .prng(d3.randomLcg(seed || 0.42))(root);
       return { root, polygon };
     };
+
+    // Clicking a node drills into the hierarchy and automatically moves the
+    // camera to the newly revealed child section. Manual wheel/swipe remains
+    // available so the user can travel back up or inspect the path at will.
+    focusNode = function(id) {
+      const node = nodeById.get(id);
+      if (!node) return;
+
+      focusPath = pathForNode(id);
+      render();
+
+      const targetDepth = node.children?.length
+        ? focusPath.length
+        : focusPath.length - 1;
+
+      requestAnimationFrame(() => scrollToDepth(targetDepth, true));
+
+      statusHost.textContent = node.children?.length
+        ? `${node.name} selected. Scrolled to its ${node.children.length} child issues. Scroll upward to revisit ancestors.`
+        : `${node.name} selected. This is a leaf node in the prototype. Scroll upward to revisit ancestors.`;
+    };
   </script>
 </body>
 </html>
