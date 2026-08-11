@@ -1,35 +1,90 @@
 # Semantic Zooming with Hierarchical Aggregation
 
-A D3.js v7 prototype that blends **circle-based hierarchical aggregation** with a **tree-style detail view**.
+A D3.js v7 prototype exploring how to keep a large forest of independent hierarchies understandable at multiple scales.
 
-The goal is to keep a large forest of independent hierarchies understandable at multiple scales without making the user mentally switch between unrelated layouts.
+The current implementation began with **circle-based hierarchical aggregation** and a **tree-style detail view**, but the design direction is evolving toward a more focused clustered hierarchy that preserves depth, reduces visual clutter, and makes backtracking easier.
 
 ## Core idea
 
-Each root hierarchy owns a stable circular territory. At a distance, that territory behaves like an aggregate bubble. Root territories are positioned with a force simulation, with cross-tree relationships pulling related roots somewhat closer together.
+At the highest level, root issues are packed together in a tight cluster, similar to a bubble or packed-circle chart. Their size can reflect the aggregate importance, count, or total weight of everything beneath them.
 
-When the user zooms in, the aggregate shell fades and a radial tree appears **inside the same territory**. This preserves spatial context while changing the level of semantic detail.
+When a user selects one root issue, the visualization focuses on that issue's hierarchy. Parent/child direction stays consistent: parents remain above, children appear below. Siblings are grouped together in compact clusters rather than spread across long horizontal rows.
 
-Cross-tree links also change meaning with zoom:
+As the user zooms in, only the selected branch is expanded. Other sibling branches can be hidden once the user drills into one child. This preserves hierarchy while avoiding the readability problems that appear when every branch remains visible at once.
 
-- **Bubble mode:** links terminate at the boundary of the relevant root aggregate.
-- **Tree mode:** links terminate at the boundary of their specific source and target nodes.
+The intended interaction is roughly:
 
-This makes the same relationship readable at both macro and micro scales.
+1. **All root issues** are shown together in a packed cluster.
+2. Selecting one root focuses the visualization on that root and shows its direct children as a compact cluster beneath it.
+3. Selecting one child hides unrelated sibling branches and reveals that child's children as a new cluster beneath it.
+4. The same pattern repeats until individual leaf nodes are reached.
+5. Zooming back out naturally restores higher-level context and eventually returns to the packed root cluster.
 
-## Features
+## Current design direction: focused hierarchy + relationship overlay
+
+The visualization has two different jobs, and they should not compete with each other:
+
+1. **Understand the hierarchy of the currently selected issue.**
+2. **Understand how that issue relates to the larger Atlas network.**
+
+The clustered drill-down view should primarily solve the first problem. It should remain structurally stable and easy to read rather than trying to display the entire network at once.
+
+Cross-tree relationships should therefore be treated as an **overlay on top of the hierarchy**, not as forces that determine node position.
+
+A useful design rule is:
+
+> **Hierarchy determines position. Relationships do not.**
+
+Parent/child relationships determine where nodes live in the clustered tree. Other relationships such as `related to`, `supports`, `depends on`, or `conflicts with` should be shown separately through styling, boundary indicators, or relationship overlays.
+
+### Showing that other root issues exist
+
+When the user is focused on one root tree, the interface should still communicate that other root-level issues exist without rendering all of their trees.
+
+For example, while viewing **Climate Change**, subtle peripheral indicators could represent roots such as **Education**, **Housing**, **Energy**, or **Economy**. These indicators act as context: they tell the user that the focused tree is part of a larger graph.
+
+The other root trees do not need to stay expanded. If the user wants to switch context, selecting one of these indicators can focus that root, while zooming fully out returns to the complete root cluster.
+
+### Aggregating cross-root relationships
+
+Cross-tree relationships can use the same semantic aggregation principle as the hierarchy itself.
+
+For example, suppose a deep node under Climate Change has several `related to` links into the Housing tree. If Housing is not expanded, the visualization does not need to draw lines to hidden individual Housing nodes. Instead, those relationships can aggregate upward into a compact Housing indicator such as:
+
+```text
+Housing · 7 relationships
+```
+
+As the user zooms deeper into the Climate Change branch, the relationship summary can become more specific. At a high level, Climate Change might have 23 relationships to Education. At a deeper level, the visualization might show that 15 originate under Policy, five under Adaptation, and three under Mitigation. At the leaf level, the exact node-to-node relationships can finally be drawn.
+
+This allows relationship detail to become more precise as hierarchy detail becomes more precise, without destroying the stable clustered layout.
+
+### Visual encoding goals
+
+The styling should communicate information rather than act as decoration. A useful visual vocabulary is:
+
+- **Position** = hierarchical parent/child structure.
+- **Containment / clustering** = sibling groups and subtree membership.
+- **Size** = aggregate descendant count, weight, or importance.
+- **Peripheral markers** = other root trees outside the currently focused hierarchy.
+- **Line treatment / color / badges** = cross-tree relationship type and strength.
+- **Visibility** = semantic zoom level and selected branch.
+
+This should allow the visualization to remain readable as a hierarchy while still communicating that the focused issue is connected to a much larger network.
+
+## Features being explored
 
 - D3 v7 + SVG
 - Multiple independent root trees (`forestData`)
-- Arbitrary cross-tree relationships (`crossLinks`)
-- Force-directed macro layout of root territories
-- Packed hierarchy used to size aggregate territories
-- Radial tree detail layout inside each territory
-- Semantic zoom with animated LOD transition
-- Cross-link endpoint re-anchoring as LOD changes
-- Curved cross-tree links anchored to node/circle perimeters rather than centers
-- Hover highlighting across trees
-- Click-to-focus on root bubbles and internal parent nodes
+- Packed root-level overview
+- Compact clustered sibling groups
+- Consistent top-to-bottom hierarchy direction
+- Branch-focused semantic zoom
+- Aggregate node sizing
+- Cross-tree relationship aggregation
+- Peripheral root indicators while focused on one tree
+- Progressive relationship detail as the user zooms deeper
+- Click-to-focus and zoom-out-to-backtrack interaction
 
 ## Data shape
 
@@ -61,33 +116,23 @@ python -m http.server 8000
 
 Then open `http://localhost:8000`.
 
-## Architecture notes
+## Earlier implementation notes
 
-### Macro layout
+The first prototype treated each root hierarchy as a circular aggregate territory. A force simulation positioned root territories, and a radial tree appeared inside each territory once the user crossed a zoom threshold.
 
-Each root hierarchy becomes one compound force node. Its collision radius is derived from the total value of the hierarchy. Cross-tree relationships are reduced to root-to-root force links for the macro simulation.
+That version demonstrated useful ideas around aggregate sizing, semantic zoom, and cross-link re-anchoring, but it did not preserve the hierarchical reading pattern as clearly as desired. In particular, switching between packed bubbles and radial trees made it harder to maintain the simple rule that **up means parent and down means child**.
 
-### Micro layout
+The newer direction keeps the good parts of clustering and aggregation while making the hierarchy itself the stable spatial structure.
 
-The hierarchy is processed twice:
+## Next experiment
 
-1. `d3.pack()` calculates aggregate sizing and establishes the root territory.
-2. `d3.tree()` calculates a radial detail layout that fits inside the same territory.
+The next prototype should replace the current radial-tree detail view with the focused clustered hierarchy described above:
 
-The radial detail view is intentionally not a separate screen or a completely different spatial arrangement.
+- packed root cluster at the outermost zoom level;
+- one selected root shown above a compact cluster of its direct children;
+- only one selected branch expanded at a time;
+- deeper child clusters appearing beneath the selected node;
+- aggregate sizing preserved at every level;
+- cross-root relationships shown as summarized peripheral overlays rather than layout-driving links.
 
-### Semantic zoom
-
-The default detail threshold is:
-
-```js
-cfg.threshold = 1.65;
-```
-
-Below the threshold, the root aggregate shell and summary label dominate. Above it, the shell fades and tree nodes, tree links, and detailed labels become visible.
-
-### Next experiment
-
-The current prototype has one principal bubble/tree threshold. The next useful step is **multi-stage hierarchical LOD**: root only → first-level branches → second-level branches → leaves. That should scale much better for the deeper structures this architecture is intended to support.
-
-For very large relationship sets, another useful step is moving cross-link rendering to Canvas while retaining SVG for nodes and labels.
+Once that interaction feels correct, the next design problem is to establish a clear visual language for relationship type, relationship strength, hidden external roots, and transitions between aggregated and exact relationships.
