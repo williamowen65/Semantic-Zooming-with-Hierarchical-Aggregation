@@ -10,15 +10,37 @@
   function appendSemanticIcon(cell, datum) {
     const item = datum?.data?.item;
     if (!item || !datum.polygon?.length) return;
-    const [cx, cy] = d3.polygonCentroid(datum.polygon);
-    const area = Math.abs(d3.polygonArea(datum.polygon));
-    const size = Math.max(11, Math.min(20, Math.sqrt(area) / 10));
-    const offset = Math.max(18, Math.min(34, Math.sqrt(area) * 0.12));
-    const iconY = cy - offset;
+
+    // The base renderer has already created the SVG label. Measure that actual
+    // rendered first line and derive the icon position from it, so there is one
+    // authoritative layout path rather than a later corrective positioning pass.
+    const text = cell.select("text.cell-label");
+    const firstLine = text.select("tspan");
+    const baseFont = parseFloat(text.style("font-size")) || 12;
+    const size = Math.max(9, Math.min(16, baseFont * 0.78));
+    const gap = Math.max(3, baseFont * 0.28);
+
+    let lineBox = null;
+    try { lineBox = firstLine.empty() ? text.node()?.getBBox?.() : firstLine.node()?.getBBox?.(); } catch (_) {}
+    const fallbackX = Number(text.attr("x")) || d3.polygonCentroid(datum.polygon)[0];
+    const fallbackY = Number(text.attr("y")) || d3.polygonCentroid(datum.polygon)[1];
+    const lineLeft = lineBox && Number.isFinite(lineBox.x) ? lineBox.x : fallbackX;
+    const lineTop = lineBox && Number.isFinite(lineBox.y) ? lineBox.y : fallbackY - baseFont * 0.78;
+
+    // The icon's visual top aligns with the label's visual top. Its right edge is
+    // separated from the first line by a small font-relative margin.
+    const issueRadius = size * 0.72;
+    const issueRightExtent = issueRadius * 0.88;
+    const solutionRadius = size * 0.62;
+    const rightExtent = item.kind === "solution" ? solutionRadius : issueRightExtent;
+    const topExtent = item.kind === "solution" ? solutionRadius : issueRadius;
+    const iconX = lineLeft - gap - rightExtent;
+    const iconY = lineTop + topExtent;
+
     const icon = cell.append("g")
       .attr("class", `semantic-kind-icon semantic-kind-${item.kind || "issue"}`)
-      .attr("transform", `translate(${cx},${iconY})`)
-      .attr("data-icon-x", cx)
+      .attr("transform", `translate(${iconX},${iconY})`)
+      .attr("data-icon-x", iconX)
       .attr("data-icon-y", iconY)
       .attr("data-icon-size", size)
       .attr("aria-hidden", "true")
@@ -160,10 +182,12 @@
       const dx = anchorX - originalX, dy = anchorY - originalY;
       text.attr("transform", `translate(${dx},${dy}) translate(${originalX},${originalY}) scale(${localScale}) translate(${-originalX},${-originalY})`);
 
+      // The icon uses the same anchor and localScale as the label. Its only offset
+      // is the measured base offset established by appendSemanticIcon().
       const icon = cell.select("g.semantic-kind-icon");
       if (!icon.empty()) {
-        const iconX = Number(icon.attr("data-icon-x")) || 0;
-        const iconY = Number(icon.attr("data-icon-y")) || 0;
+        const iconX = Number(icon.attr("data-icon-x")) || originalX;
+        const iconY = Number(icon.attr("data-icon-y")) || originalY;
         icon.attr("transform", `translate(${anchorX},${anchorY}) scale(${localScale}) translate(${iconX - originalX},${iconY - originalY})`);
       }
     });
