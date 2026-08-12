@@ -11,21 +11,12 @@
   ];
 
   const storageKey = "atlas-theme";
-  const toolbar = document.querySelector(".toolbar");
-  if (!toolbar) return;
+  const control = document.querySelector("#theme-control");
+  const trigger = control?.querySelector(".theme-trigger");
+  const menu = control?.querySelector(".theme-menu");
+  if (!control || !trigger || !menu) return;
 
-  const control = document.createElement("div");
-  control.className = "theme-control";
-  control.innerHTML = `
-    <button class="theme-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="theme-menu">
-      <span aria-hidden="true">◐</span><span>Theme</span>
-    </button>
-    <div id="theme-menu" class="theme-menu" role="menu" aria-label="Atlas theme" hidden></div>`;
-  document.body.appendChild(control);
-
-  const trigger = control.querySelector(".theme-trigger");
-  const menu = control.querySelector(".theme-menu");
-
+  menu.replaceChildren();
   themes.forEach(theme => {
     const button = document.createElement("button");
     button.type = "button";
@@ -47,7 +38,9 @@
     });
   }
 
-  let current = themes.find(t => t.id === localStorage.getItem(storageKey)) || themes.find(t => t.id === "calm-earthy") || themes[0];
+  let saved = null;
+  try { saved = localStorage.getItem(storageKey); } catch (_) {}
+  let current = themes.find(t => t.id === saved) || themes.find(t => t.id === "calm-earthy") || themes[0];
 
   function applyTheme(id, persist = true) {
     current = themes.find(t => t.id === id) || themes[0];
@@ -60,7 +53,9 @@
     });
     trigger.setAttribute("aria-label", `Theme: ${current.name}`);
     applyFontScale(current);
-    if (persist) localStorage.setItem(storageKey, current.id);
+    if (persist) {
+      try { localStorage.setItem(storageKey, current.id); } catch (_) {}
+    }
   }
 
   function closeMenu() {
