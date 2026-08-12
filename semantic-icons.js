@@ -1,59 +1,10 @@
-// Adds redundant, color-independent semantic cues to every rendered cell,
-// viewport-aware hierarchy depth, selected-cell connectors, all-roots breadcrumb
+// Adds viewport-aware hierarchy depth, selected-cell connectors, all-roots breadcrumb
 // navigation, and independent content-aware pan/zoom cameras for each hierarchy layer.
 (() => {
   if (typeof renderCluster !== "function") return;
   const baseRenderClusterWithSemanticIcons = renderCluster;
   const layerViews = new Map();
   let clipSerial = 0;
-
-  function appendSemanticIcon(cell, datum) {
-    const item = datum?.data?.item;
-    if (!item || !datum.polygon?.length) return;
-
-    const text = cell.select("text.cell-label");
-    if (text.empty()) return;
-    const firstLine = text.select("tspan");
-    const baseFont = parseFloat(text.style("font-size")) || 12;
-    const fitScale = Number(text.attr("data-fit-scale")) || 1;
-    const fitAnchorX = Number(text.attr("data-fit-anchor-x")) || Number(text.attr("x")) || d3.polygonCentroid(datum.polygon)[0];
-    const fitAnchorY = Number(text.attr("data-fit-anchor-y")) || d3.polygonCentroid(datum.polygon)[1];
-    const size = Math.max(9, Math.min(16, baseFont * 0.78));
-    const gap = Math.max(3, baseFont * 0.28);
-
-    let lineBox = null;
-    try { lineBox = firstLine.empty() ? text.node()?.getBBox?.() : firstLine.node()?.getBBox?.(); } catch (_) {}
-    const fallbackX = Number(text.attr("x")) || fitAnchorX;
-    const fallbackY = Number(text.attr("y")) || fitAnchorY;
-    const lineLeft = lineBox && Number.isFinite(lineBox.x) ? lineBox.x : fallbackX;
-    const lineTop = lineBox && Number.isFinite(lineBox.y) ? lineBox.y : fallbackY - baseFont * 0.78;
-
-    const issueRadius = size * 0.72;
-    const issueRightExtent = issueRadius * 0.88;
-    const solutionRadius = size * 0.62;
-    const rightExtent = item.kind === "solution" ? solutionRadius : issueRightExtent;
-    const topExtent = item.kind === "solution" ? solutionRadius : issueRadius;
-    const iconX = lineLeft - gap - rightExtent;
-    const iconY = lineTop + topExtent;
-
-    const icon = cell.append("g")
-      .attr("class", `semantic-kind-icon semantic-kind-${item.kind || "issue"}`)
-      .attr("transform", `translate(${fitAnchorX},${fitAnchorY}) scale(${fitScale}) translate(${iconX - fitAnchorX},${iconY - fitAnchorY})`)
-      .attr("data-icon-x", iconX)
-      .attr("data-icon-y", iconY)
-      .attr("data-icon-size", size)
-      .attr("aria-hidden", "true")
-      .style("pointer-events", "none");
-    if (item.kind === "solution") {
-      icon.append("circle").attr("r", size * 0.62).attr("fill", "rgba(255,255,255,.94)").attr("stroke", "#1f2937").attr("stroke-width", Math.max(1.25, size * 0.09)).attr("vector-effect", "non-scaling-stroke");
-      icon.append("path").attr("d", `M${-size * 0.28},${size * 0.02} L${-size * 0.06},${size * 0.26} L${size * 0.34},${-size * 0.24}`).attr("fill", "none").attr("stroke", "#1f2937").attr("stroke-width", Math.max(1.4, size * 0.105)).attr("stroke-linecap", "round").attr("stroke-linejoin", "round").attr("vector-effect", "non-scaling-stroke");
-    } else {
-      const r = size * 0.72, points = [[0, -r], [r * 0.88, r * 0.64], [-r * 0.88, r * 0.64]];
-      icon.append("path").attr("d", `M${points[0][0]},${points[0][1]} L${points[1][0]},${points[1][1]} L${points[2][0]},${points[2][1]} Z`).attr("fill", "rgba(255,255,255,.94)").attr("stroke", "#1f2937").attr("stroke-width", Math.max(1.25, size * 0.09)).attr("stroke-linejoin", "round").attr("vector-effect", "non-scaling-stroke");
-      icon.append("line").attr("x1", 0).attr("x2", 0).attr("y1", -size * 0.29).attr("y2", size * 0.13).attr("stroke", "#1f2937").attr("stroke-width", Math.max(1.4, size * 0.105)).attr("stroke-linecap", "round").attr("vector-effect", "non-scaling-stroke");
-      icon.append("circle").attr("cx", 0).attr("cy", size * 0.34).attr("r", Math.max(1.05, size * 0.07)).attr("fill", "#1f2937");
-    }
-  }
 
   function layerKey(options) { return (options.items || []).map(item => item.id).join("|") || options.className || "layer"; }
   function minimumLayerScale() { return 1; }
@@ -93,18 +44,9 @@
 
   function annotationFits(cell, polygon, originalX, originalY, anchorX, anchorY, localScale) {
     const text = cell.select("text.cell-label");
-    const icon = cell.select("g.semantic-kind-icon");
     let box;
     try { box = text.node().getBBox(); } catch (_) { return true; }
     let minX = box.x, minY = box.y, maxX = box.x + box.width, maxY = box.y + box.height;
-    if (!icon.empty()) {
-      const iconX = Number(icon.attr("data-icon-x")) || originalX;
-      const iconY = Number(icon.attr("data-icon-y")) || originalY;
-      const iconSize = Number(icon.attr("data-icon-size")) || 12;
-      const r = iconSize * 0.9;
-      minX = Math.min(minX, iconX - r); maxX = Math.max(maxX, iconX + r);
-      minY = Math.min(minY, iconY - r); maxY = Math.max(maxY, iconY + r);
-    }
     const pad = 2 / Math.max(localScale, 0.001);
     minX -= pad; minY -= pad; maxX += pad; maxY += pad;
     const transformPoint = (x, y) => [anchorX + (x - originalX) * localScale, anchorY + (y - originalY) * localScale];
@@ -147,12 +89,6 @@
       }
       const [anchorX, anchorY] = constrainedAnnotationAnchor(cell, d.polygon, originalX, originalY, desiredX, desiredY, localScale);
       text.attr("transform", `translate(${anchorX},${anchorY}) scale(${localScale}) translate(${-originalX},${-originalY})`);
-
-      const icon = cell.select("g.semantic-kind-icon");
-      if (!icon.empty()) {
-        const iconX = Number(icon.attr("data-icon-x")) || originalX, iconY = Number(icon.attr("data-icon-y")) || originalY;
-        icon.attr("transform", `translate(${anchorX},${anchorY}) scale(${localScale}) translate(${iconX - originalX},${iconY - originalY})`);
-      }
     });
   }
 
@@ -174,12 +110,10 @@
     g.selectAll(":scope > g.cell").nodes().forEach(cell => content.node().appendChild(cell));
     if (!layerViews.has(key)) layerViews.set(key, centeredView(options.w, options.h, minK));
     applyLayerView(node);
-    g.append("rect").attr("class", "layer-interaction-border").attr("x", 0).attr("y", 0).attr("width", options.w).attr("height", options.h).attr("fill", "none").attr("stroke", "rgba(27,43,61,.10)").attr("stroke-width", 1).attr("vector-effect", "non-scaling-stroke").style("pointer-events", "none");
   }
 
   renderCluster = function(options) {
     const rendered = baseRenderClusterWithSemanticIcons(options);
-    rendered.g.selectAll("g.cell").each(function(d) { const cell = d3.select(this); cell.selectAll(".semantic-kind-icon").remove(); appendSemanticIcon(cell, d); });
     makeLayerViewport(rendered, options); return rendered;
   };
 
