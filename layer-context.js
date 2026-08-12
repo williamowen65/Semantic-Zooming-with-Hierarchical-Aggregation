@@ -15,6 +15,25 @@
   };
   const esc = value => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 
+  // A layer's visible frame is fixed even when its internal layer-content is
+  // panned or zoomed. Never use getBBox() here: getBBox() includes transformed
+  // descendants and makes the context card drift when a layer is zoomed.
+  function layerTop(cluster) {
+    return parseTranslateY(cluster);
+  }
+  function layerHeight(cluster) {
+    const declared = Number(cluster?.dataset?.layerHeight);
+    if (Number.isFinite(declared) && declared > 0) return declared;
+    const outline = cluster ? d3.select(cluster).select('.cluster-outline').node() : null;
+    if (outline) {
+      try { return outline.getBBox().height; } catch (_) {}
+    }
+    return 0;
+  }
+  function layerBottom(cluster) {
+    return layerTop(cluster) + layerHeight(cluster);
+  }
+
   function renderLayerContextEntries() {
     stage.selectAll('.layer-context-entry').remove();
     if (!focusPath?.length) return;
@@ -25,10 +44,12 @@
       const node = nodeById.get(id), current = clusters[index];
       if (!node || !current) return;
       const next = clusters[index + 1] || (index === focusPath.length - 1 ? childCluster : null);
-      const currentY = parseTranslateY(current), currentBox = current.getBBox();
-      const currentBottom = currentY + currentBox.y + currentBox.height;
+
+      // Position strictly in world/layer coordinates. Internal pan/zoom changes
+      // only g.layer-content and therefore cannot affect these values.
+      const currentBottom = layerBottom(current);
       const gapTop = currentBottom;
-      const gapBottom = next ? parseTranslateY(next) + next.getBBox().y : currentBottom + (width < 720 ? 96 : 112);
+      const gapBottom = next ? layerTop(next) : currentBottom + (width < 720 ? 96 : 112);
       const available = Math.max(58, gapBottom - gapTop);
       const cardHeight = Math.min(width < 720 ? 76 : 66, Math.max(58, available - 12));
       const y = gapTop + Math.max(5, (available - cardHeight) / 2);
