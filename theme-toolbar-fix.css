@@ -1,0 +1,23 @@
+/* Keep the theme picker visibly in the toolbar, immediately left of Depth. */
+.theme-control {
+  position: fixed;
+  z-index: 60;
+  top: 12px;
+  right: 112px;
+}
+
+@media (max-width: 720px) {
+  .theme-control {
+    top: 10px;
+    right: 104px;
+  }
+  .theme-trigger {
+    min-height: 34px;
+    padding: 6px 9px;
+    font-size: 11px;
+  }
+  .theme-menu {
+    right: -92px;
+    top: calc(100% + 7px);
+  }
+}
