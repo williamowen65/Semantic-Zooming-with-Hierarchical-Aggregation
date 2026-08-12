@@ -28,12 +28,21 @@ polygonPath=function(poly){if(!poly||poly.length<2)return"";let d=`M${poly[0][0]
 const baseRenderBreadcrumbs=renderBreadcrumbs;
 renderBreadcrumbs=function(){baseRenderBreadcrumbs();requestAnimationFrame(()=>{breadcrumbHost.scrollLeft=breadcrumbHost.scrollWidth;});};
 
+// Keep this override aligned with app.js: after render(), levelCenters contains
+// one center for every selected/context layer plus one extra center for the child
+// layer when the selected node has children. Target that extra center so the newly
+// revealed children, not the selected parent, are what the viewport moves to.
 focusNode=function(id){
   const node=nodeById.get(id);if(!node)return;
   if(window.stopHierarchyMomentum)window.stopHierarchyMomentum();
-  focusPath=pathForNode(id);render();
-  requestAnimationFrame(()=>scrollToDepth(Math.max(0,focusPath.length-1),true));
-  statusHost.textContent=`${node.name} selected. No child nodes have been added yet.`;
+  focusPath=pathForNode(id);
+  render();
+  const hasChildren=(node.children||[]).length>0;
+  const targetDepth=hasChildren?focusPath.length:Math.max(0,focusPath.length-1);
+  requestAnimationFrame(()=>scrollToDepth(targetDepth,true));
+  statusHost.textContent=hasChildren
+    ?`${node.name} selected. Showing ${node.children.length} example children.`
+    :`${node.name} selected. No child nodes have been added yet.`;
 };
 
 (() => {
