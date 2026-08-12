@@ -14,8 +14,6 @@
     const selected = typeof currentNode === 'function' ? currentNode() : null;
     if (!selected || (selected.children || []).length) return;
 
-    // The empty state occupies exactly the slot where a child layer would have been.
-    // Its position is based on the fixed layer frame, never on an internal pan/zoom transform.
     const compactMobile = width < 720;
     const contentTop = compactMobile ? 132 : 98;
     const geometry = levelGeometry(compactMobile, contentTop);
@@ -28,31 +26,35 @@
 
     group.append('rect')
       .attr('class', 'leaf-end-background')
-      .attr('x', 0)
-      .attr('y', 0)
-      .attr('width', width)
-      .attr('height', geometry.h);
+      .attr('x', 0).attr('y', 0).attr('width', width).attr('height', geometry.h);
 
     const label = selected.kind === 'solution' ? 'solution' : 'issue';
-    const message = `No sub-issues or sub-solutions have been created for this ${label} yet.`;
     const cx = width / 2;
-    const cy = Math.min(geometry.h * .34, compactMobile ? 118 : 140);
+    const cy = Math.min(geometry.h * .30, compactMobile ? 108 : 140);
 
     group.append('text')
       .attr('class', 'leaf-end-title')
-      .attr('x', cx)
-      .attr('y', cy)
+      .attr('x', cx).attr('y', cy)
       .attr('text-anchor', 'middle')
       .text('End of this branch');
 
-    group.append('text')
+    // SVG text does not wrap itself. Use separate centered lines on narrow screens so
+    // the end-state copy can never run outside the viewport.
+    const message = group.append('text')
       .attr('class', 'leaf-end-message')
       .attr('x', cx)
       .attr('y', cy + (compactMobile ? 28 : 32))
-      .attr('text-anchor', 'middle')
-      .text(message);
+      .attr('text-anchor', 'middle');
 
-    // Treat the empty state as the next depth so the same scrolling target is available.
+    if (compactMobile) {
+      message.append('tspan').attr('x', cx).attr('dy', 0)
+        .text('No sub-issues or sub-solutions');
+      message.append('tspan').attr('x', cx).attr('dy', 18)
+        .text(`have been created for this ${label} yet.`);
+    } else {
+      message.text(`No sub-issues or sub-solutions have been created for this ${label} yet.`);
+    }
+
     levelCenters.push(y + geometry.h / 2);
     worldHeight = Math.max(worldHeight, y + geometry.h + 24);
     applyCamera(false);
@@ -64,8 +66,6 @@
     renderLeafEndLayer();
   };
 
-  // The original leaf behavior scrolls back to the selected layer. For a leaf, target
-  // the newly-created empty next layer instead, exactly as if real children existed.
   focusNode = function(id) {
     const node = nodeById.get(id);
     if (!node) return;
