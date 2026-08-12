@@ -31,19 +31,47 @@
     const label = selected.kind === 'solution' ? 'solution' : 'issue';
     const cx = width / 2;
     const cy = Math.min(geometry.h * .30, compactMobile ? 108 : 140);
+    const panelWidth = compactMobile ? Math.max(260, width - 48) : Math.min(720, width - 80);
+    const panelHeight = compactMobile ? 184 : 150;
+    const panelX = cx - panelWidth / 2;
+    const panelY = cy - 56;
+
+    group.append('rect')
+      .attr('class', 'leaf-end-card')
+      .attr('x', panelX).attr('y', panelY)
+      .attr('width', panelWidth).attr('height', panelHeight)
+      .attr('rx', compactMobile ? 18 : 16);
 
     group.append('text')
       .attr('class', 'leaf-end-title')
-      .attr('x', cx).attr('y', cy)
+      .attr('x', cx).attr('y', panelY + 40)
       .attr('text-anchor', 'middle')
       .text('End of this branch');
 
-    // SVG text does not wrap itself. Use separate centered lines on narrow screens so
-    // the end-state copy can never run outside the viewport.
+    const name = group.append('text')
+      .attr('class', 'leaf-end-node-name')
+      .attr('x', cx).attr('y', panelY + 70)
+      .attr('text-anchor', 'middle');
+
+    // Keep long leaf names inside the card on mobile.
+    if (compactMobile && selected.name.length > 32) {
+      const words = selected.name.split(/\s+/);
+      let first = '', second = '';
+      words.forEach(word => {
+        if (!second && `${first} ${word}`.trim().length <= 28) first = `${first} ${word}`.trim();
+        else second = `${second} ${word}`.trim();
+      });
+      name.append('tspan').attr('x', cx).attr('dy', 0).text(first);
+      name.append('tspan').attr('x', cx).attr('dy', 18).text(second);
+    } else {
+      name.text(selected.name);
+    }
+
+    const nameLines = compactMobile && selected.name.length > 32 ? 2 : 1;
+    const messageY = panelY + 70 + (nameLines * 18) + 18;
     const message = group.append('text')
       .attr('class', 'leaf-end-message')
-      .attr('x', cx)
-      .attr('y', cy + (compactMobile ? 28 : 32))
+      .attr('x', cx).attr('y', messageY)
       .attr('text-anchor', 'middle');
 
     if (compactMobile) {
@@ -71,8 +99,7 @@
     if (!node) return;
     focusPath = pathForNode(id);
     render();
-    const targetDepth = focusPath.length;
-    scrollToDepth(targetDepth, true);
+    scrollToDepth(focusPath.length, true);
     const hasChildren = (node.children || []).length > 0;
     statusHost.textContent = hasChildren
       ? `${node.name} selected. Showing ${node.children.length} example children.`
