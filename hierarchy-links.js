@@ -107,7 +107,28 @@
     });
   }
 
+  // Layer pan/zoom changes the transform on `g.layer-content`. The old connector
+  // updater only moved one endpoint dot and used centroid positions, so the newer
+  // perimeter/card dots could drift away from the line. Recompute the complete
+  // connector geometry whenever a layer transform changes so every dot and the
+  // line are derived from exactly the same current geometry.
+  let refreshFrame = 0;
+  function scheduleHierarchyRefresh() {
+    if (refreshFrame) return;
+    refreshFrame = requestAnimationFrame(() => {
+      refreshFrame = 0;
+      renderHierarchyLinks();
+    });
+  }
+  const stageNode = stage.node();
+  if (stageNode && typeof MutationObserver !== "undefined") {
+    new MutationObserver(records => {
+      if (records.some(record => record.target?.classList?.contains("layer-content"))) scheduleHierarchyRefresh();
+    }).observe(stageNode, { subtree: true, attributes: true, attributeFilter: ["transform"] });
+  }
+  window.refreshHierarchyLinks = scheduleHierarchyRefresh;
+
   const baseRenderWithHierarchyLinks = render;
-  render = function() { const result = baseRenderWithHierarchyLinks(); requestAnimationFrame(renderHierarchyLinks); return result; };
+  render = function() { const result = baseRenderWithHierarchyLinks(); scheduleHierarchyRefresh(); return result; };
   render();
 })();
