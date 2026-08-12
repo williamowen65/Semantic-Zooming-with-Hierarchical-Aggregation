@@ -53,10 +53,25 @@
     }
   }
 
+  function advanceTheme() {
+    applyTheme(currentIndex + 1);
+  }
+
+  // Use pointerup for touch/mouse so the control is not dependent on the browser
+  // synthesizing a click after the visualization's own gesture handlers run.
+  // The click fallback is reserved for keyboard activation (detail === 0), which
+  // keeps Enter/Space accessible without double-advancing after a pointer tap.
+  trigger.addEventListener("pointerup", event => {
+    if (event.button != null && event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    advanceTheme();
+  }, { capture: true });
+
   trigger.addEventListener("click", event => {
     event.preventDefault();
     event.stopPropagation();
-    applyTheme(currentIndex + 1);
+    if (event.detail === 0) advanceTheme();
   });
 
   let queued = false;
