@@ -59,8 +59,15 @@
       const gapTop = currentBottom;
       const gapBottom = next ? layerTop(next) : currentBottom + (width < 720 ? 96 : 112);
       const available = Math.max(58, gapBottom - gapTop);
-      const cardHeight = Math.min(width < 720 ? 76 : 66, Math.max(58, available - 12));
-      const y = gapTop + Math.max(5, (available - cardHeight) / 2);
+
+      // Keep the visual inset from the adjacent layers constant at every
+      // breakpoint. Previously desktop capped the card at 66px while mobile
+      // used 76px, leaving dramatically different amounts of blank space.
+      // Let the actual inter-layer gap determine the card height instead.
+      const layerInset = 6;
+      const cardHeight = Math.max(58, available - layerInset * 2);
+      const y = gapTop + Math.max(layerInset, (available - cardHeight) / 2);
+
       const x = width < 720 ? 10 : Math.max(16, width * .12);
       const cardWidth = width < 720 ? Math.max(120, width - 20) : Math.min(width - 32, width * .76);
       const locations = affectedLocationCount(node);
