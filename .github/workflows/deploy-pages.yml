@@ -50,6 +50,7 @@ jobs:
             theme-picker.js
             layer-context.js
             leaf-end-state.js
+            hierarchy-overview.js
           )
 
           cp "${assets[@]}" _site/
