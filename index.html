@@ -6,7 +6,7 @@
   <title>Semantic Zooming with Hierarchical Aggregation</title>
   <link rel="stylesheet" href="styles.css?v=theme-pointer-20260812-0834" />
   <link rel="stylesheet" href="theme-toolbar-fix.css?v=legend-toggle-20260812" />
-  <link rel="stylesheet" href="topic-panel.css?v=compact-topic-sheet-20260812" />
+  <link rel="stylesheet" href="layer-context.css?v=interlevel-context-20260812" />
 </head>
 <body>
   <header class="toolbar"><div class="title-block"><h1>Atlas hierarchy prototype</h1><p>Weighted tiled clusters · broad roots only for this data pass</p></div><nav id="breadcrumbs" class="breadcrumbs" aria-label="Hierarchy breadcrumb"></nav><button id="reset" class="reset-button" type="button">All roots</button></header>
@@ -14,22 +14,7 @@
   <aside id="theme-control" class="theme-control" aria-label="Visualization tools"><button id="tools-trigger" class="tools-trigger" type="button" aria-expanded="false" aria-controls="tools-panel" aria-label="Open visualization tools"><span class="tools-icon" aria-hidden="true">⚙</span></button><div id="tools-panel" class="tools-panel" role="dialog" aria-modal="false" aria-label="Visualization tools" hidden><div class="tools-panel-heading"><strong>Display</strong><button id="tools-close" class="tools-close" type="button" aria-label="Close visualization tools">×</button></div><div class="display-settings-row"><div class="theme-setting"><span class="theme-setting-label">Theme</span><button class="theme-trigger" type="button" aria-label="Cycle visualization theme"><span id="current-theme-name" class="current-theme-name" aria-live="polite">Calm & Earthy</span><span class="theme-next" aria-hidden="true">›</span></button></div><div class="legend-setting"><span class="theme-setting-label">Legend</span><button id="legend-toggle" class="legend-toggle" type="button" aria-pressed="true" aria-controls="visual-key"><span class="legend-toggle-icon" aria-hidden="true">☷</span><span id="legend-toggle-label">On</span></button></div></div></div></aside>
   <div id="visual-key" class="key" aria-label="Visual encoding key"><span><i class="key-cell selected"></i> selected</span><span><i class="key-cell faded"></i> sibling context</span><span><i class="key-area"></i> area = aggregate importance</span><span>drag / pinch = pan and zoom a layer</span></div>
   <div id="status" class="status" aria-live="polite"></div>
-
-  <aside id="topic-sheet" class="topic-sheet" aria-label="Selected topic details">
-    <button id="topic-sheet-tab" class="topic-sheet-tab" type="button" aria-expanded="false" aria-controls="topic-sheet-body" aria-label="Show or hide selected topic details"><span class="topic-sheet-handle" aria-hidden="true"></span></button>
-    <div id="topic-sheet-body" class="topic-sheet-body">
-      <div id="topic-sheet-kind" class="topic-sheet-kicker">Topic details</div>
-      <h2 id="topic-sheet-title" class="topic-sheet-title">Select a topic</h2>
-      <div class="topic-sheet-stats">
-        <div class="topic-stat"><span class="topic-stat-label">Affected locations</span><span id="topic-affected-locations" class="topic-stat-value">—</span></div>
-        <div class="topic-stat"><span class="topic-stat-label">Votes</span><span id="topic-votes" class="topic-stat-value">—</span></div>
-        <div class="topic-stat"><span class="topic-stat-label">Average</span><span id="topic-rating" class="topic-stat-value">—</span></div>
-        <div class="topic-stat"><span class="topic-stat-label">Children</span><span id="topic-children" class="topic-stat-value">—</span></div>
-      </div>
-    </div>
-  </aside>
-
   <script src="https://d3js.org/d3.v6.min.js"></script><script src="https://cdn.jsdelivr.net/npm/d3-weighted-voronoi@1.1.3/build/d3-weighted-voronoi.min.js"></script><script src="https://cdn.jsdelivr.net/npm/d3-voronoi-map@2.1.1/build/d3-voronoi-map.min.js"></script><script src="https://cdn.jsdelivr.net/npm/d3-voronoi-treemap@1.1.2/build/d3-voronoi-treemap.min.js"></script>
-  <script src="app.js?v=root-only-20260811"></script><script src="enhancements.js?v=root-only-20260811"></script><script src="semantic-icons.js?v=label-geometry-icons-20260811"></script><script src="hierarchy-links.js?v=restore-links-20260812"></script><script src="theme-picker.js?v=legend-toggle-20260812"></script><script src="topic-panel.js?v=topic-sheet-20260812"></script>
+  <script src="app.js?v=root-only-20260811"></script><script src="enhancements.js?v=root-only-20260811"></script><script src="semantic-icons.js?v=label-geometry-icons-20260811"></script><script src="hierarchy-links.js?v=restore-links-20260812"></script><script src="theme-picker.js?v=legend-toggle-20260812"></script><script src="layer-context.js?v=interlevel-context-20260812"></script>
 </body>
 </html>
