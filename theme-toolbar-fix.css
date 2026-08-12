@@ -1,10 +1,17 @@
 /* Floating visualization tools control. Display controls live here instead of
    competing with the title/depth controls in the header. */
-.theme-control { position:fixed; z-index:1000; right:0; top:58%; transform:translateY(-50%); pointer-events:auto; }
-.tools-trigger { width:50px; height:58px; display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--border); border-right:0; border-radius:999px 0 0 999px; background:var(--panel); color:var(--ink); box-shadow:0 8px 24px rgba(20,30,40,.14); backdrop-filter:blur(12px); cursor:pointer; touch-action:manipulation; }
+.theme-control { position:fixed; z-index:1000; right:0; bottom:88px; top:auto; transform:none; pointer-events:auto; touch-action:none; user-select:none; }
+.theme-control[data-side="left"] { left:0; right:auto; }
+.theme-control[data-side="right"] { right:0; left:auto; }
+.theme-control.is-dragging { transition:none; }
+.tools-trigger { width:50px; height:58px; display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--border); border-right:0; border-radius:999px 0 0 999px; background:var(--panel); color:var(--ink); box-shadow:0 8px 24px rgba(20,30,40,.14); backdrop-filter:blur(12px); cursor:grab; touch-action:none; }
+.theme-control.is-dragging .tools-trigger { cursor:grabbing; }
+.theme-control[data-side="left"] .tools-trigger { border-right:1px solid var(--border); border-left:0; border-radius:0 999px 999px 0; }
 .tools-trigger:focus-visible,.theme-trigger:focus-visible,.legend-toggle:focus-visible,.tools-close:focus-visible { outline:2px solid var(--selected); outline-offset:2px; }
-.tools-icon { font-size:22px; line-height:1; transform:translateX(-1px); }
-.tools-panel { position:absolute; right:58px; top:50%; transform:translateY(-50%); width:min(360px,calc(100vw - 84px)); padding:12px; border:1px solid var(--border); border-radius:18px; background:rgba(255,255,255,.96); color:var(--ink); box-shadow:0 18px 48px rgba(20,30,40,.20); backdrop-filter:blur(18px); }
+.tools-icon { font-size:22px; line-height:1; transform:translateX(-1px); pointer-events:none; }
+.theme-control[data-side="left"] .tools-icon { transform:translateX(1px); }
+.tools-panel { position:absolute; right:58px; left:auto; top:50%; transform:translateY(-50%); width:min(360px,calc(100vw - 84px)); padding:12px; border:1px solid var(--border); border-radius:18px; background:rgba(255,255,255,.96); color:var(--ink); box-shadow:0 18px 48px rgba(20,30,40,.20); backdrop-filter:blur(18px); user-select:text; touch-action:auto; }
+.theme-control[data-side="left"] .tools-panel { left:58px; right:auto; }
 .tools-panel[hidden] { display:none; }
 .tools-panel-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; font-size:12px; }
 .tools-close { width:30px; height:30px; display:inline-flex; align-items:center; justify-content:center; border:0; border-radius:999px; background:rgba(27,43,61,.06); color:var(--muted); font-size:20px; line-height:1; cursor:pointer; }
@@ -26,10 +33,11 @@
   .title-block { grid-column:1; grid-row:1; min-width:0; padding-right:8px; }
   #depth-indicator { grid-column:2; grid-row:1; justify-self:end; align-self:start; min-height:34px; padding:6px 10px !important; font-size:11px !important; }
   .breadcrumbs { grid-column:1 / -1; grid-row:2; width:100%; }
-  .theme-control { top:62%; }
+  .theme-control { bottom:78px; }
   .tools-trigger { width:44px; height:54px; }
   .tools-icon { font-size:20px; }
   .tools-panel { right:51px; width:min(320px,calc(100vw - 68px)); border-radius:16px; }
+  .theme-control[data-side="left"] .tools-panel { left:51px; right:auto; }
   .display-settings-row { grid-template-columns:minmax(0,1fr) auto; }
   .legend-toggle { min-width:70px; padding-inline:9px; }
 }
