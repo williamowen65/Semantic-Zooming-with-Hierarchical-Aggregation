@@ -1,6 +1,5 @@
 // User-selectable presentation themes for the Atlas visualization.
-// Each press of the toolbar control advances to the next theme. Presentation only;
-// hierarchy data and geometry stay untouched.
+// Theme selection now lives in a floating tools panel instead of the header.
 (() => {
   const themes = [
     { id: "calm-earthy", name: "Calm & Earthy", scale: 1.12 },
@@ -13,9 +12,12 @@
 
   const storageKey = "atlas-theme";
   const control = document.querySelector("#theme-control");
-  const trigger = control?.querySelector(".theme-trigger");
+  const toolsTrigger = document.querySelector("#tools-trigger");
+  const toolsPanel = document.querySelector("#tools-panel");
+  const toolsClose = document.querySelector("#tools-close");
+  const themeTrigger = control?.querySelector(".theme-trigger");
   const readout = document.querySelector("#current-theme-name");
-  if (!control || !trigger) return;
+  if (!control || !toolsTrigger || !toolsPanel || !themeTrigger) return;
 
   function applyFontScale(theme) {
     document.querySelectorAll("#viz text.cell-label").forEach(text => {
@@ -35,12 +37,9 @@
   let current = themes[currentIndex];
 
   function updateThemeLabels() {
-    // Put the current theme directly inside the actionable pill. This avoids a
-    // separate readout competing with Depth for header space on small screens.
-    trigger.innerHTML = `<span aria-hidden="true">◐</span><span class="theme-trigger-label">${current.name}</span>`;
-    trigger.setAttribute("aria-label", `Current theme ${current.name}. Activate for next theme.`);
-    trigger.title = `Current theme: ${current.name}. Click for next theme.`;
     if (readout) readout.textContent = current.name;
+    themeTrigger.setAttribute("aria-label", `Current theme ${current.name}. Activate for next theme.`);
+    themeTrigger.title = `Current theme: ${current.name}. Click for next theme.`;
   }
 
   function applyTheme(index, persist = true) {
@@ -55,21 +54,57 @@
     }
   }
 
-  function advanceTheme() {
-    applyTheme(currentIndex + 1);
+  function advanceTheme() { applyTheme(currentIndex + 1); }
+
+  function setToolsOpen(open) {
+    toolsPanel.hidden = !open;
+    toolsTrigger.setAttribute("aria-expanded", String(open));
+    toolsTrigger.setAttribute("aria-label", open ? "Close visualization tools" : "Open visualization tools");
+    if (open) requestAnimationFrame(() => themeTrigger.focus({ preventScroll: true }));
   }
 
-  trigger.addEventListener("pointerup", event => {
+  toolsTrigger.addEventListener("pointerup", event => {
+    if (event.button != null && event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setToolsOpen(toolsPanel.hidden);
+  }, { capture: true });
+
+  toolsTrigger.addEventListener("click", event => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.detail === 0) setToolsOpen(toolsPanel.hidden);
+  });
+
+  toolsClose?.addEventListener("click", event => {
+    event.preventDefault();
+    event.stopPropagation();
+    setToolsOpen(false);
+    toolsTrigger.focus({ preventScroll: true });
+  });
+
+  themeTrigger.addEventListener("pointerup", event => {
     if (event.button != null && event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
     advanceTheme();
   }, { capture: true });
 
-  trigger.addEventListener("click", event => {
+  themeTrigger.addEventListener("click", event => {
     event.preventDefault();
     event.stopPropagation();
     if (event.detail === 0) advanceTheme();
+  });
+
+  document.addEventListener("pointerdown", event => {
+    if (!toolsPanel.hidden && !control.contains(event.target)) setToolsOpen(false);
+  }, { capture: true });
+
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && !toolsPanel.hidden) {
+      setToolsOpen(false);
+      toolsTrigger.focus({ preventScroll: true });
+    }
   });
 
   let queued = false;
@@ -82,5 +117,6 @@
     }).observe(viz, { childList: true, subtree: true });
   }
 
+  setToolsOpen(false);
   applyTheme(currentIndex, false);
 })();
