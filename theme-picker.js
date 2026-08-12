@@ -11,6 +11,7 @@
 
   const storageKey = "atlas-theme";
   const legendStorageKey = "atlas-legend-visible";
+  const toolsPositionKey = "atlas-tools-position";
   const control = document.querySelector("#theme-control");
   const toolsTrigger = document.querySelector("#tools-trigger");
   const toolsPanel = document.querySelector("#tools-panel");
@@ -64,8 +65,6 @@
     const legend = getLegend();
     if (!legend) return;
     const show = Boolean(visible);
-    // Toggle the requested element itself. Inline display wins over any legacy
-    // .key styles and avoids depending on the hidden attribute implementation.
     legend.style.display = show ? "flex" : "none";
     legend.hidden = !show;
     legend.setAttribute("aria-hidden", String(!show));
@@ -94,13 +93,106 @@
     if (open) requestAnimationFrame(() => themeTrigger.focus({ preventScroll: true }));
   }
 
-  toolsTrigger.addEventListener("pointerup", event => {
+  // The tools pill defaults to the lower-right edge, but can be dragged vertically
+  // or carried across the midpoint to dock on the left. Persist the user's choice.
+  let toolsSide = "right";
+  let toolsTop = null;
+  let dragState = null;
+  let suppressTriggerActivation = false;
+
+  function triggerHeight() {
+    return toolsTrigger.getBoundingClientRect().height || (window.innerWidth < 720 ? 54 : 58);
+  }
+
+  function verticalLimits() {
+    const h = triggerHeight();
+    return { min: 12, max: Math.max(12, window.innerHeight - h - 12) };
+  }
+
+  function clampTop(top) {
+    const limits = verticalLimits();
+    return Math.max(limits.min, Math.min(limits.max, top));
+  }
+
+  function defaultTop() {
+    const h = triggerHeight();
+    return clampTop(window.innerHeight - h - (window.innerWidth < 720 ? 78 : 88));
+  }
+
+  function applyToolsPosition(side = toolsSide, top = toolsTop, persist = false) {
+    toolsSide = side === "left" ? "left" : "right";
+    toolsTop = clampTop(Number.isFinite(top) ? top : defaultTop());
+    control.dataset.side = toolsSide;
+    control.style.top = `${toolsTop}px`;
+    control.style.bottom = "auto";
+    if (persist) {
+      try { localStorage.setItem(toolsPositionKey, JSON.stringify({ side: toolsSide, top: toolsTop })); } catch (_) {}
+    }
+  }
+
+  function restoreToolsPosition() {
+    let stored = null;
+    try { stored = JSON.parse(localStorage.getItem(toolsPositionKey) || "null"); } catch (_) {}
+    if (stored && (stored.side === "left" || stored.side === "right") && Number.isFinite(stored.top)) {
+      applyToolsPosition(stored.side, stored.top, false);
+    } else {
+      applyToolsPosition("right", defaultTop(), false);
+    }
+  }
+
+  toolsTrigger.addEventListener("pointerdown", event => {
     if (event.button != null && event.button !== 0) return;
+    dragState = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startTop: toolsTop ?? defaultTop(),
+      moved: false
+    };
+    toolsTrigger.setPointerCapture?.(event.pointerId);
+  });
+
+  toolsTrigger.addEventListener("pointermove", event => {
+    if (!dragState || event.pointerId !== dragState.pointerId) return;
+    const dx = event.clientX - dragState.startX;
+    const dy = event.clientY - dragState.startY;
+    if (!dragState.moved && Math.hypot(dx, dy) < 7) return;
+    dragState.moved = true;
+    suppressTriggerActivation = true;
+    control.classList.add("is-dragging");
+    setToolsOpen(false);
+    const side = event.clientX < window.innerWidth / 2 ? "left" : "right";
+    applyToolsPosition(side, dragState.startTop + dy, false);
+    event.preventDefault();
+  });
+
+  toolsTrigger.addEventListener("pointerup", event => {
+    if (dragState && event.pointerId === dragState.pointerId && dragState.moved) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      applyToolsPosition(toolsSide, toolsTop, true);
+      control.classList.remove("is-dragging");
+      dragState = null;
+      requestAnimationFrame(() => { suppressTriggerActivation = false; });
+      return;
+    }
+    dragState = null;
+    if (event.button != null && event.button !== 0) return;
+    if (suppressTriggerActivation) return;
     event.preventDefault(); event.stopPropagation(); setToolsOpen(toolsPanel.hidden);
   }, { capture: true });
-  toolsTrigger.addEventListener("click", event => {
-    event.preventDefault(); event.stopPropagation(); if (event.detail === 0) setToolsOpen(toolsPanel.hidden);
+
+  toolsTrigger.addEventListener("pointercancel", () => {
+    control.classList.remove("is-dragging");
+    dragState = null;
+    suppressTriggerActivation = false;
   });
+
+  toolsTrigger.addEventListener("click", event => {
+    event.preventDefault(); event.stopPropagation();
+    if (event.detail === 0 && !suppressTriggerActivation) setToolsOpen(toolsPanel.hidden);
+  });
+
   toolsClose?.addEventListener("click", event => {
     event.preventDefault(); event.stopPropagation(); setToolsOpen(false); toolsTrigger.focus({ preventScroll: true });
   });
@@ -112,8 +204,6 @@
     event.preventDefault(); event.stopPropagation(); if (event.detail === 0) advanceTheme();
   });
 
-  // One physical pointer gesture = one legend toggle. Keyboard activation is
-  // handled by click (detail === 0), matching the theme control behavior.
   legendToggle?.addEventListener("pointerup", event => {
     if (event.button != null && event.button !== 0) return;
     event.preventDefault(); event.stopPropagation(); toggleLegend();
@@ -128,6 +218,8 @@
   document.addEventListener("keydown", event => {
     if (event.key === "Escape" && !toolsPanel.hidden) { setToolsOpen(false); toolsTrigger.focus({ preventScroll: true }); }
   });
+
+  window.addEventListener("resize", () => applyToolsPosition(toolsSide, toolsTop, false));
 
   let queued = false;
   const viz = document.querySelector("#viz");
@@ -145,6 +237,7 @@
     if (storedLegend !== null) initialLegendVisible = storedLegend !== "false";
   } catch (_) {}
 
+  restoreToolsPosition();
   setToolsOpen(false);
   applyTheme(currentIndex, false);
   setLegendVisible(initialLegendVisible, false);
