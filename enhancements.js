@@ -53,18 +53,38 @@ renderBreadcrumbs=function(){
   });
 };
 
-// Keep this override aligned with app.js: after render(), levelCenters contains
-// one center for every selected/context layer plus one extra center for the child
-// layer when the selected node has children. Target that extra center so the newly
-// revealed children, not the selected parent, are what the viewport moves to.
+// Position the selected node's inter-level context card near the top of the
+// visible hierarchy. This makes the card, connector, and beginning of the child
+// layer visible together instead of centering the child layer and potentially
+// scrolling the context card above the viewport.
+function scrollSelectedContextIntoView(animate=true){
+  const entries=stage.selectAll("g.layer-context-entry").nodes();
+  const entry=entries[focusPath.length-1]||entries[entries.length-1];
+  const card=entry?.querySelector("foreignObject");
+  if(!card){
+    const fallback=Math.max(0,Math.min(levelCenters.length-1,focusPath.length));
+    scrollToDepth(fallback,animate);
+    return;
+  }
+  const rect=card.getBoundingClientRect();
+  const desiredTop=width<720?140:94;
+  cameraY+=desiredTop-rect.top;
+  applyCamera(animate);
+}
+
+// When a selected node reveals children, auto-scroll to the information card
+// between that selected layer and its children. The card's top stays visible,
+// matching the visual reading order: selected topic context, then child layer.
 focusNode=function(id){
   const node=nodeById.get(id);if(!node)return;
   if(window.stopHierarchyMomentum)window.stopHierarchyMomentum();
   focusPath=pathForNode(id);
   render();
   const hasChildren=(node.children||[]).length>0;
-  const targetDepth=hasChildren?focusPath.length:Math.max(0,focusPath.length-1);
-  requestAnimationFrame(()=>scrollToDepth(targetDepth,true));
+  requestAnimationFrame(()=>{
+    if(hasChildren)scrollSelectedContextIntoView(true);
+    else scrollToDepth(Math.max(0,focusPath.length-1),true);
+  });
   statusHost.textContent=hasChildren
     ?`${node.name} selected. Showing ${node.children.length} example children.`
     :`${node.name} selected. No child nodes have been added yet.`;
