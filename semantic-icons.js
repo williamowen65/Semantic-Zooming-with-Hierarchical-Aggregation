@@ -11,24 +11,23 @@
     const item = datum?.data?.item;
     if (!item || !datum.polygon?.length) return;
 
-    // The base renderer has already created the SVG label. Measure that actual
-    // rendered first line and derive the icon position from it, so there is one
-    // authoritative layout path rather than a later corrective positioning pass.
     const text = cell.select("text.cell-label");
+    if (text.empty()) return;
     const firstLine = text.select("tspan");
     const baseFont = parseFloat(text.style("font-size")) || 12;
+    const fitScale = Number(text.attr("data-fit-scale")) || 1;
+    const fitAnchorX = Number(text.attr("data-fit-anchor-x")) || Number(text.attr("x")) || d3.polygonCentroid(datum.polygon)[0];
+    const fitAnchorY = Number(text.attr("data-fit-anchor-y")) || d3.polygonCentroid(datum.polygon)[1];
     const size = Math.max(9, Math.min(16, baseFont * 0.78));
     const gap = Math.max(3, baseFont * 0.28);
 
     let lineBox = null;
     try { lineBox = firstLine.empty() ? text.node()?.getBBox?.() : firstLine.node()?.getBBox?.(); } catch (_) {}
-    const fallbackX = Number(text.attr("x")) || d3.polygonCentroid(datum.polygon)[0];
-    const fallbackY = Number(text.attr("y")) || d3.polygonCentroid(datum.polygon)[1];
+    const fallbackX = Number(text.attr("x")) || fitAnchorX;
+    const fallbackY = Number(text.attr("y")) || fitAnchorY;
     const lineLeft = lineBox && Number.isFinite(lineBox.x) ? lineBox.x : fallbackX;
     const lineTop = lineBox && Number.isFinite(lineBox.y) ? lineBox.y : fallbackY - baseFont * 0.78;
 
-    // The icon's visual top aligns with the label's visual top. Its right edge is
-    // separated from the first line by a small font-relative margin.
     const issueRadius = size * 0.72;
     const issueRightExtent = issueRadius * 0.88;
     const solutionRadius = size * 0.62;
@@ -39,7 +38,7 @@
 
     const icon = cell.append("g")
       .attr("class", `semantic-kind-icon semantic-kind-${item.kind || "issue"}`)
-      .attr("transform", `translate(${iconX},${iconY})`)
+      .attr("transform", `translate(${fitAnchorX},${fitAnchorY}) scale(${fitScale}) translate(${iconX - fitAnchorX},${iconY - fitAnchorY})`)
       .attr("data-icon-x", iconX)
       .attr("data-icon-y", iconY)
       .attr("data-icon-size", size)
@@ -92,9 +91,6 @@
     return output.filter(p => Number.isFinite(p[0]) && Number.isFinite(p[1]));
   }
 
-  // Test the annotation as a single icon + label unit against the actual cell.
-  // We deliberately do NOT clip annotations. If the unit cannot fit at all (for
-  // example a very small cell with a long title), it stays at its natural center.
   function annotationFits(cell, polygon, originalX, originalY, anchorX, anchorY, localScale) {
     const text = cell.select("text.cell-label");
     const icon = cell.select("g.semantic-kind-icon");
@@ -109,85 +105,52 @@
       minX = Math.min(minX, iconX - r); maxX = Math.max(maxX, iconX + r);
       minY = Math.min(minY, iconY - r); maxY = Math.max(maxY, iconY + r);
     }
-    // A small inset keeps glyphs from visually kissing the boundary.
     const pad = 2 / Math.max(localScale, 0.001);
     minX -= pad; minY -= pad; maxX += pad; maxY += pad;
-    const transformPoint = (x, y) => [
-      anchorX + (x - originalX) * localScale,
-      anchorY + (y - originalY) * localScale
-    ];
+    const transformPoint = (x, y) => [anchorX + (x - originalX) * localScale, anchorY + (y - originalY) * localScale];
     const mx = (minX + maxX) / 2, my = (minY + maxY) / 2;
-    const probes = [
-      [minX,minY],[maxX,minY],[maxX,maxY],[minX,maxY],
-      [mx,minY],[maxX,my],[mx,maxY],[minX,my]
-    ].map(([x,y]) => transformPoint(x,y));
+    const probes = [[minX,minY],[maxX,minY],[maxX,maxY],[minX,maxY],[mx,minY],[maxX,my],[mx,maxY],[minX,my]].map(([x,y]) => transformPoint(x,y));
     return probes.every(point => d3.polygonContains(polygon, point));
   }
 
   function constrainedAnnotationAnchor(cell, polygon, originalX, originalY, desiredX, desiredY, localScale) {
-    if (!annotationFits(cell, polygon, originalX, originalY, originalX, originalY, localScale)) {
-      return [originalX, originalY];
-    }
-    if (annotationFits(cell, polygon, originalX, originalY, desiredX, desiredY, localScale)) {
-      return [desiredX, desiredY];
-    }
-    // Walk from the safe natural center toward the viewport-aware target and
-    // stop at the last position where the entire annotation remains in-cell.
+    if (!annotationFits(cell, polygon, originalX, originalY, originalX, originalY, localScale)) return [originalX, originalY];
+    if (annotationFits(cell, polygon, originalX, originalY, desiredX, desiredY, localScale)) return [desiredX, desiredY];
     let lo = 0, hi = 1;
     for (let i = 0; i < 12; i += 1) {
-      const t = (lo + hi) / 2;
-      const x = originalX + (desiredX - originalX) * t;
-      const y = originalY + (desiredY - originalY) * t;
-      if (annotationFits(cell, polygon, originalX, originalY, x, y, localScale)) lo = t;
-      else hi = t;
+      const t = (lo + hi) / 2, x = originalX + (desiredX - originalX) * t, y = originalY + (desiredY - originalY) * t;
+      if (annotationFits(cell, polygon, originalX, originalY, x, y, localScale)) lo = t; else hi = t;
     }
-    return [
-      originalX + (desiredX - originalX) * lo,
-      originalY + (desiredY - originalY) * lo
-    ];
+    return [originalX + (desiredX - originalX) * lo, originalY + (desiredY - originalY) * lo];
   }
 
-  // Annotation anchors are sticky inside the visible portion of their cell, but
-  // movement is geometry-constrained so the annotation itself does not cross the
-  // cell boundary. No masking is used, so text is never chopped by this feature.
   function updateLayerAnnotations(clusterNode, view) {
-    const k = view.k;
-    const maxScreenFont = width < 720 ? 22 : 24;
-    const w = Number(clusterNode.dataset.layerWidth) || 1;
-    const h = Number(clusterNode.dataset.layerHeight) || 1;
-    const marginPx = width < 720 ? 18 : 24;
-    const left = (-view.x + marginPx) / k;
-    const top = (-view.y + marginPx) / k;
-    const right = (w - view.x - marginPx) / k;
-    const bottom = (h - view.y - marginPx) / k;
+    const k = view.k, maxScreenFont = width < 720 ? 22 : 24;
+    const w = Number(clusterNode.dataset.layerWidth) || 1, h = Number(clusterNode.dataset.layerHeight) || 1, marginPx = width < 720 ? 18 : 24;
+    const left = (-view.x + marginPx) / k, top = (-view.y + marginPx) / k, right = (w - view.x - marginPx) / k, bottom = (h - view.y - marginPx) / k;
 
     d3.select(clusterNode).selectAll("g.layer-content g.cell").each(function(d) {
-      const cell = d3.select(this);
-      const text = cell.select("text.cell-label");
+      const cell = d3.select(this), text = cell.select("text.cell-label");
       if (text.empty() || !d?.polygon?.length) return;
       const baseFont = parseFloat(text.style("font-size")) || 12;
-      const localScale = Math.min(1, maxScreenFont / Math.max(baseFont * k, 1));
-      const originalX = Number(text.attr("x")) || 0;
-      const originalY = Number(text.attr("y")) || 0;
+      const fitScale = Number(text.attr("data-fit-scale")) || 1;
+      const originalX = Number(text.attr("data-fit-anchor-x")) || Number(text.attr("x")) || 0;
+      const originalY = Number(text.attr("data-fit-anchor-y")) || Number(text.attr("y")) || 0;
+      const viewportScale = Math.min(1, maxScreenFont / Math.max(baseFont * fitScale * k, 1));
+      const localScale = fitScale * viewportScale;
       const visiblePolygon = clipPolygonToRect(d.polygon, left, top, right, bottom);
       const visibleArea = visiblePolygon.length >= 3 ? Math.abs(d3.polygonArea(visiblePolygon)) : 0;
       let desiredX = originalX, desiredY = originalY;
       if (visibleArea > 4 / (k * k)) {
         const centroid = d3.polygonCentroid(visiblePolygon);
-        if (Number.isFinite(centroid[0]) && Number.isFinite(centroid[1])) {
-          desiredX = centroid[0]; desiredY = centroid[1];
-        }
+        if (Number.isFinite(centroid[0]) && Number.isFinite(centroid[1])) { desiredX = centroid[0]; desiredY = centroid[1]; }
       }
       const [anchorX, anchorY] = constrainedAnnotationAnchor(cell, d.polygon, originalX, originalY, desiredX, desiredY, localScale);
-      const dx = anchorX - originalX, dy = anchorY - originalY;
-      text.attr("transform", `translate(${dx},${dy}) translate(${originalX},${originalY}) scale(${localScale}) translate(${-originalX},${-originalY})`);
+      text.attr("transform", `translate(${anchorX},${anchorY}) scale(${localScale}) translate(${-originalX},${-originalY})`);
 
-      // The icon uses the same anchor and localScale as the label. Its only offset
-      // is the measured base offset established by appendSemanticIcon().
       const icon = cell.select("g.semantic-kind-icon");
       if (!icon.empty()) {
-        const iconX = Number(icon.attr("data-icon-x")) || originalX;
-        const iconY = Number(icon.attr("data-icon-y")) || originalY;
+        const iconX = Number(icon.attr("data-icon-x")) || originalX, iconY = Number(icon.attr("data-icon-y")) || originalY;
         icon.attr("transform", `translate(${anchorX},${anchorY}) scale(${localScale}) translate(${iconX - originalX},${iconY - originalY})`);
       }
     });
@@ -196,8 +159,7 @@
   function applyLayerView(clusterNode) {
     if (!clusterNode) return;
     const key = clusterNode.dataset.layerKey, w = Number(clusterNode.dataset.layerWidth) || 1, h = Number(clusterNode.dataset.layerHeight) || 1, minK = Number(clusterNode.dataset.layerMinScale) || 1;
-    const fallback = centeredView(w, h, minK);
-    const view = clampLayerView(layerViews.get(key) || fallback, w, h, minK);
+    const fallback = centeredView(w, h, minK), view = clampLayerView(layerViews.get(key) || fallback, w, h, minK);
     layerViews.set(key, view);
     d3.select(clusterNode).select("g.layer-content").attr("transform", `translate(${view.x},${view.y}) scale(${view.k})`);
     updateLayerAnnotations(clusterNode, view);
@@ -208,8 +170,7 @@
     node.dataset.layerKey = key; node.dataset.layerWidth = options.w; node.dataset.layerHeight = options.h; node.dataset.layerMinScale = minK;
     const defs = g.append("defs");
     defs.append("clipPath").attr("id", clipId).append("rect").attr("x", 0).attr("y", 0).attr("width", options.w).attr("height", options.h);
-    const viewport = g.append("g").attr("class", "layer-viewport").attr("clip-path", `url(#${clipId})`);
-    const content = viewport.append("g").attr("class", "layer-content");
+    const viewport = g.append("g").attr("class", "layer-viewport").attr("clip-path", `url(#${clipId})`), content = viewport.append("g").attr("class", "layer-content");
     g.selectAll(":scope > g.cell").nodes().forEach(cell => content.node().appendChild(cell));
     if (!layerViews.has(key)) layerViews.set(key, centeredView(options.w, options.h, minK));
     applyLayerView(node);
