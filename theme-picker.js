@@ -1,5 +1,4 @@
-// User-selectable presentation themes for the Atlas visualization.
-// Theme selection now lives in a floating tools panel instead of the header.
+// User-selectable presentation themes and display controls for the Atlas visualization.
 (() => {
   const themes = [
     { id: "calm-earthy", name: "Calm & Earthy", scale: 1.12 },
@@ -11,12 +10,16 @@
   ];
 
   const storageKey = "atlas-theme";
+  const legendStorageKey = "atlas-legend-visible";
   const control = document.querySelector("#theme-control");
   const toolsTrigger = document.querySelector("#tools-trigger");
   const toolsPanel = document.querySelector("#tools-panel");
   const toolsClose = document.querySelector("#tools-close");
   const themeTrigger = control?.querySelector(".theme-trigger");
   const readout = document.querySelector("#current-theme-name");
+  const legend = document.querySelector("#visual-key");
+  const legendToggle = document.querySelector("#legend-toggle");
+  const legendToggleLabel = document.querySelector("#legend-toggle-label");
   if (!control || !toolsTrigger || !toolsPanel || !themeTrigger) return;
 
   function applyFontScale(theme) {
@@ -55,6 +58,29 @@
   }
 
   function advanceTheme() { applyTheme(currentIndex + 1); }
+
+  let legendVisible = true;
+  try {
+    const storedLegend = localStorage.getItem(legendStorageKey);
+    if (storedLegend !== null) legendVisible = storedLegend !== "false";
+  } catch (_) {}
+
+  function applyLegendVisibility(visible, persist = true) {
+    legendVisible = Boolean(visible);
+    if (legend) {
+      legend.hidden = !legendVisible;
+      legend.classList.toggle("is-hidden", !legendVisible);
+    }
+    if (legendToggle) {
+      legendToggle.setAttribute("aria-pressed", String(legendVisible));
+      legendToggle.setAttribute("aria-label", legendVisible ? "Hide legend" : "Show legend");
+      legendToggle.classList.toggle("is-off", !legendVisible);
+    }
+    if (legendToggleLabel) legendToggleLabel.textContent = legendVisible ? "On" : "Off";
+    if (persist) {
+      try { localStorage.setItem(legendStorageKey, String(legendVisible)); } catch (_) {}
+    }
+  }
 
   function setToolsOpen(open) {
     toolsPanel.hidden = !open;
@@ -96,6 +122,19 @@
     if (event.detail === 0) advanceTheme();
   });
 
+  legendToggle?.addEventListener("pointerup", event => {
+    if (event.button != null && event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    applyLegendVisibility(!legendVisible);
+  }, { capture: true });
+
+  legendToggle?.addEventListener("click", event => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.detail === 0) applyLegendVisibility(!legendVisible);
+  });
+
   document.addEventListener("pointerdown", event => {
     if (!toolsPanel.hidden && !control.contains(event.target)) setToolsOpen(false);
   }, { capture: true });
@@ -119,4 +158,5 @@
 
   setToolsOpen(false);
   applyTheme(currentIndex, false);
+  applyLegendVisibility(legendVisible, false);
 })();
