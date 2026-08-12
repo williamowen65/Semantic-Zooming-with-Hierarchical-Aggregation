@@ -14,18 +14,8 @@
   const storageKey = "atlas-theme";
   const control = document.querySelector("#theme-control");
   const trigger = control?.querySelector(".theme-trigger");
-  const menu = control?.querySelector(".theme-menu");
+  const readout = document.querySelector("#current-theme-name");
   if (!control || !trigger) return;
-
-  // The control is intentionally a single cycling button now. Keep the old menu
-  // element inert/hidden so this change does not disturb the toolbar markup.
-  if (menu) {
-    menu.hidden = true;
-    menu.replaceChildren();
-  }
-  trigger.removeAttribute("aria-haspopup");
-  trigger.removeAttribute("aria-controls");
-  trigger.removeAttribute("aria-expanded");
 
   function applyFontScale(theme) {
     document.querySelectorAll("#viz text.cell-label").forEach(text => {
@@ -44,10 +34,11 @@
   if (currentIndex < 0) currentIndex = 0;
   let current = themes[currentIndex];
 
-  function updateTrigger() {
-    trigger.innerHTML = `<span aria-hidden="true">◐</span><span>${current.name}</span>`;
-    trigger.setAttribute("aria-label", `Theme: ${current.name}. Activate for next theme.`);
+  function updateThemeLabels() {
+    trigger.innerHTML = `<span aria-hidden="true">◐</span><span>Theme</span>`;
+    trigger.setAttribute("aria-label", `Current theme ${current.name}. Activate for next theme.`);
     trigger.title = `Current theme: ${current.name}. Click for next theme.`;
+    if (readout) readout.textContent = current.name;
   }
 
   function applyTheme(index, persist = true) {
@@ -55,7 +46,7 @@
     current = themes[currentIndex];
     document.body.dataset.theme = current.id;
     themes.forEach(theme => document.body.classList.toggle(`theme-${theme.id}`, theme.id === current.id));
-    updateTrigger();
+    updateThemeLabels();
     applyFontScale(current);
     if (persist) {
       try { localStorage.setItem(storageKey, current.id); } catch (_) {}
