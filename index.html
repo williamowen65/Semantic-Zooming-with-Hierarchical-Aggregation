@@ -71,8 +71,6 @@
       forestData.push(root); annotate(root);
     });
 
-    // Sparse cross-forest sample data: several roots now have short, medium,
-    // and branching lineages so the prototype is not dominated by one deep path.
     const sampleBranches = {
       infrastructure: [
         { id:"transit-capacity", name:"Transit Capacity", votes:1420, rating:4.2, children:[{id:"bus-frequency",name:"Bus Frequency",votes:610,rating:4.3},{id:"rail-bottlenecks",name:"Rail Bottlenecks",votes:520,rating:4.0}] },
@@ -221,6 +219,7 @@
     })();
     render();
   </script>
+  <script src="public-data.js"></script>
   <script src="semantic-icons.js"></script>
 </body>
 </html>
