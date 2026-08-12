@@ -29,6 +29,12 @@
   backdrop-filter: blur(8px);
 }
 
+/* Semantic meaning now lives inside the label text itself (⚠ / ✓), so the
+   older independently-positioned SVG glyph is intentionally suppressed. */
+.semantic-kind-icon {
+  display: none !important;
+}
+
 @media (max-width: 720px) {
   .theme-control {
     top: 10px;
