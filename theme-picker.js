@@ -17,7 +17,6 @@
   const toolsClose = document.querySelector("#tools-close");
   const themeTrigger = control?.querySelector(".theme-trigger");
   const readout = document.querySelector("#current-theme-name");
-  const legend = document.querySelector("#visual-key");
   const legendToggle = document.querySelector("#legend-toggle");
   const legendToggleLabel = document.querySelector("#legend-toggle-label");
   if (!control || !toolsTrigger || !toolsPanel || !themeTrigger) return;
@@ -59,28 +58,34 @@
 
   function advanceTheme() { applyTheme(currentIndex + 1); }
 
-  let legendVisible = true;
-  try {
-    const storedLegend = localStorage.getItem(legendStorageKey);
-    if (storedLegend !== null) legendVisible = storedLegend !== "false";
-  } catch (_) {}
+  function getLegend() { return document.getElementById("visual-key"); }
 
-  function applyLegendVisibility(visible, persist = true) {
-    legendVisible = Boolean(visible);
-    if (legend) {
-      legend.hidden = !legendVisible;
-      legend.classList.toggle("is-hidden", !legendVisible);
-    }
+  function setLegendVisible(visible, persist = true) {
+    const legend = getLegend();
+    if (!legend) return;
+    const show = Boolean(visible);
+    // Toggle the requested element itself. Inline display wins over any legacy
+    // .key styles and avoids depending on the hidden attribute implementation.
+    legend.style.display = show ? "flex" : "none";
+    legend.hidden = !show;
+    legend.setAttribute("aria-hidden", String(!show));
     if (legendToggle) {
-      legendToggle.setAttribute("aria-pressed", String(legendVisible));
-      legendToggle.setAttribute("aria-label", legendVisible ? "Hide legend" : "Show legend");
-      legendToggle.classList.toggle("is-off", !legendVisible);
+      legendToggle.setAttribute("aria-pressed", String(show));
+      legendToggle.setAttribute("aria-label", show ? "Hide legend" : "Show legend");
+      legendToggle.classList.toggle("is-off", !show);
     }
-    if (legendToggleLabel) legendToggleLabel.textContent = legendVisible ? "On" : "Off";
+    if (legendToggleLabel) legendToggleLabel.textContent = show ? "Shown" : "Hidden";
     if (persist) {
-      try { localStorage.setItem(legendStorageKey, String(legendVisible)); } catch (_) {}
+      try { localStorage.setItem(legendStorageKey, String(show)); } catch (_) {}
     }
   }
+
+  function legendIsVisible() {
+    const legend = getLegend();
+    return !!legend && !legend.hidden && legend.style.display !== "none";
+  }
+
+  function toggleLegend() { setLegendVisible(!legendIsVisible()); }
 
   function setToolsOpen(open) {
     toolsPanel.hidden = !open;
@@ -91,59 +96,37 @@
 
   toolsTrigger.addEventListener("pointerup", event => {
     if (event.button != null && event.button !== 0) return;
-    event.preventDefault();
-    event.stopPropagation();
-    setToolsOpen(toolsPanel.hidden);
+    event.preventDefault(); event.stopPropagation(); setToolsOpen(toolsPanel.hidden);
   }, { capture: true });
-
   toolsTrigger.addEventListener("click", event => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (event.detail === 0) setToolsOpen(toolsPanel.hidden);
+    event.preventDefault(); event.stopPropagation(); if (event.detail === 0) setToolsOpen(toolsPanel.hidden);
   });
-
   toolsClose?.addEventListener("click", event => {
-    event.preventDefault();
-    event.stopPropagation();
-    setToolsOpen(false);
-    toolsTrigger.focus({ preventScroll: true });
+    event.preventDefault(); event.stopPropagation(); setToolsOpen(false); toolsTrigger.focus({ preventScroll: true });
   });
-
   themeTrigger.addEventListener("pointerup", event => {
     if (event.button != null && event.button !== 0) return;
-    event.preventDefault();
-    event.stopPropagation();
-    advanceTheme();
+    event.preventDefault(); event.stopPropagation(); advanceTheme();
   }, { capture: true });
-
   themeTrigger.addEventListener("click", event => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (event.detail === 0) advanceTheme();
+    event.preventDefault(); event.stopPropagation(); if (event.detail === 0) advanceTheme();
   });
 
+  // One physical pointer gesture = one legend toggle. Keyboard activation is
+  // handled by click (detail === 0), matching the theme control behavior.
   legendToggle?.addEventListener("pointerup", event => {
     if (event.button != null && event.button !== 0) return;
-    event.preventDefault();
-    event.stopPropagation();
-    applyLegendVisibility(!legendVisible);
+    event.preventDefault(); event.stopPropagation(); toggleLegend();
   }, { capture: true });
-
   legendToggle?.addEventListener("click", event => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (event.detail === 0) applyLegendVisibility(!legendVisible);
+    event.preventDefault(); event.stopPropagation(); if (event.detail === 0) toggleLegend();
   });
 
   document.addEventListener("pointerdown", event => {
     if (!toolsPanel.hidden && !control.contains(event.target)) setToolsOpen(false);
   }, { capture: true });
-
   document.addEventListener("keydown", event => {
-    if (event.key === "Escape" && !toolsPanel.hidden) {
-      setToolsOpen(false);
-      toolsTrigger.focus({ preventScroll: true });
-    }
+    if (event.key === "Escape" && !toolsPanel.hidden) { setToolsOpen(false); toolsTrigger.focus({ preventScroll: true }); }
   });
 
   let queued = false;
@@ -156,7 +139,13 @@
     }).observe(viz, { childList: true, subtree: true });
   }
 
+  let initialLegendVisible = true;
+  try {
+    const storedLegend = localStorage.getItem(legendStorageKey);
+    if (storedLegend !== null) initialLegendVisible = storedLegend !== "false";
+  } catch (_) {}
+
   setToolsOpen(false);
   applyTheme(currentIndex, false);
-  applyLegendVisibility(legendVisible, false);
+  setLegendVisible(initialLegendVisible, false);
 })();
