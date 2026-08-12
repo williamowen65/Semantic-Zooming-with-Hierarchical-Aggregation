@@ -1,39 +1,125 @@
-// Sparse Atlas seed: broad roots with a few example children for interaction testing.
+// Broad Atlas demo dataset. Every root has children, with several branches extending 4-5 levels deep.
 const forestData = [
   { id:"root-health", name:"Health & Wellbeing", votes:9800, rating:4.7, kind:"issue", color:"#71879a", children:[
-    { id:"health-mental-access", name:"Mental Health Care Access", votes:4100, rating:4.8, kind:"issue" },
+    { id:"health-mental-access", name:"Mental Health Care Access", votes:4100, rating:4.8, kind:"issue", children:[
+      { id:"health-mental-waits", name:"Long Therapy Waitlists", votes:2600, rating:4.7, kind:"issue", children:[
+        { id:"health-mental-rural", name:"Rural Provider Shortages", votes:1500, rating:4.6, kind:"issue", children:[
+          { id:"health-mental-telehealth", name:"Regional Telehealth Networks", votes:980, rating:4.5, kind:"solution" },
+          { id:"health-mental-incentives", name:"Rural Clinician Incentives", votes:760, rating:4.4, kind:"solution" }
+        ]},
+        { id:"health-mental-triage", name:"Same-Day Mental Health Triage", votes:1200, rating:4.6, kind:"solution" }
+      ]},
+      { id:"health-school-counseling", name:"School Counseling Access", votes:2100, rating:4.6, kind:"issue" },
+      { id:"health-peer-support", name:"Peer Support Programs", votes:1700, rating:4.5, kind:"solution" }
+    ]},
+    { id:"health-primary-care", name:"Primary Care Availability", votes:3300, rating:4.6, kind:"issue" },
     { id:"health-community-clinics", name:"Community Health Clinics", votes:2800, rating:4.7, kind:"solution" }
   ]},
-  { id:"root-economy", name:"Money, Work & Economy", votes:9400, rating:4.6, kind:"issue", color:"#71879a" },
+  { id:"root-economy", name:"Money, Work & Economy", votes:9400, rating:4.6, kind:"issue", color:"#71879a", children:[
+    { id:"economy-wage-pressure", name:"Wages Lagging Living Costs", votes:5200, rating:4.8, kind:"issue" },
+    { id:"economy-job-instability", name:"Unpredictable Work Schedules", votes:3400, rating:4.5, kind:"issue" },
+    { id:"economy-portable-benefits", name:"Portable Worker Benefits", votes:2500, rating:4.6, kind:"solution" }
+  ]},
   { id:"root-housing", name:"Housing & Built Environment", votes:9000, rating:4.7, kind:"issue", color:"#71879a", children:[
-    { id:"housing-affordability", name:"Housing Affordability", votes:4700, rating:4.8, kind:"issue" },
+    { id:"housing-affordability", name:"Housing Affordability", votes:4700, rating:4.8, kind:"issue", children:[
+      { id:"housing-rent-burden", name:"High Rent Burden", votes:3500, rating:4.7, kind:"issue", children:[
+        { id:"housing-entry-costs", name:"Move-In Costs and Deposits", votes:1900, rating:4.5, kind:"issue" },
+        { id:"housing-eviction-prevention", name:"Emergency Rent Assistance", votes:1700, rating:4.6, kind:"solution", children:[
+          { id:"housing-auto-eligibility", name:"Automatic Eligibility Screening", votes:920, rating:4.5, kind:"solution" }
+        ]}
+      ]},
+      { id:"housing-supply", name:"Housing Supply Shortage", votes:3100, rating:4.6, kind:"issue" }
+    ]},
+    { id:"housing-accessibility", name:"Accessible Housing Shortage", votes:2600, rating:4.6, kind:"issue" },
     { id:"housing-mixed-income", name:"Mixed-Income Housing Development", votes:2400, rating:4.5, kind:"solution" }
   ]},
   { id:"root-education", name:"Education & Knowledge", votes:8500, rating:4.6, kind:"issue", color:"#71879a", children:[
-    { id:"education-teacher-shortages", name:"Teacher Shortages", votes:3600, rating:4.6, kind:"issue" },
+    { id:"education-teacher-shortages", name:"Teacher Shortages", votes:3600, rating:4.6, kind:"issue", children:[
+      { id:"education-burnout", name:"Teacher Burnout", votes:2700, rating:4.6, kind:"issue" },
+      { id:"education-mentorship", name:"New Teacher Mentorship", votes:1800, rating:4.5, kind:"solution" }
+    ]},
+    { id:"education-literacy", name:"Early Literacy Gaps", votes:3300, rating:4.7, kind:"issue" },
     { id:"education-adult-skills", name:"Free Adult Skills Programs", votes:2100, rating:4.5, kind:"solution" }
   ]},
   { id:"root-environment", name:"Environment & Natural World", votes:9300, rating:4.8, kind:"issue", color:"#71879a", children:[
-    { id:"environment-biodiversity", name:"Biodiversity Loss", votes:3900, rating:4.7, kind:"issue" },
+    { id:"environment-biodiversity", name:"Biodiversity Loss", votes:3900, rating:4.7, kind:"issue", children:[
+      { id:"environment-habitat-fragmentation", name:"Habitat Fragmentation", votes:2800, rating:4.7, kind:"issue", children:[
+        { id:"environment-road-barriers", name:"Roads Blocking Wildlife Movement", votes:1700, rating:4.6, kind:"issue", children:[
+          { id:"environment-crossings", name:"Wildlife Crossing Corridors", votes:1300, rating:4.7, kind:"solution" }
+        ]},
+        { id:"environment-green-links", name:"Connected Urban Greenways", votes:1450, rating:4.6, kind:"solution" }
+      ]},
+      { id:"environment-pollinators", name:"Pollinator Decline", votes:2300, rating:4.6, kind:"issue" }
+    ]},
+    { id:"environment-water", name:"Waterway Pollution", votes:3400, rating:4.7, kind:"issue" },
     { id:"environment-restoration", name:"Local Habitat Restoration", votes:2300, rating:4.6, kind:"solution" }
   ]},
-  { id:"root-infrastructure", name:"Infrastructure, Transportation & Utilities", votes:8200, rating:4.5, kind:"issue", color:"#71879a" },
-  { id:"root-energy", name:"Energy & Resources", votes:7600, rating:4.5, kind:"issue", color:"#71879a" },
+  { id:"root-infrastructure", name:"Infrastructure, Transportation & Utilities", votes:8200, rating:4.5, kind:"issue", color:"#71879a", children:[
+    { id:"infra-transit-gaps", name:"Transit Service Gaps", votes:3900, rating:4.7, kind:"issue" },
+    { id:"infra-water-aging", name:"Aging Water Infrastructure", votes:3500, rating:4.6, kind:"issue" },
+    { id:"infra-complete-streets", name:"Complete Streets Upgrades", votes:2500, rating:4.5, kind:"solution" }
+  ]},
+  { id:"root-energy", name:"Energy & Resources", votes:7600, rating:4.5, kind:"issue", color:"#71879a", children:[
+    { id:"energy-bill-burden", name:"High Household Energy Bills", votes:3700, rating:4.7, kind:"issue" },
+    { id:"energy-grid-resilience", name:"Grid Reliability During Extreme Weather", votes:3500, rating:4.7, kind:"issue" },
+    { id:"energy-weatherization", name:"Home Weatherization Grants", votes:2300, rating:4.6, kind:"solution" }
+  ]},
   { id:"root-government", name:"Government & Public Institutions", votes:8300, rating:4.5, kind:"issue", color:"#71879a", children:[
-    { id:"government-service-access", name:"Hard-to-Access Public Services", votes:3100, rating:4.5, kind:"issue" },
+    { id:"government-service-access", name:"Hard-to-Access Public Services", votes:3100, rating:4.5, kind:"issue", children:[
+      { id:"government-forms", name:"Confusing Forms and Eligibility Rules", votes:2200, rating:4.5, kind:"issue" },
+      { id:"government-language", name:"Limited Language Access", votes:1900, rating:4.6, kind:"issue" }
+    ]},
+    { id:"government-transparency", name:"Public Decision Transparency", votes:2900, rating:4.6, kind:"issue" },
     { id:"government-one-stop", name:"One-Stop Public Service Portal", votes:1900, rating:4.4, kind:"solution" }
   ]},
-  { id:"root-justice", name:"Law, Rights & Justice", votes:8500, rating:4.7, kind:"issue", color:"#71879a" },
-  { id:"root-safety", name:"Safety, Conflict & Security", votes:7900, rating:4.6, kind:"issue", color:"#71879a" },
+  { id:"root-justice", name:"Law, Rights & Justice", votes:8500, rating:4.7, kind:"issue", color:"#71879a", children:[
+    { id:"justice-legal-access", name:"Affordable Legal Help", votes:4200, rating:4.8, kind:"issue" },
+    { id:"justice-court-delays", name:"Court Backlogs and Delays", votes:3100, rating:4.5, kind:"issue" },
+    { id:"justice-community-legal", name:"Community Legal Clinics", votes:2400, rating:4.7, kind:"solution" }
+  ]},
+  { id:"root-safety", name:"Safety, Conflict & Security", votes:7900, rating:4.6, kind:"issue", color:"#71879a", children:[
+    { id:"safety-disaster-readiness", name:"Disaster Preparedness Gaps", votes:3600, rating:4.7, kind:"issue" },
+    { id:"safety-domestic-violence", name:"Domestic Violence Support Access", votes:3300, rating:4.8, kind:"issue" },
+    { id:"safety-neighborhood-response", name:"Neighborhood Emergency Response Teams", votes:2200, rating:4.5, kind:"solution" }
+  ]},
   { id:"root-technology", name:"Technology & Information", votes:8800, rating:4.7, kind:"issue", color:"#71879a", children:[
-    { id:"technology-misinformation", name:"Online Misinformation", votes:4300, rating:4.7, kind:"issue" },
+    { id:"technology-misinformation", name:"Online Misinformation", votes:4300, rating:4.7, kind:"issue", children:[
+      { id:"technology-local-rumors", name:"False Local Emergency Rumors", votes:2800, rating:4.6, kind:"issue", children:[
+        { id:"technology-source-confusion", name:"Unclear Source Credibility", votes:1900, rating:4.6, kind:"issue", children:[
+          { id:"technology-source-labels", name:"Community Source Context Labels", votes:1250, rating:4.5, kind:"solution" },
+          { id:"technology-origin-links", name:"Original Source Linking", votes:1100, rating:4.6, kind:"solution" }
+        ]}
+      ]},
+      { id:"technology-media-literacy", name:"Practical Media Literacy Guides", votes:2200, rating:4.6, kind:"solution" }
+    ]},
+    { id:"technology-digital-divide", name:"Digital Access Divide", votes:3600, rating:4.7, kind:"issue" },
     { id:"technology-privacy", name:"Privacy-Preserving Digital Services", votes:2500, rating:4.6, kind:"solution" }
   ]},
-  { id:"root-community", name:"Family, Relationships & Community", votes:7800, rating:4.6, kind:"issue", color:"#71879a" },
-  { id:"root-culture", name:"Culture, Media & Recreation", votes:7200, rating:4.4, kind:"issue", color:"#71879a" },
-  { id:"root-food", name:"Food & Agriculture", votes:7300, rating:4.6, kind:"issue", color:"#71879a" },
-  { id:"root-migration", name:"Human Movement & Migration", votes:6900, rating:4.5, kind:"issue", color:"#71879a" },
-  { id:"root-consumer", name:"Products, Services & Consumer Life", votes:8100, rating:4.6, kind:"issue", color:"#71879a" }
+  { id:"root-community", name:"Family, Relationships & Community", votes:7800, rating:4.6, kind:"issue", color:"#71879a", children:[
+    { id:"community-loneliness", name:"Social Isolation and Loneliness", votes:3900, rating:4.7, kind:"issue" },
+    { id:"community-caregiving", name:"Caregiver Support Gaps", votes:3200, rating:4.7, kind:"issue" },
+    { id:"community-third-places", name:"More Free Community Gathering Spaces", votes:2500, rating:4.6, kind:"solution" }
+  ]},
+  { id:"root-culture", name:"Culture, Media & Recreation", votes:7200, rating:4.4, kind:"issue", color:"#71879a", children:[
+    { id:"culture-local-news", name:"Loss of Local News", votes:3300, rating:4.6, kind:"issue" },
+    { id:"culture-arts-access", name:"Unequal Access to Arts and Recreation", votes:2800, rating:4.5, kind:"issue" },
+    { id:"culture-public-programming", name:"Free Public Cultural Programming", votes:2100, rating:4.5, kind:"solution" }
+  ]},
+  { id:"root-food", name:"Food & Agriculture", votes:7300, rating:4.6, kind:"issue", color:"#71879a", children:[
+    { id:"food-affordability", name:"Healthy Food Affordability", votes:4100, rating:4.8, kind:"issue" },
+    { id:"food-waste", name:"Food Waste", votes:2800, rating:4.5, kind:"issue" },
+    { id:"food-community-markets", name:"Community Produce Markets", votes:2200, rating:4.6, kind:"solution" }
+  ]},
+  { id:"root-migration", name:"Human Movement & Migration", votes:6900, rating:4.5, kind:"issue", color:"#71879a", children:[
+    { id:"migration-settlement", name:"Newcomer Settlement Barriers", votes:3400, rating:4.6, kind:"issue" },
+    { id:"migration-family-reunification", name:"Family Reunification Delays", votes:3000, rating:4.7, kind:"issue" },
+    { id:"migration-navigation", name:"Multilingual Newcomer Navigation Hubs", votes:2100, rating:4.6, kind:"solution" }
+  ]},
+  { id:"root-consumer", name:"Products, Services & Consumer Life", votes:8100, rating:4.6, kind:"issue", color:"#71879a", children:[
+    { id:"consumer-repairability", name:"Products That Are Hard to Repair", votes:3700, rating:4.7, kind:"issue" },
+    { id:"consumer-fees", name:"Hidden Fees and Confusing Pricing", votes:3500, rating:4.8, kind:"issue" },
+    { id:"consumer-standard-labels", name:"Plain-Language Price and Repair Labels", votes:2400, rating:4.6, kind:"solution" }
+  ]}
 ];
 
 const host=document.querySelector("#viz"),breadcrumbHost=document.querySelector("#breadcrumbs"),resetButton=document.querySelector("#reset"),statusHost=document.querySelector("#status");
@@ -105,9 +191,9 @@ function selectedCentroid(rendered,id,x,y){const leaf=rendered.leaves.find(d=>d.
 function levelGeometry(compactMobile,contentTop){const availableViewport=Math.max(360,height-contentTop-72),h=Math.max(compactMobile?340:420,Math.min(availableViewport*.92,compactMobile?width*.9:width*.38));return{x:0,w:width,h};}
 function render(){
   width=host.clientWidth;height=host.clientHeight;svg.attr("viewBox",[0,0,width,height]);stage.selectAll("*").remove();levelCenters=[];renderBreadcrumbs();const compactMobile=width<720,contentTop=compactMobile?132:98,centerX=width/2,geometry=levelGeometry(compactMobile,contentTop),gap=compactMobile?88:110;
-  if(!focusPath.length){cameraY=0;worldHeight=height;stage.attr("transform","translate(0,0)");renderCluster({items:forestData,x:0,y:contentTop,w:geometry.w,h:geometry.h,interactive:true,className:"root-overview"});stage.append("text").attr("class","canvas-caption").attr("x",centerX).attr("y",Math.min(height-22,contentTop+geometry.h+32)).attr("text-anchor","middle").text("Broad Atlas roots · sparse example children on selected topics");return;}
+  if(!focusPath.length){cameraY=0;worldHeight=height;stage.attr("transform","translate(0,0)");renderCluster({items:forestData,x:0,y:contentTop,w:geometry.w,h:geometry.h,interactive:true,className:"root-overview"});stage.append("text").attr("class","canvas-caption").attr("x",centerX).attr("y",Math.min(height-22,contentTop+geometry.h+32)).attr("text-anchor","middle").text("Broad Atlas roots · populated demo hierarchy");return;}
   let cursorY=contentTop;for(let depth=0;depth<focusPath.length;depth++){const selectedId=focusPath[depth],selected=nodeById.get(selectedId),siblings=depth===0?forestData:(parentById.get(selectedId)?.children||[selected]);renderCluster({items:siblings,x:0,y:cursorY,w:geometry.w,h:geometry.h,selectedId,faded:true,interactive:true,className:`context-cluster depth-${depth}`});levelCenters.push(cursorY+geometry.h/2);cursorY+=geometry.h+gap;}
-  const selected=currentNode(),children=selected?.children||[];if(children.length){renderCluster({items:children,x:0,y:cursorY,w:geometry.w,h:geometry.h,interactive:true,className:"child-cluster"});levelCenters.push(cursorY+geometry.h/2);stage.append("text").attr("class","canvas-caption").attr("x",centerX).attr("y",cursorY-24).attr("text-anchor","middle").text(`${selected.name} · example children`);cursorY+=geometry.h+gap;}else{stage.append("text").attr("class","leaf-message").attr("x",centerX).attr("y",cursorY-30).attr("text-anchor","middle").text("No child nodes yet");}
+  const selected=currentNode(),children=selected?.children||[];if(children.length){renderCluster({items:children,x:0,y:cursorY,w:geometry.w,h:geometry.h,interactive:true,className:"child-cluster"});levelCenters.push(cursorY+geometry.h/2);stage.append("text").attr("class","canvas-caption").attr("x",centerX).attr("y",cursorY-24).attr("text-anchor","middle").text(`${selected.name} · children`);cursorY+=geometry.h+gap;}else{stage.append("text").attr("class","leaf-message").attr("x",centerX).attr("y",cursorY-30).attr("text-anchor","middle").text("No child nodes yet");}
   worldHeight=Math.max(height,cursorY+24);applyCamera(false);
 }
 host.addEventListener("wheel",event=>{if(!focusPath.length||worldHeight<=height)return;event.preventDefault();cameraY-=event.deltaY*.78;applyCamera(false);},{passive:false});
