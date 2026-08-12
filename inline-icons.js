@@ -1,5 +1,6 @@
-// Keeps issue/solution icons inline immediately before the first label line.
-// This is presentation-only: semantic-icons.js still owns icon drawing and zoom behavior.
+// Keeps issue/solution icons immediately left of the node label, with the icon's
+// top edge aligned to the top of the first line of text. Presentation only:
+// semantic-icons.js still owns icon drawing and zoom behavior.
 (() => {
   function positionIcon(cell) {
     const text = cell.querySelector("text.cell-label");
@@ -9,25 +10,30 @@
 
     const fontSize = parseFloat(getComputedStyle(text).fontSize) || 12;
     const iconSize = Math.max(9, Math.min(16, fontSize * 0.78));
-    const lineX = Number(firstLine.getAttribute("x") || text.getAttribute("x") || 0);
-    const lineY = Number(text.getAttribute("y") || 0);
-    let lineWidth = 0;
-    try { lineWidth = firstLine.getComputedTextLength(); } catch (_) {}
+    const isSolution = icon.classList.contains("semantic-kind-solution");
 
-    // Labels are centered, so the first line starts half its measured width left
-    // of x. Put the icon just before that start and align it optically to the line.
-    const gap = Math.max(3, fontSize * 0.28);
-    const iconX = lineX - lineWidth / 2 - gap - iconSize * 0.72;
-    const iconY = lineY - fontSize * 0.34;
+    let lineBox;
+    try { lineBox = firstLine.getBBox(); } catch (_) { lineBox = null; }
+    if (!lineBox || !Number.isFinite(lineBox.x) || !Number.isFinite(lineBox.y)) return;
+
+    // Keep a small, consistent breathing space between symbol and copy.
+    const gap = Math.max(3, fontSize * 0.26);
+
+    // Use the actual visible extent of each symbol. This places the icon wholly
+    // to the left of the first line and lowers it so its TOP edge matches the
+    // text's top edge rather than centering the icon on the text baseline.
+    const verticalRadius = isSolution ? iconSize * 0.62 : iconSize * 0.72;
+    const horizontalRadius = isSolution ? iconSize * 0.62 : iconSize * 0.72 * 0.88;
+    const iconX = lineBox.x - gap - horizontalRadius;
+    const iconY = lineBox.y + verticalRadius;
 
     icon.setAttribute("data-icon-x", iconX);
     icon.setAttribute("data-icon-y", iconY);
     icon.setAttribute("data-icon-size", iconSize);
     icon.setAttribute("transform", `translate(${iconX},${iconY})`);
 
-    // Resize the existing geometry without changing which symbol is used.
-    const kind = icon.classList.contains("semantic-kind-solution") ? "solution" : "issue";
-    if (kind === "solution") {
+    // Resize the existing geometry without changing which semantic symbol is used.
+    if (isSolution) {
       const circle = icon.querySelector("circle");
       const path = icon.querySelector("path");
       if (circle) circle.setAttribute("r", iconSize * 0.62);
