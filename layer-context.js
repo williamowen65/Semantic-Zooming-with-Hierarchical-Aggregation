@@ -23,9 +23,6 @@
   };
   const esc = value => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 
-  // A layer's visible frame is fixed even when its internal layer-content is
-  // panned or zoomed. Never use getBBox() here: getBBox() includes transformed
-  // descendants and makes the context card drift when a layer is zoomed.
   function layerTop(cluster) {
     return parseTranslateY(cluster);
   }
@@ -53,20 +50,18 @@
       if (!node || !current) return;
       const next = clusters[index + 1] || (index === focusPath.length - 1 ? childCluster : null);
 
-      // Position strictly in world/layer coordinates. Internal pan/zoom changes
-      // only g.layer-content and therefore cannot affect these values.
       const currentBottom = layerBottom(current);
       const gapTop = currentBottom;
       const gapBottom = next ? layerTop(next) : currentBottom + (width < 720 ? 96 : 112);
       const available = Math.max(58, gapBottom - gapTop);
 
-      // Keep the visual inset from the adjacent layers constant at every
-      // breakpoint. Previously desktop capped the card at 66px while mobile
-      // used 76px, leaving dramatically different amounts of blank space.
-      // Let the actual inter-layer gap determine the card height instead.
-      const layerInset = 6;
-      const cardHeight = Math.max(58, available - layerInset * 2);
-      const y = gapTop + Math.max(layerInset, (available - cardHeight) / 2);
+      // The desktop treatment was the desired one: a compact card floating
+      // within the inter-layer whitespace instead of filling that whitespace.
+      // Use that same compact height on mobile and desktop, and center it in
+      // whatever gap is available. Mobile content is allowed to wrap inside.
+      const preferredCardHeight = 66;
+      const cardHeight = Math.min(preferredCardHeight, Math.max(58, available - 12));
+      const y = gapTop + Math.max(6, (available - cardHeight) / 2);
 
       const x = width < 720 ? 10 : Math.max(16, width * .12);
       const cardWidth = width < 720 ? Math.max(120, width - 20) : Math.min(width - 32, width * .76);
