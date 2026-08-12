@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Semantic Zooming with Hierarchical Aggregation</title>
   <link rel="stylesheet" href="styles.css?v=theme-pointer-20260812-0834" />
-  <link rel="stylesheet" href="theme-toolbar-fix.css?v=theme-pointer-20260812-0834" />
+  <link rel="stylesheet" href="theme-toolbar-fix.css?v=floating-tools-20260812" />
 </head>
 <body>
   <header class="toolbar">
@@ -14,15 +14,30 @@
       <p>Weighted tiled clusters · broad roots only for this data pass</p>
     </div>
     <nav id="breadcrumbs" class="breadcrumbs" aria-label="Hierarchy breadcrumb"></nav>
-    <div id="theme-control" class="theme-control">
-      <button class="theme-trigger" type="button" aria-label="Cycle visualization theme">
-        <span aria-hidden="true">◐</span><span>Theme</span>
-      </button>
-      <span id="current-theme-name" class="current-theme-name" aria-live="polite">Calm & Earthy</span>
-    </div>
     <button id="reset" class="reset-button" type="button">All roots</button>
   </header>
+
   <main id="viz" aria-label="Interactive weighted hierarchy visualization"></main>
+
+  <aside id="theme-control" class="theme-control" aria-label="Visualization tools">
+    <button id="tools-trigger" class="tools-trigger" type="button" aria-expanded="false" aria-controls="tools-panel" aria-label="Open visualization tools">
+      <span class="tools-icon" aria-hidden="true">⚙</span>
+    </button>
+    <div id="tools-panel" class="tools-panel" role="dialog" aria-modal="false" aria-label="Visualization tools" hidden>
+      <div class="tools-panel-heading">
+        <strong>Display</strong>
+        <button id="tools-close" class="tools-close" type="button" aria-label="Close visualization tools">×</button>
+      </div>
+      <div class="theme-setting">
+        <span class="theme-setting-label">Theme</span>
+        <button class="theme-trigger" type="button" aria-label="Cycle visualization theme">
+          <span id="current-theme-name" class="current-theme-name" aria-live="polite">Calm & Earthy</span>
+          <span class="theme-next" aria-hidden="true">›</span>
+        </button>
+      </div>
+    </div>
+  </aside>
+
   <div class="key" aria-label="Visual encoding key">
     <span><i class="key-cell selected"></i> selected</span>
     <span><i class="key-cell faded"></i> sibling context</span>
@@ -39,6 +54,6 @@
   <script src="enhancements.js?v=root-only-20260811"></script>
   <script src="semantic-icons.js?v=label-geometry-icons-20260811"></script>
   <script src="hierarchy-links.js?v=restore-links-20260812"></script>
-  <script src="theme-picker.js?v=theme-pointer-20260812-0834"></script>
+  <script src="theme-picker.js?v=floating-tools-20260812"></script>
 </body>
 </html>
