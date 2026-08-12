@@ -1,9 +1,28 @@
 // Interaction-only enhancements for the Atlas prototype.
 // No dataset lives in this file.
 
+// Compress extreme aggregate-score differences before handing them to the
+// Voronoi layout. The ordering is preserved (the most important topic remains
+// largest), but one deep branch can no longer consume nearly an entire layer or
+// squeeze a valid sibling into an unreadable sliver.
+function balancedLayoutWeights(items){
+  const scores=items.map(item=>Math.max(1,aggregateScore(item)));
+  if(scores.length<2)return scores;
+  const sorted=[...scores].sort((a,b)=>a-b);
+  const mid=Math.floor(sorted.length/2);
+  const median=sorted.length%2?sorted[mid]:(sorted[mid-1]+sorted[mid])/2;
+  return scores.map(score=>{
+    // Square-root compression preserves rank while reducing descendant-count
+    // amplification. A floor/cap then guarantees a practical sibling range.
+    const relative=Math.sqrt(score/Math.max(1,median));
+    return Math.max(.58,Math.min(2.55,relative));
+  });
+}
+
 // Stable Voronoi geometry: selection changes emphasis, not layout.
 layoutCluster = function(items,w,h){
-  const proxies=items.map(item=>({id:item.id,item,weight:Math.max(1,aggregateScore(item))}));
+  const balanced=balancedLayoutWeights(items);
+  const proxies=items.map((item,index)=>({id:item.id,item,weight:balanced[index]}));
   const root=d3.hierarchy({children:proxies}).sum(d=>d.weight||0);
   const polygon=outerPolygon(w,h);
   const stableKey=items.map(item=>item.id).join("-");
