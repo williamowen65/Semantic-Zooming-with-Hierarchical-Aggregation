@@ -39,6 +39,7 @@ jobs:
             styles.css
             theme-toolbar-fix.css
             layer-context.css
+            leaf-end-state.css
             app.js
             environment-expansion.js
             descriptions.js
@@ -48,6 +49,7 @@ jobs:
             hierarchy-links.js
             theme-picker.js
             layer-context.js
+            leaf-end-state.js
           )
 
           cp "${assets[@]}" _site/
