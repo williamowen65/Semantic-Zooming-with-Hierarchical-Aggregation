@@ -26,7 +26,13 @@ function curvedEdgeControls(a,b){
 polygonPath=function(poly){if(!poly||poly.length<2)return"";let d=`M${poly[0][0]},${poly[0][1]}`;for(let i=0;i<poly.length;i+=1){const a=poly[i],b=poly[(i+1)%poly.length],[c1,c2]=curvedEdgeControls(a,b);d+=`C${c1[0]},${c1[1]} ${c2[0]},${c2[1]} ${b[0]},${b[1]}`;}return`${d}Z`;};
 
 const baseRenderBreadcrumbs=renderBreadcrumbs;
-renderBreadcrumbs=function(){baseRenderBreadcrumbs();requestAnimationFrame(()=>{breadcrumbHost.scrollLeft=breadcrumbHost.scrollWidth;});};
+renderBreadcrumbs=function(){
+  baseRenderBreadcrumbs();
+  requestAnimationFrame(()=>{
+    const current=breadcrumbHost.querySelector("button.current")||breadcrumbHost.lastElementChild;
+    if(current&&current.scrollIntoView){current.scrollIntoView({behavior:"auto",block:"nearest",inline:"end"});}
+  });
+};
 
 // Keep this override aligned with app.js: after render(), levelCenters contains
 // one center for every selected/context layer plus one extra center for the child
