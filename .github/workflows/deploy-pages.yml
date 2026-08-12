@@ -41,6 +41,7 @@ jobs:
             app.js
             enhancements.js
             semantic-icons.js
+            hierarchy-links.js
             theme-picker.js
           )
 
