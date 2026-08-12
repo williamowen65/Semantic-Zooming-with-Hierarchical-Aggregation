@@ -1,31 +1,31 @@
 // User-selectable presentation themes for the Atlas visualization.
-// This file changes presentation only; hierarchy data and geometry stay untouched.
+// Each press of the toolbar control advances to the next theme. Presentation only;
+// hierarchy data and geometry stay untouched.
 (() => {
   const themes = [
-    { id: "clean-modern", name: "Clean & Modern", note: "Airy blue · thin borders", scale: 1.12 },
-    { id: "bold-contrast", name: "Bold & High Contrast", note: "Dark tiles · strongest contrast", scale: 1.08 },
-    { id: "calm-earthy", name: "Calm & Earthy", note: "Muted natural palette", scale: 1.12 },
-    { id: "minimal-neutral", name: "Minimal & Neutral", note: "Quiet grayscale", scale: 1.10 },
-    { id: "vibrant-distinct", name: "Vibrant & Distinct", note: "Color-coded variety", scale: 1.08 },
-    { id: "soft-refined", name: "Soft & Refined", note: "Rounded, subtle, calm", scale: 1.10 }
+    { id: "calm-earthy", name: "Calm & Earthy", scale: 1.12 },
+    { id: "clean-modern", name: "Clean & Modern", scale: 1.12 },
+    { id: "bold-contrast", name: "Bold & High Contrast", scale: 1.08 },
+    { id: "minimal-neutral", name: "Minimal & Neutral", scale: 1.10 },
+    { id: "vibrant-distinct", name: "Vibrant & Distinct", scale: 1.08 },
+    { id: "soft-refined", name: "Soft & Refined", scale: 1.10 }
   ];
 
   const storageKey = "atlas-theme";
   const control = document.querySelector("#theme-control");
   const trigger = control?.querySelector(".theme-trigger");
   const menu = control?.querySelector(".theme-menu");
-  if (!control || !trigger || !menu) return;
+  if (!control || !trigger) return;
 
-  menu.replaceChildren();
-  themes.forEach(theme => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "theme-option";
-    button.dataset.theme = theme.id;
-    button.setAttribute("role", "menuitemradio");
-    button.innerHTML = `<span class="theme-swatch swatch-${theme.id}" aria-hidden="true"></span><span><strong>${theme.name}</strong><small>${theme.note}</small></span><span class="theme-check" aria-hidden="true">✓</span>`;
-    menu.appendChild(button);
-  });
+  // The control is intentionally a single cycling button now. Keep the old menu
+  // element inert/hidden so this change does not disturb the toolbar markup.
+  if (menu) {
+    menu.hidden = true;
+    menu.replaceChildren();
+  }
+  trigger.removeAttribute("aria-haspopup");
+  trigger.removeAttribute("aria-controls");
+  trigger.removeAttribute("aria-expanded");
 
   function applyFontScale(theme) {
     document.querySelectorAll("#viz text.cell-label").forEach(text => {
@@ -40,45 +40,33 @@
 
   let saved = null;
   try { saved = localStorage.getItem(storageKey); } catch (_) {}
-  let current = themes.find(t => t.id === saved) || themes.find(t => t.id === "calm-earthy") || themes[0];
+  let currentIndex = themes.findIndex(theme => theme.id === saved);
+  if (currentIndex < 0) currentIndex = 0;
+  let current = themes[currentIndex];
 
-  function applyTheme(id, persist = true) {
-    current = themes.find(t => t.id === id) || themes[0];
+  function updateTrigger() {
+    trigger.innerHTML = `<span aria-hidden="true">◐</span><span>${current.name}</span>`;
+    trigger.setAttribute("aria-label", `Theme: ${current.name}. Activate for next theme.`);
+    trigger.title = `Current theme: ${current.name}. Click for next theme.`;
+  }
+
+  function applyTheme(index, persist = true) {
+    currentIndex = ((index % themes.length) + themes.length) % themes.length;
+    current = themes[currentIndex];
     document.body.dataset.theme = current.id;
     themes.forEach(theme => document.body.classList.toggle(`theme-${theme.id}`, theme.id === current.id));
-    menu.querySelectorAll(".theme-option").forEach(button => {
-      const active = button.dataset.theme === current.id;
-      button.classList.toggle("is-active", active);
-      button.setAttribute("aria-checked", active ? "true" : "false");
-    });
-    trigger.setAttribute("aria-label", `Theme: ${current.name}`);
+    updateTrigger();
     applyFontScale(current);
     if (persist) {
       try { localStorage.setItem(storageKey, current.id); } catch (_) {}
     }
   }
 
-  function closeMenu() {
-    menu.hidden = true;
-    trigger.setAttribute("aria-expanded", "false");
-  }
-
   trigger.addEventListener("click", event => {
+    event.preventDefault();
     event.stopPropagation();
-    const opening = menu.hidden;
-    menu.hidden = !opening;
-    trigger.setAttribute("aria-expanded", opening ? "true" : "false");
+    applyTheme(currentIndex + 1);
   });
-
-  menu.addEventListener("click", event => {
-    const option = event.target.closest(".theme-option");
-    if (!option) return;
-    applyTheme(option.dataset.theme);
-    closeMenu();
-  });
-
-  document.addEventListener("click", event => { if (!control.contains(event.target)) closeMenu(); });
-  document.addEventListener("keydown", event => { if (event.key === "Escape") closeMenu(); });
 
   let queued = false;
   const viz = document.querySelector("#viz");
@@ -90,5 +78,5 @@
     }).observe(viz, { childList: true, subtree: true });
   }
 
-  applyTheme(current.id, false);
+  applyTheme(currentIndex, false);
 })();
