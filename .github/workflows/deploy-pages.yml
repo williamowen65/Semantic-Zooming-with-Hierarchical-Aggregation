@@ -38,11 +38,15 @@ jobs:
             index.html
             styles.css
             theme-toolbar-fix.css
+            layer-context.css
             app.js
+            environment-expansion.js
+            descriptions.js
             enhancements.js
             semantic-icons.js
             hierarchy-links.js
             theme-picker.js
+            layer-context.js
           )
 
           cp "${assets[@]}" _site/
