@@ -1,6 +1,6 @@
 // Renders the hierarchy connectors between the selected cell in one layer and
-// the selected cell (or child layer) below it. Connector endpoints now land on
-// the perimeter of selected Voronoi cells instead of their centroids.
+// the selected cell (or child layer) below it. Connector endpoints land on the
+// perimeter of selected Voronoi cells instead of their centroids.
 (() => {
   if (typeof render !== "function" || typeof d3 === "undefined" || !stage) return;
 
@@ -19,9 +19,6 @@
     return { x: stagePoint.x, y: stagePoint.y };
   }
 
-  // Find where a ray starting at the polygon centroid exits the polygon.
-  // The ray points toward the next hierarchy layer, so connectors visually
-  // attach to the node edge rather than terminating in the node's middle.
   function perimeterPoint(poly, towardX, towardY) {
     if (!poly?.length) return null;
     const [cx, cy] = d3.polygonCentroid(poly);
@@ -58,21 +55,19 @@
   function selectedPerimeterPoint(clusterNode, targetStagePoint) {
     const selected = selectedCell(clusterNode);
     if (!selected) return null;
-    const targetLocal = (() => {
-      const svgNode = svg?.node?.();
-      if (!svgNode || !selected.cellNode.getCTM) return null;
-      const cellMatrix = selected.cellNode.getCTM();
-      if (!cellMatrix) return null;
-      const p = svgNode.createSVGPoint();
-      const stageMatrix = stage.node().getCTM();
-      if (!stageMatrix) return null;
-      const viewportPoint = svgNode.createSVGPoint();
-      viewportPoint.x = targetStagePoint.x;
-      viewportPoint.y = targetStagePoint.y;
-      const screenPoint = viewportPoint.matrixTransform(stageMatrix);
-      return screenPoint.matrixTransform(cellMatrix.inverse());
-    })();
-    if (!targetLocal) return pointToStage(selected.cellNode, selected.centroid.x, selected.centroid.y);
+    const svgNode = svg?.node?.();
+    const stageNode = stage?.node?.();
+    if (!svgNode || !stageNode || !selected.cellNode.getCTM || !stageNode.getCTM) {
+      return pointToStage(selected.cellNode, selected.centroid.x, selected.centroid.y);
+    }
+    const cellMatrix = selected.cellNode.getCTM();
+    const stageMatrix = stageNode.getCTM();
+    if (!cellMatrix || !stageMatrix) return pointToStage(selected.cellNode, selected.centroid.x, selected.centroid.y);
+    const stagePoint = svgNode.createSVGPoint();
+    stagePoint.x = targetStagePoint.x;
+    stagePoint.y = targetStagePoint.y;
+    const screenPoint = stagePoint.matrixTransform(stageMatrix);
+    const targetLocal = screenPoint.matrixTransform(cellMatrix.inverse());
     const edge = perimeterPoint(selected.datum.polygon, targetLocal.x, targetLocal.y);
     return pointToStage(selected.cellNode, edge[0], edge[1]);
   }
@@ -86,6 +81,16 @@
     if (!clusterNode) return null;
     const box = clusterNode.getBBox();
     return pointToStage(clusterNode, box.x + box.width / 2, box.y);
+  }
+
+  function appendDot(point, role) {
+    stage.append("circle")
+      .attr("class", `link-dot link-dot-${role}`)
+      .attr("cx", point.x)
+      .attr("cy", point.y)
+      .attr("r", 4)
+      .attr("fill", "#526070")
+      .style("pointer-events", "none");
   }
 
   function renderHierarchyLinks() {
@@ -119,15 +124,10 @@
         .attr("vector-effect", "non-scaling-stroke")
         .style("pointer-events", "none");
 
-      // Dots live at the selected node boundary, where the relationship enters
-      // the next node. This makes the connection visually legible at a glance.
-      stage.append("circle")
-        .attr("class", "link-dot")
-        .attr("cx", target.x)
-        .attr("cy", target.y)
-        .attr("r", 4)
-        .attr("fill", "#526070")
-        .style("pointer-events", "none");
+      // Mark both ends of the relationship: where it exits the parent/selected
+      // node and where it enters the next selected node or child layer.
+      appendDot(source, "exit");
+      appendDot(target, "entry");
     });
   }
 
