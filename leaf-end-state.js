@@ -9,19 +9,6 @@
     return match ? Number(match[1]) : 0;
   };
 
-  function splitIntoLines(text, maxChars) {
-    const words = String(text || '').trim().split(/\s+/).filter(Boolean);
-    const lines = [];
-    let line = '';
-    words.forEach(word => {
-      const candidate = line ? `${line} ${word}` : word;
-      if (candidate.length <= maxChars || !line) line = candidate;
-      else { lines.push(line); line = word; }
-    });
-    if (line) lines.push(line);
-    return lines;
-  }
-
   function renderLeafEndLayer() {
     stage.selectAll('.leaf-end-layer').remove();
     const selected = typeof currentNode === 'function' ? currentNode() : null;
@@ -44,55 +31,58 @@
     const label = selected.kind === 'solution' ? 'solution' : 'issue';
     const cx = width / 2;
     const cy = Math.min(geometry.h * .30, compactMobile ? 108 : 140);
-    const horizontalMargin = compactMobile ? 24 : 40;
-    const panelWidth = Math.max(240, Math.min(compactMobile ? width - horizontalMargin * 2 : 720, width - horizontalMargin * 2));
-    const nameLines = splitIntoLines(selected.name, compactMobile ? 30 : 58).slice(0, compactMobile ? 3 : 2);
-    const panelHeight = compactMobile ? 220 + Math.max(0, nameLines.length - 1) * 18 : 172;
+    const panelWidth = compactMobile ? Math.max(260, width - 48) : Math.min(720, width - 80);
+    const panelHeight = compactMobile ? 184 : 150;
     const panelX = cx - panelWidth / 2;
-    const panelY = cy - 58;
+    const panelY = cy - 56;
 
     group.append('rect')
       .attr('class', 'leaf-end-card')
       .attr('x', panelX).attr('y', panelY)
       .attr('width', panelWidth).attr('height', panelHeight)
-      .attr('rx', compactMobile ? 20 : 16);
+      .attr('rx', compactMobile ? 18 : 16);
 
     group.append('text')
       .attr('class', 'leaf-end-title')
-      .attr('x', cx).attr('y', panelY + 38)
+      .attr('x', cx).attr('y', panelY + 34)
       .attr('text-anchor', 'middle')
       .text('End of this branch');
 
-    const kindLine = group.append('text')
-      .attr('class', 'leaf-end-kind')
-      .attr('x', cx).attr('y', panelY + 66)
-      .attr('text-anchor', 'middle')
-      .text(label.toUpperCase());
-
-    const name = group.append('text')
+    const kindAndName = group.append('text')
       .attr('class', 'leaf-end-node-name')
-      .attr('x', cx).attr('y', panelY + 91)
+      .attr('x', cx).attr('y', panelY + 66)
       .attr('text-anchor', 'middle');
+    kindAndName.append('tspan').attr('class', 'leaf-end-kind').text(`${label.toUpperCase()}  `);
 
-    nameLines.forEach((line, index) => {
-      name.append('tspan')
-        .attr('x', cx)
-        .attr('dy', index === 0 ? 0 : (compactMobile ? 18 : 17))
-        .text(line);
-    });
+    const nameText = selected.name;
+    if (compactMobile && nameText.length > 30) {
+      const words = nameText.split(/\s+/);
+      let first = '', second = '';
+      words.forEach(word => {
+        if (!second && `${first} ${word}`.trim().length <= 27) first = `${first} ${word}`.trim();
+        else second = `${second} ${word}`.trim();
+      });
+      kindAndName.append('tspan').text(first);
+      if (second) kindAndName.append('tspan').attr('x', cx).attr('dy', 18).text(second);
+    } else {
+      kindAndName.append('tspan').text(nameText);
+    }
 
-    const messageY = panelY + 91 + Math.max(1, nameLines.length) * (compactMobile ? 18 : 17) + 26;
+    const nameLines = compactMobile && nameText.length > 30 ? 2 : 1;
+    const messageY = panelY + 66 + ((nameLines - 1) * 18) + 32;
     const message = group.append('text')
       .attr('class', 'leaf-end-message')
       .attr('x', cx).attr('y', messageY)
       .attr('text-anchor', 'middle');
 
-    // Keep the first thought together and explicitly wrap after "sub-solutions"
-    // so the copy never gets close to the card edges on mobile.
-    message.append('tspan').attr('x', cx).attr('dy', 0)
-      .text('No sub-issues or sub-solutions');
-    message.append('tspan').attr('x', cx).attr('dy', compactMobile ? 19 : 18)
-      .text(`have been created for this ${label} yet.`);
+    if (compactMobile) {
+      message.append('tspan').attr('x', cx).attr('dy', 0)
+        .text('No sub-issues or sub-solutions');
+      message.append('tspan').attr('x', cx).attr('dy', 18)
+        .text(`have been created for this ${label} yet.`);
+    } else {
+      message.text(`No sub-issues or sub-solutions have been created for this ${label} yet.`);
+    }
 
     levelCenters.push(y + geometry.h / 2);
     worldHeight = Math.max(worldHeight, y + geometry.h + 24);
@@ -105,12 +95,37 @@
     renderLeafEndLayer();
   };
 
+  function scrollSelectedContextCardDesktop() {
+    if (width < 720) return false;
+    const cards = stage.selectAll('.layer-context-entry foreignObject').nodes();
+    const card = cards[cards.length - 1];
+    if (!card) return false;
+    const cardY = Number(card.getAttribute('y'));
+    if (!Number.isFinite(cardY)) return false;
+
+    // Desktop should frame the drill-down exactly like mobile: selected-topic card
+    // immediately below the fixed header, followed by the next layer/end state.
+    const toolbar = document.querySelector('.toolbar');
+    const toolbarBottom = toolbar ? toolbar.getBoundingClientRect().bottom : 78;
+    const viewportTarget = Math.max(88, toolbarBottom + 12);
+    cameraY = viewportTarget - cardY;
+    applyCamera(true);
+    return true;
+  }
+
   focusNode = function(id) {
     const node = nodeById.get(id);
     if (!node) return;
     focusPath = pathForNode(id);
     render();
-    scrollToDepth(focusPath.length, true);
+
+    // Preserve the existing mobile behavior. On desktop, explicitly anchor the
+    // newly rendered selected-topic card under the toolbar instead of centering
+    // the layer, which could appear not to scroll on tall desktop viewports.
+    if (!scrollSelectedContextCardDesktop()) {
+      scrollToDepth(focusPath.length, true);
+    }
+
     const hasChildren = (node.children || []).length > 0;
     statusHost.textContent = hasChildren
       ? `${node.name} selected. Showing ${node.children.length} example children.`
