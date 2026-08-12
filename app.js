@@ -1,123 +1,374 @@
-// Broad Atlas demo dataset. Every root has children, with several branches extending 4-5 levels deep.
+// Broad Atlas demo dataset. Every root has children, with several dense branches extending 4-5 levels deep.
 const forestData = [
   { id:"root-health", name:"Health & Wellbeing", votes:9800, rating:4.7, kind:"issue", color:"#71879a", children:[
     { id:"health-mental-access", name:"Mental Health Care Access", votes:4100, rating:4.8, kind:"issue", children:[
       { id:"health-mental-waits", name:"Long Therapy Waitlists", votes:2600, rating:4.7, kind:"issue", children:[
         { id:"health-mental-rural", name:"Rural Provider Shortages", votes:1500, rating:4.6, kind:"issue", children:[
           { id:"health-mental-telehealth", name:"Regional Telehealth Networks", votes:980, rating:4.5, kind:"solution" },
-          { id:"health-mental-incentives", name:"Rural Clinician Incentives", votes:760, rating:4.4, kind:"solution" }
+          { id:"health-mental-incentives", name:"Rural Clinician Incentives", votes:760, rating:4.4, kind:"solution" },
+          { id:"health-mental-transport", name:"Long Travel Distances for Care", votes:690, rating:4.5, kind:"issue" },
+          { id:"health-mental-specialists", name:"Shortage of Child Psychiatrists", votes:640, rating:4.7, kind:"issue" },
+          { id:"health-mental-crisis", name:"Limited Rural Crisis Response", votes:610, rating:4.6, kind:"issue" }
         ]},
-        { id:"health-mental-triage", name:"Same-Day Mental Health Triage", votes:1200, rating:4.6, kind:"solution" }
+        { id:"health-mental-insurance", name:"Insurance Network Gaps", votes:1450, rating:4.7, kind:"issue" },
+        { id:"health-mental-youth", name:"Youth Counseling Backlogs", votes:1320, rating:4.8, kind:"issue" },
+        { id:"health-mental-language", name:"Few Multilingual Therapists", votes:920, rating:4.6, kind:"issue" },
+        { id:"health-mental-evening", name:"Limited Evening Appointments", votes:850, rating:4.4, kind:"issue" },
+        { id:"health-mental-triage", name:"Same-Day Mental Health Triage", votes:1200, rating:4.6, kind:"solution" },
+        { id:"health-mental-group", name:"Community Group Therapy Programs", votes:910, rating:4.5, kind:"solution" },
+        { id:"health-mental-navigation", name:"Central Behavioral Health Referral Line", votes:870, rating:4.5, kind:"solution" }
       ]},
       { id:"health-school-counseling", name:"School Counseling Access", votes:2100, rating:4.6, kind:"issue" },
-      { id:"health-peer-support", name:"Peer Support Programs", votes:1700, rating:4.5, kind:"solution" }
+      { id:"health-substance-care", name:"Substance Use Treatment Access", votes:2050, rating:4.7, kind:"issue" },
+      { id:"health-crisis-response", name:"Behavioral Health Crisis Response", votes:1950, rating:4.7, kind:"issue" },
+      { id:"health-peer-support", name:"Peer Support Programs", votes:1700, rating:4.5, kind:"solution" },
+      { id:"health-integrated-care", name:"Integrated Primary and Mental Health Care", votes:1580, rating:4.6, kind:"solution" }
     ]},
-    { id:"health-primary-care", name:"Primary Care Availability", votes:3300, rating:4.6, kind:"issue" },
+    { id:"health-primary-care", name:"Primary Care Availability", votes:3300, rating:4.6, kind:"issue", children:[
+      { id:"health-primary-new-patients", name:"Clinics Not Accepting New Patients", votes:1900, rating:4.7, kind:"issue" },
+      { id:"health-primary-appointments", name:"Weeks-Long Appointment Delays", votes:1750, rating:4.6, kind:"issue" },
+      { id:"health-primary-mobile", name:"Mobile Primary Care Clinics", votes:1100, rating:4.5, kind:"solution" },
+      { id:"health-primary-nurse", name:"Expanded Nurse Practitioner Clinics", votes:980, rating:4.5, kind:"solution" }
+    ]},
+    { id:"health-costs", name:"Medical Cost Burden", votes:3200, rating:4.7, kind:"issue" },
+    { id:"health-prevention", name:"Preventive Care Gaps", votes:2750, rating:4.5, kind:"issue" },
     { id:"health-community-clinics", name:"Community Health Clinics", votes:2800, rating:4.7, kind:"solution" }
   ]},
   { id:"root-economy", name:"Money, Work & Economy", votes:9400, rating:4.6, kind:"issue", color:"#71879a", children:[
-    { id:"economy-wage-pressure", name:"Wages Lagging Living Costs", votes:5200, rating:4.8, kind:"issue" },
-    { id:"economy-job-instability", name:"Unpredictable Work Schedules", votes:3400, rating:4.5, kind:"issue" },
+    { id:"economy-wage-pressure", name:"Wages Lagging Living Costs", votes:5200, rating:4.8, kind:"issue", children:[
+      { id:"economy-rent-wages", name:"Rent Rising Faster Than Pay", votes:3100, rating:4.8, kind:"issue" },
+      { id:"economy-food-wages", name:"Food Costs Outpacing Raises", votes:2700, rating:4.7, kind:"issue" },
+      { id:"economy-childcare-wages", name:"Childcare Costs Absorbing Income", votes:2550, rating:4.8, kind:"issue" },
+      { id:"economy-medical-wages", name:"Health Costs Reducing Take-Home Pay", votes:2200, rating:4.6, kind:"issue" },
+      { id:"economy-entry-pay", name:"Low Entry-Level Pay", votes:2050, rating:4.6, kind:"issue" },
+      { id:"economy-pay-transparency", name:"Pay Transparency Requirements", votes:1700, rating:4.5, kind:"solution" },
+      { id:"economy-living-wage-tools", name:"Local Living-Wage Calculators", votes:1150, rating:4.4, kind:"solution" }
+    ]},
+    { id:"economy-job-instability", name:"Unpredictable Work Schedules", votes:3400, rating:4.5, kind:"issue", children:[
+      { id:"economy-last-minute", name:"Last-Minute Shift Changes", votes:1900, rating:4.6, kind:"issue" },
+      { id:"economy-hours", name:"Unstable Weekly Hours", votes:1750, rating:4.6, kind:"issue" },
+      { id:"economy-oncall", name:"Unpaid On-Call Time", votes:1320, rating:4.7, kind:"issue" },
+      { id:"economy-fair-scheduling", name:"Fair Scheduling Standards", votes:1450, rating:4.5, kind:"solution" }
+    ]},
+    { id:"economy-benefits-gap", name:"Benefits Gaps for Part-Time Workers", votes:3150, rating:4.6, kind:"issue" },
+    { id:"economy-small-business", name:"Small Business Cost Pressure", votes:2800, rating:4.5, kind:"issue" },
     { id:"economy-portable-benefits", name:"Portable Worker Benefits", votes:2500, rating:4.6, kind:"solution" }
   ]},
   { id:"root-housing", name:"Housing & Built Environment", votes:9000, rating:4.7, kind:"issue", color:"#71879a", children:[
     { id:"housing-affordability", name:"Housing Affordability", votes:4700, rating:4.8, kind:"issue", children:[
       { id:"housing-rent-burden", name:"High Rent Burden", votes:3500, rating:4.7, kind:"issue", children:[
         { id:"housing-entry-costs", name:"Move-In Costs and Deposits", votes:1900, rating:4.5, kind:"issue" },
+        { id:"housing-rent-increases", name:"Large Annual Rent Increases", votes:1850, rating:4.7, kind:"issue" },
+        { id:"housing-fees", name:"Mandatory Rental Fees", votes:1480, rating:4.6, kind:"issue" },
+        { id:"housing-screening", name:"Rental Screening Barriers", votes:1360, rating:4.5, kind:"issue" },
+        { id:"housing-roommate", name:"Few Affordable Family-Sized Units", votes:1310, rating:4.6, kind:"issue" },
+        { id:"housing-commute", name:"Affordable Homes Far From Jobs", votes:1270, rating:4.6, kind:"issue" },
         { id:"housing-eviction-prevention", name:"Emergency Rent Assistance", votes:1700, rating:4.6, kind:"solution", children:[
-          { id:"housing-auto-eligibility", name:"Automatic Eligibility Screening", votes:920, rating:4.5, kind:"solution" }
-        ]}
+          { id:"housing-auto-eligibility", name:"Automatic Eligibility Screening", votes:920, rating:4.5, kind:"solution" },
+          { id:"housing-fast-payments", name:"Direct-to-Landlord Rapid Payments", votes:810, rating:4.5, kind:"solution" },
+          { id:"housing-legal-referral", name:"Eviction Legal Aid Referral", votes:760, rating:4.6, kind:"solution" },
+          { id:"housing-utility-arrears", name:"Utility Arrears Assistance", votes:690, rating:4.4, kind:"solution" }
+        ]},
+        { id:"housing-rental-navigation", name:"Affordable Rental Navigation Service", votes:1120, rating:4.5, kind:"solution" }
       ]},
-      { id:"housing-supply", name:"Housing Supply Shortage", votes:3100, rating:4.6, kind:"issue" }
+      { id:"housing-supply", name:"Housing Supply Shortage", votes:3100, rating:4.6, kind:"issue", children:[
+        { id:"housing-permits", name:"Slow Housing Permitting", votes:1700, rating:4.5, kind:"issue" },
+        { id:"housing-small-units", name:"Few Small Starter Homes", votes:1550, rating:4.5, kind:"issue" },
+        { id:"housing-infill", name:"Infill Housing Near Services", votes:1450, rating:4.5, kind:"solution" },
+        { id:"housing-adus", name:"Accessory Dwelling Unit Support", votes:1320, rating:4.4, kind:"solution" }
+      ]}
     ]},
+    { id:"housing-homelessness", name:"Unsheltered Homelessness", votes:3900, rating:4.8, kind:"issue" },
     { id:"housing-accessibility", name:"Accessible Housing Shortage", votes:2600, rating:4.6, kind:"issue" },
+    { id:"housing-maintenance", name:"Unsafe or Poorly Maintained Rentals", votes:2550, rating:4.6, kind:"issue" },
     { id:"housing-mixed-income", name:"Mixed-Income Housing Development", votes:2400, rating:4.5, kind:"solution" }
   ]},
   { id:"root-education", name:"Education & Knowledge", votes:8500, rating:4.6, kind:"issue", color:"#71879a", children:[
     { id:"education-teacher-shortages", name:"Teacher Shortages", votes:3600, rating:4.6, kind:"issue", children:[
-      { id:"education-burnout", name:"Teacher Burnout", votes:2700, rating:4.6, kind:"issue" },
-      { id:"education-mentorship", name:"New Teacher Mentorship", votes:1800, rating:4.5, kind:"solution" }
+      { id:"education-burnout", name:"Teacher Burnout", votes:2700, rating:4.6, kind:"issue", children:[
+        { id:"education-class-size", name:"Large Class Sizes", votes:1880, rating:4.7, kind:"issue" },
+        { id:"education-admin-load", name:"Administrative Workload", votes:1540, rating:4.5, kind:"issue" },
+        { id:"education-planning-time", name:"Insufficient Planning Time", votes:1490, rating:4.6, kind:"issue" },
+        { id:"education-behavior-support", name:"Limited Student Behavior Support", votes:1380, rating:4.6, kind:"issue" },
+        { id:"education-sub-shortage", name:"Substitute Teacher Shortages", votes:1260, rating:4.5, kind:"issue" },
+        { id:"education-planning-solution", name:"Protected Teacher Planning Blocks", votes:1210, rating:4.5, kind:"solution" }
+      ]},
+      { id:"education-special-ed", name:"Special Education Staffing Gaps", votes:2450, rating:4.8, kind:"issue" },
+      { id:"education-rural-teachers", name:"Rural Teacher Recruitment", votes:1980, rating:4.6, kind:"issue" },
+      { id:"education-stem-teachers", name:"Math and Science Teacher Shortages", votes:1870, rating:4.5, kind:"issue" },
+      { id:"education-para", name:"Paraprofessional Shortages", votes:1690, rating:4.6, kind:"issue" },
+      { id:"education-mentorship", name:"New Teacher Mentorship", votes:1800, rating:4.5, kind:"solution" },
+      { id:"education-residency", name:"Paid Teacher Residency Programs", votes:1540, rating:4.6, kind:"solution" }
     ]},
     { id:"education-literacy", name:"Early Literacy Gaps", votes:3300, rating:4.7, kind:"issue" },
+    { id:"education-special-needs", name:"Special Education Service Gaps", votes:3150, rating:4.7, kind:"issue" },
+    { id:"education-childcare", name:"Early Childhood Education Access", votes:2900, rating:4.7, kind:"issue" },
     { id:"education-adult-skills", name:"Free Adult Skills Programs", votes:2100, rating:4.5, kind:"solution" }
   ]},
   { id:"root-environment", name:"Environment & Natural World", votes:9300, rating:4.8, kind:"issue", color:"#71879a", children:[
     { id:"environment-biodiversity", name:"Biodiversity Loss", votes:3900, rating:4.7, kind:"issue", children:[
       { id:"environment-habitat-fragmentation", name:"Habitat Fragmentation", votes:2800, rating:4.7, kind:"issue", children:[
         { id:"environment-road-barriers", name:"Roads Blocking Wildlife Movement", votes:1700, rating:4.6, kind:"issue", children:[
-          { id:"environment-crossings", name:"Wildlife Crossing Corridors", votes:1300, rating:4.7, kind:"solution" }
+          { id:"environment-roadkill", name:"Wildlife-Vehicle Collisions", votes:1180, rating:4.6, kind:"issue" },
+          { id:"environment-fenced-roads", name:"Fencing Blocking Migration Routes", votes:830, rating:4.5, kind:"issue" },
+          { id:"environment-small-crossings", name:"Road Barriers for Amphibians", votes:760, rating:4.5, kind:"issue" },
+          { id:"environment-crossings", name:"Wildlife Crossing Corridors", votes:1300, rating:4.7, kind:"solution" },
+          { id:"environment-seasonal-crossings", name:"Seasonal Wildlife Crossing Alerts", votes:620, rating:4.3, kind:"solution" }
         ]},
-        { id:"environment-green-links", name:"Connected Urban Greenways", votes:1450, rating:4.6, kind:"solution" }
+        { id:"environment-suburban-fragment", name:"Suburban Habitat Fragmentation", votes:1540, rating:4.6, kind:"issue" },
+        { id:"environment-riparian-breaks", name:"Broken Riverbank Habitat Corridors", votes:1490, rating:4.7, kind:"issue" },
+        { id:"environment-farm-fragment", name:"Loss of Hedgerows and Field Habitat", votes:1170, rating:4.5, kind:"issue" },
+        { id:"environment-green-links", name:"Connected Urban Greenways", votes:1450, rating:4.6, kind:"solution" },
+        { id:"environment-riparian-restoration", name:"Connected Riparian Restoration", votes:1320, rating:4.6, kind:"solution" }
       ]},
-      { id:"environment-pollinators", name:"Pollinator Decline", votes:2300, rating:4.6, kind:"issue" }
+      { id:"environment-orca", name:"Southern Resident Orca Decline", votes:2760, rating:4.9, kind:"issue", children:[
+        { id:"environment-orca-prey", name:"Chinook Salmon Prey Shortage", votes:2310, rating:4.9, kind:"issue", children:[
+          { id:"environment-salmon-warm-streams", name:"Warm Salmon-Bearing Streams", votes:1620, rating:4.8, kind:"issue" },
+          { id:"environment-salmon-barriers", name:"Fish Passage Barriers and Culverts", votes:1540, rating:4.8, kind:"issue" },
+          { id:"environment-salmon-spawning", name:"Degraded Spawning Habitat", votes:1490, rating:4.7, kind:"issue" },
+          { id:"environment-salmon-estuary", name:"Loss of Estuary Nursery Habitat", votes:1360, rating:4.7, kind:"issue" },
+          { id:"environment-salmon-low-flow", name:"Low Summer Stream Flows", votes:1280, rating:4.7, kind:"issue" },
+          { id:"environment-salmon-foodweb", name:"Reduced Salmon Food Availability", votes:1110, rating:4.6, kind:"issue" },
+          { id:"environment-salmon-culvert-fix", name:"Fish-Friendly Culvert Replacement", votes:1430, rating:4.8, kind:"solution" },
+          { id:"environment-salmon-coldwater", name:"Cold-Water Refuge Restoration", votes:1370, rating:4.8, kind:"solution" },
+          { id:"environment-salmon-estuary-fix", name:"Estuary Habitat Restoration", votes:1260, rating:4.7, kind:"solution" }
+        ]},
+        { id:"environment-orca-noise", name:"Vessel Noise and Disturbance", votes:1980, rating:4.8, kind:"issue", children:[
+          { id:"environment-orca-ship-noise", name:"Commercial Ship Noise", votes:1320, rating:4.7, kind:"issue" },
+          { id:"environment-orca-recreation", name:"Recreational Vessel Disturbance", votes:1160, rating:4.7, kind:"issue" },
+          { id:"environment-orca-approach", name:"Close Vessel Approaches", votes:1040, rating:4.8, kind:"issue" },
+          { id:"environment-orca-slow-zones", name:"Seasonal Vessel Slow Zones", votes:1280, rating:4.7, kind:"solution" },
+          { id:"environment-orca-routing", name:"Voluntary Ship Routing Away From Orcas", votes:940, rating:4.6, kind:"solution" }
+        ]},
+        { id:"environment-orca-contaminants", name:"Toxic Contaminants in the Food Web", votes:1810, rating:4.8, kind:"issue", children:[
+          { id:"environment-orca-pcb", name:"Legacy PCB Contamination", votes:1130, rating:4.7, kind:"issue" },
+          { id:"environment-orca-stormwater", name:"Toxic Urban Stormwater Runoff", votes:1080, rating:4.8, kind:"issue" },
+          { id:"environment-orca-toxics", name:"Reduce Persistent Toxic Discharges", votes:990, rating:4.7, kind:"solution" },
+          { id:"environment-orca-stormwater-fix", name:"Green Stormwater Treatment", votes:930, rating:4.6, kind:"solution" }
+        ]},
+        { id:"environment-orca-small-pop", name:"Small Population Vulnerability", votes:1510, rating:4.7, kind:"issue" },
+        { id:"environment-orca-climate", name:"Climate-Driven Food Web Changes", votes:1470, rating:4.7, kind:"issue" },
+        { id:"environment-orca-salmon-recovery", name:"Regional Chinook Habitat Recovery", votes:1680, rating:4.8, kind:"solution" },
+        { id:"environment-orca-monitoring", name:"Real-Time Orca Location Alerts", votes:1190, rating:4.6, kind:"solution" }
+      ]},
+      { id:"environment-pollinators", name:"Pollinator Decline", votes:2300, rating:4.6, kind:"issue", children:[
+        { id:"environment-pollinator-habitat", name:"Loss of Flower-Rich Habitat", votes:1510, rating:4.7, kind:"issue" },
+        { id:"environment-pollinator-pesticides", name:"Pesticide Exposure", votes:1430, rating:4.7, kind:"issue" },
+        { id:"environment-pollinator-mowing", name:"Frequent Mowing of Roadside Habitat", votes:870, rating:4.4, kind:"issue" },
+        { id:"environment-pollinator-native", name:"Native Pollinator Plantings", votes:1320, rating:4.7, kind:"solution" },
+        { id:"environment-pollinator-corridors", name:"Pollinator Habitat Corridors", votes:1190, rating:4.6, kind:"solution" },
+        { id:"environment-pollinator-pesticide-reduction", name:"Targeted Pesticide Reduction", votes:1060, rating:4.6, kind:"solution" }
+      ]},
+      { id:"environment-invasive", name:"Invasive Species Pressure", votes:2190, rating:4.7, kind:"issue", children:[
+        { id:"environment-invasive-aquatic", name:"Aquatic Invasive Species", votes:1390, rating:4.6, kind:"issue" },
+        { id:"environment-invasive-forest", name:"Forest Pests and Pathogens", votes:1260, rating:4.6, kind:"issue" },
+        { id:"environment-invasive-plants", name:"Invasive Plants Displacing Native Habitat", votes:1180, rating:4.6, kind:"issue" },
+        { id:"environment-invasive-detection", name:"Early Detection and Rapid Response", votes:1240, rating:4.7, kind:"solution" },
+        { id:"environment-invasive-clean", name:"Boat and Gear Cleaning Stations", votes:870, rating:4.5, kind:"solution" }
+      ]},
+      { id:"environment-freshwater-biodiversity", name:"Freshwater Species Decline", votes:2080, rating:4.7, kind:"issue", children:[
+        { id:"environment-stream-temp", name:"Rising Stream Temperatures", votes:1420, rating:4.8, kind:"issue" },
+        { id:"environment-stream-flow", name:"Altered Seasonal Stream Flows", votes:1280, rating:4.7, kind:"issue" },
+        { id:"environment-wetland-loss", name:"Wetland Habitat Loss", votes:1240, rating:4.7, kind:"issue" },
+        { id:"environment-riparian-shade", name:"Riparian Shade Restoration", votes:1180, rating:4.7, kind:"solution" },
+        { id:"environment-wetland-restoration", name:"Wetland Restoration", votes:1110, rating:4.7, kind:"solution" }
+      ]},
+      { id:"environment-marine-biodiversity", name:"Marine Biodiversity Decline", votes:2010, rating:4.7, kind:"issue", children:[
+        { id:"environment-kelp", name:"Kelp Forest Decline", votes:1290, rating:4.7, kind:"issue" },
+        { id:"environment-ocean-heat", name:"Marine Heatwaves", votes:1250, rating:4.7, kind:"issue" },
+        { id:"environment-marine-debris", name:"Marine Debris and Plastics", votes:1190, rating:4.6, kind:"issue" },
+        { id:"environment-kelp-restoration", name:"Kelp Habitat Restoration", votes:1060, rating:4.6, kind:"solution" }
+      ]},
+      { id:"environment-biodiversity-monitoring", name:"Community Biodiversity Monitoring", votes:1520, rating:4.6, kind:"solution" },
+      { id:"environment-habitat-network", name:"Regional Habitat Connectivity Network", votes:1490, rating:4.7, kind:"solution" }
     ]},
-    { id:"environment-water", name:"Waterway Pollution", votes:3400, rating:4.7, kind:"issue" },
+    { id:"environment-water", name:"Waterway Pollution", votes:3400, rating:4.7, kind:"issue", children:[
+      { id:"environment-stormwater", name:"Urban Stormwater Pollution", votes:2180, rating:4.7, kind:"issue" },
+      { id:"environment-nutrients", name:"Nutrient Runoff and Algal Blooms", votes:1960, rating:4.7, kind:"issue" },
+      { id:"environment-plastics", name:"Plastic and Microplastic Pollution", votes:1830, rating:4.6, kind:"issue" },
+      { id:"environment-green-infrastructure", name:"Green Stormwater Infrastructure", votes:1710, rating:4.7, kind:"solution" }
+    ]},
+    { id:"environment-wildfire", name:"Wildfire and Ecosystem Stress", votes:3280, rating:4.8, kind:"issue" },
+    { id:"environment-air", name:"Air Pollution and Ecosystem Damage", votes:2850, rating:4.6, kind:"issue" },
     { id:"environment-restoration", name:"Local Habitat Restoration", votes:2300, rating:4.6, kind:"solution" }
   ]},
   { id:"root-infrastructure", name:"Infrastructure, Transportation & Utilities", votes:8200, rating:4.5, kind:"issue", color:"#71879a", children:[
-    { id:"infra-transit-gaps", name:"Transit Service Gaps", votes:3900, rating:4.7, kind:"issue" },
+    { id:"infra-transit-gaps", name:"Transit Service Gaps", votes:3900, rating:4.7, kind:"issue", children:[
+      { id:"infra-evening", name:"Limited Evening Transit", votes:2050, rating:4.6, kind:"issue" },
+      { id:"infra-weekend", name:"Infrequent Weekend Service", votes:1890, rating:4.6, kind:"issue" },
+      { id:"infra-rural", name:"Rural Transit Gaps", votes:1840, rating:4.7, kind:"issue" },
+      { id:"infra-first-last", name:"First-and-Last-Mile Gaps", votes:1720, rating:4.6, kind:"issue" },
+      { id:"infra-accessibility", name:"Inaccessible Stops and Stations", votes:1590, rating:4.7, kind:"issue" },
+      { id:"infra-frequency", name:"Higher Frequency Bus Corridors", votes:1730, rating:4.6, kind:"solution" },
+      { id:"infra-microtransit", name:"Community Microtransit", votes:1310, rating:4.5, kind:"solution" }
+    ]},
     { id:"infra-water-aging", name:"Aging Water Infrastructure", votes:3500, rating:4.6, kind:"issue" },
+    { id:"infra-sidewalks", name:"Missing Sidewalk and Crossing Links", votes:3300, rating:4.7, kind:"issue" },
+    { id:"infra-broadband", name:"Broadband Service Gaps", votes:3000, rating:4.6, kind:"issue" },
     { id:"infra-complete-streets", name:"Complete Streets Upgrades", votes:2500, rating:4.5, kind:"solution" }
   ]},
   { id:"root-energy", name:"Energy & Resources", votes:7600, rating:4.5, kind:"issue", color:"#71879a", children:[
-    { id:"energy-bill-burden", name:"High Household Energy Bills", votes:3700, rating:4.7, kind:"issue" },
+    { id:"energy-bill-burden", name:"High Household Energy Bills", votes:3700, rating:4.7, kind:"issue", children:[
+      { id:"energy-rental-efficiency", name:"Inefficient Rental Housing", votes:2030, rating:4.6, kind:"issue" },
+      { id:"energy-heating-cost", name:"High Winter Heating Costs", votes:1900, rating:4.7, kind:"issue" },
+      { id:"energy-cooling-cost", name:"High Summer Cooling Costs", votes:1620, rating:4.6, kind:"issue" },
+      { id:"energy-weatherization-lowincome", name:"Targeted Low-Income Weatherization", votes:1710, rating:4.7, kind:"solution" }
+    ]},
     { id:"energy-grid-resilience", name:"Grid Reliability During Extreme Weather", votes:3500, rating:4.7, kind:"issue" },
+    { id:"energy-storage", name:"Energy Storage Access", votes:2900, rating:4.5, kind:"issue" },
+    { id:"energy-resource-waste", name:"Material and Resource Waste", votes:2750, rating:4.5, kind:"issue" },
     { id:"energy-weatherization", name:"Home Weatherization Grants", votes:2300, rating:4.6, kind:"solution" }
   ]},
   { id:"root-government", name:"Government & Public Institutions", votes:8300, rating:4.5, kind:"issue", color:"#71879a", children:[
     { id:"government-service-access", name:"Hard-to-Access Public Services", votes:3100, rating:4.5, kind:"issue", children:[
       { id:"government-forms", name:"Confusing Forms and Eligibility Rules", votes:2200, rating:4.5, kind:"issue" },
-      { id:"government-language", name:"Limited Language Access", votes:1900, rating:4.6, kind:"issue" }
+      { id:"government-language", name:"Limited Language Access", votes:1900, rating:4.6, kind:"issue" },
+      { id:"government-office-hours", name:"Office Hours Conflict With Work", votes:1710, rating:4.5, kind:"issue" },
+      { id:"government-phone-waits", name:"Long Public-Service Phone Waits", votes:1650, rating:4.5, kind:"issue" },
+      { id:"government-digital-access", name:"Digital-Only Service Barriers", votes:1560, rating:4.6, kind:"issue" },
+      { id:"government-case-status", name:"No Clear Application Status", votes:1480, rating:4.5, kind:"issue" },
+      { id:"government-one-stop", name:"One-Stop Public Service Portal", votes:1900, rating:4.4, kind:"solution" },
+      { id:"government-callback", name:"Scheduled Callback Service", votes:1240, rating:4.4, kind:"solution" }
     ]},
     { id:"government-transparency", name:"Public Decision Transparency", votes:2900, rating:4.6, kind:"issue" },
-    { id:"government-one-stop", name:"One-Stop Public Service Portal", votes:1900, rating:4.4, kind:"solution" }
+    { id:"government-meetings", name:"Public Meetings Hard to Attend", votes:2450, rating:4.5, kind:"issue" },
+    { id:"government-procurement", name:"Slow Public Procurement", votes:2150, rating:4.4, kind:"issue" },
+    { id:"government-participation", name:"Accessible Public Participation Tools", votes:1810, rating:4.5, kind:"solution" }
   ]},
   { id:"root-justice", name:"Law, Rights & Justice", votes:8500, rating:4.7, kind:"issue", color:"#71879a", children:[
-    { id:"justice-legal-access", name:"Affordable Legal Help", votes:4200, rating:4.8, kind:"issue" },
+    { id:"justice-legal-access", name:"Affordable Legal Help", votes:4200, rating:4.8, kind:"issue", children:[
+      { id:"justice-housing-law", name:"Housing Legal Aid Gaps", votes:2380, rating:4.8, kind:"issue" },
+      { id:"justice-family-law", name:"Family Law Assistance Gaps", votes:2170, rating:4.7, kind:"issue" },
+      { id:"justice-debt-law", name:"Consumer Debt Legal Help", votes:1840, rating:4.6, kind:"issue" },
+      { id:"justice-rural-law", name:"Rural Legal Service Gaps", votes:1720, rating:4.7, kind:"issue" },
+      { id:"justice-selfhelp", name:"Plain-Language Court Self-Help", votes:1680, rating:4.6, kind:"solution" },
+      { id:"justice-community-legal", name:"Community Legal Clinics", votes:2400, rating:4.7, kind:"solution" }
+    ]},
     { id:"justice-court-delays", name:"Court Backlogs and Delays", votes:3100, rating:4.5, kind:"issue" },
-    { id:"justice-community-legal", name:"Community Legal Clinics", votes:2400, rating:4.7, kind:"solution" }
+    { id:"justice-language", name:"Language Access in Legal Systems", votes:2850, rating:4.7, kind:"issue" },
+    { id:"justice-records", name:"Difficulty Correcting Public Records", votes:2140, rating:4.5, kind:"issue" }
   ]},
   { id:"root-safety", name:"Safety, Conflict & Security", votes:7900, rating:4.6, kind:"issue", color:"#71879a", children:[
-    { id:"safety-disaster-readiness", name:"Disaster Preparedness Gaps", votes:3600, rating:4.7, kind:"issue" },
+    { id:"safety-disaster-readiness", name:"Disaster Preparedness Gaps", votes:3600, rating:4.7, kind:"issue", children:[
+      { id:"safety-heat", name:"Extreme Heat Preparedness", votes:2140, rating:4.7, kind:"issue" },
+      { id:"safety-smoke", name:"Wildfire Smoke Preparedness", votes:2070, rating:4.8, kind:"issue" },
+      { id:"safety-flood", name:"Flood Evacuation Planning", votes:1780, rating:4.6, kind:"issue" },
+      { id:"safety-power", name:"Extended Power Outage Readiness", votes:1690, rating:4.6, kind:"issue" },
+      { id:"safety-language-alerts", name:"Multilingual Emergency Alerts", votes:1510, rating:4.7, kind:"solution" },
+      { id:"safety-neighborhood-response", name:"Neighborhood Emergency Response Teams", votes:2200, rating:4.5, kind:"solution" }
+    ]},
     { id:"safety-domestic-violence", name:"Domestic Violence Support Access", votes:3300, rating:4.8, kind:"issue" },
-    { id:"safety-neighborhood-response", name:"Neighborhood Emergency Response Teams", votes:2200, rating:4.5, kind:"solution" }
+    { id:"safety-road", name:"Traffic Injury Risk", votes:3100, rating:4.7, kind:"issue" },
+    { id:"safety-cyber", name:"Community Cybersecurity Readiness", votes:2720, rating:4.5, kind:"issue" }
   ]},
   { id:"root-technology", name:"Technology & Information", votes:8800, rating:4.7, kind:"issue", color:"#71879a", children:[
     { id:"technology-misinformation", name:"Online Misinformation", votes:4300, rating:4.7, kind:"issue", children:[
       { id:"technology-local-rumors", name:"False Local Emergency Rumors", votes:2800, rating:4.6, kind:"issue", children:[
         { id:"technology-source-confusion", name:"Unclear Source Credibility", votes:1900, rating:4.6, kind:"issue", children:[
+          { id:"technology-anonymous-screens", name:"Anonymous Screenshots Without Sources", votes:1280, rating:4.6, kind:"issue" },
+          { id:"technology-old-images", name:"Old Images Reposted as Current", votes:1190, rating:4.6, kind:"issue" },
+          { id:"technology-fake-agencies", name:"Accounts Impersonating Public Agencies", votes:1160, rating:4.7, kind:"issue" },
+          { id:"technology-context-collapse", name:"Quotes Shared Without Context", votes:1090, rating:4.5, kind:"issue" },
           { id:"technology-source-labels", name:"Community Source Context Labels", votes:1250, rating:4.5, kind:"solution" },
-          { id:"technology-origin-links", name:"Original Source Linking", votes:1100, rating:4.6, kind:"solution" }
-        ]}
+          { id:"technology-origin-links", name:"Original Source Linking", votes:1100, rating:4.6, kind:"solution" },
+          { id:"technology-timestamp", name:"Prominent Original Publication Dates", votes:940, rating:4.5, kind:"solution" }
+        ]},
+        { id:"technology-rumor-weather", name:"False Severe Weather Claims", votes:1670, rating:4.6, kind:"issue" },
+        { id:"technology-rumor-crime", name:"Unverified Crime Alerts", votes:1580, rating:4.6, kind:"issue" },
+        { id:"technology-rumor-school", name:"False School Closure Posts", votes:1320, rating:4.5, kind:"issue" },
+        { id:"technology-rumor-health", name:"False Local Health Warnings", votes:1260, rating:4.6, kind:"issue" },
+        { id:"technology-official-feed", name:"Verified Local Emergency Feed", votes:1510, rating:4.7, kind:"solution" },
+        { id:"technology-rumor-friction", name:"Reshare Friction for Unverified Alerts", votes:1180, rating:4.5, kind:"solution" }
       ]},
-      { id:"technology-media-literacy", name:"Practical Media Literacy Guides", votes:2200, rating:4.6, kind:"solution" }
+      { id:"technology-ai-media", name:"Synthetic Media Confusion", votes:2710, rating:4.7, kind:"issue" },
+      { id:"technology-health-misinfo", name:"Health Misinformation", votes:2590, rating:4.8, kind:"issue" },
+      { id:"technology-scam-content", name:"Fraudulent Advice and Scam Content", votes:2470, rating:4.8, kind:"issue" },
+      { id:"technology-media-literacy", name:"Practical Media Literacy Guides", votes:2200, rating:4.6, kind:"solution" },
+      { id:"technology-community-notes", name:"Community Context and Corrections", votes:1940, rating:4.5, kind:"solution" }
     ]},
-    { id:"technology-digital-divide", name:"Digital Access Divide", votes:3600, rating:4.7, kind:"issue" },
+    { id:"technology-digital-divide", name:"Digital Access Divide", votes:3600, rating:4.7, kind:"issue", children:[
+      { id:"technology-rural-broadband", name:"Rural Broadband Gaps", votes:2340, rating:4.7, kind:"issue" },
+      { id:"technology-device-cost", name:"Device Affordability", votes:2010, rating:4.6, kind:"issue" },
+      { id:"technology-digital-skills", name:"Digital Skills Gaps", votes:1880, rating:4.6, kind:"issue" },
+      { id:"technology-public-wifi", name:"Reliable Public Wi-Fi", votes:1570, rating:4.5, kind:"solution" }
+    ]},
+    { id:"technology-privacy-risk", name:"Everyday Digital Privacy Risks", votes:3440, rating:4.7, kind:"issue" },
+    { id:"technology-accessibility", name:"Inaccessible Digital Services", votes:2980, rating:4.7, kind:"issue" },
     { id:"technology-privacy", name:"Privacy-Preserving Digital Services", votes:2500, rating:4.6, kind:"solution" }
   ]},
   { id:"root-community", name:"Family, Relationships & Community", votes:7800, rating:4.6, kind:"issue", color:"#71879a", children:[
-    { id:"community-loneliness", name:"Social Isolation and Loneliness", votes:3900, rating:4.7, kind:"issue" },
+    { id:"community-loneliness", name:"Social Isolation and Loneliness", votes:3900, rating:4.7, kind:"issue", children:[
+      { id:"community-seniors", name:"Senior Isolation", votes:2260, rating:4.7, kind:"issue" },
+      { id:"community-young-adults", name:"Young Adult Loneliness", votes:2110, rating:4.7, kind:"issue" },
+      { id:"community-new-residents", name:"New Residents Struggling to Connect", votes:1670, rating:4.5, kind:"issue" },
+      { id:"community-third-places", name:"More Free Community Gathering Spaces", votes:2500, rating:4.6, kind:"solution" },
+      { id:"community-neighbor-events", name:"Neighborhood Welcome Events", votes:1320, rating:4.4, kind:"solution" }
+    ]},
     { id:"community-caregiving", name:"Caregiver Support Gaps", votes:3200, rating:4.7, kind:"issue" },
-    { id:"community-third-places", name:"More Free Community Gathering Spaces", votes:2500, rating:4.6, kind:"solution" }
+    { id:"community-childcare", name:"Childcare and Family Support Gaps", votes:3060, rating:4.7, kind:"issue" },
+    { id:"community-public-space", name:"Loss of Informal Gathering Places", votes:2760, rating:4.6, kind:"issue" },
+    { id:"community-mutual-aid", name:"Local Mutual Aid Networks", votes:2180, rating:4.6, kind:"solution" }
   ]},
   { id:"root-culture", name:"Culture, Media & Recreation", votes:7200, rating:4.4, kind:"issue", color:"#71879a", children:[
-    { id:"culture-local-news", name:"Loss of Local News", votes:3300, rating:4.6, kind:"issue" },
+    { id:"culture-local-news", name:"Loss of Local News", votes:3300, rating:4.6, kind:"issue", children:[
+      { id:"culture-news-deserts", name:"Local News Deserts", votes:2050, rating:4.7, kind:"issue" },
+      { id:"culture-civic-reporting", name:"Loss of Local Government Reporting", votes:1880, rating:4.7, kind:"issue" },
+      { id:"culture-local-sports", name:"Loss of Local Sports and Community Coverage", votes:1320, rating:4.4, kind:"issue" },
+      { id:"culture-nonprofit-news", name:"Nonprofit Local Newsrooms", votes:1650, rating:4.6, kind:"solution" },
+      { id:"culture-library-news", name:"Library-Supported Community Information", votes:1130, rating:4.4, kind:"solution" }
+    ]},
     { id:"culture-arts-access", name:"Unequal Access to Arts and Recreation", votes:2800, rating:4.5, kind:"issue" },
+    { id:"culture-public-space", name:"Loss of Cultural Gathering Spaces", votes:2630, rating:4.5, kind:"issue" },
+    { id:"culture-youth-rec", name:"Limited Youth Recreation", votes:2510, rating:4.6, kind:"issue" },
     { id:"culture-public-programming", name:"Free Public Cultural Programming", votes:2100, rating:4.5, kind:"solution" }
   ]},
   { id:"root-food", name:"Food & Agriculture", votes:7300, rating:4.6, kind:"issue", color:"#71879a", children:[
-    { id:"food-affordability", name:"Healthy Food Affordability", votes:4100, rating:4.8, kind:"issue" },
+    { id:"food-affordability", name:"Healthy Food Affordability", votes:4100, rating:4.8, kind:"issue", children:[
+      { id:"food-produce-cost", name:"High Fresh Produce Prices", votes:2550, rating:4.8, kind:"issue" },
+      { id:"food-rural-access", name:"Long Travel to Full Grocery Stores", votes:2130, rating:4.7, kind:"issue" },
+      { id:"food-benefit-gap", name:"Food Benefits Not Lasting the Month", votes:2040, rating:4.8, kind:"issue" },
+      { id:"food-dietary-cost", name:"High Cost of Special-Diet Foods", votes:1690, rating:4.6, kind:"issue" },
+      { id:"food-school-break", name:"School-Break Meal Gaps", votes:1570, rating:4.7, kind:"issue" },
+      { id:"food-mobile-market", name:"Mobile Produce Markets", votes:1540, rating:4.6, kind:"solution" },
+      { id:"food-double-benefits", name:"Produce Benefit Matching", votes:1430, rating:4.7, kind:"solution" }
+    ]},
     { id:"food-waste", name:"Food Waste", votes:2800, rating:4.5, kind:"issue" },
+    { id:"food-farm-viability", name:"Small Farm Viability", votes:2710, rating:4.6, kind:"issue" },
+    { id:"food-soil", name:"Soil Health Decline", votes:2490, rating:4.6, kind:"issue" },
     { id:"food-community-markets", name:"Community Produce Markets", votes:2200, rating:4.6, kind:"solution" }
   ]},
   { id:"root-migration", name:"Human Movement & Migration", votes:6900, rating:4.5, kind:"issue", color:"#71879a", children:[
-    { id:"migration-settlement", name:"Newcomer Settlement Barriers", votes:3400, rating:4.6, kind:"issue" },
+    { id:"migration-settlement", name:"Newcomer Settlement Barriers", votes:3400, rating:4.6, kind:"issue", children:[
+      { id:"migration-language", name:"Language Access Barriers", votes:2240, rating:4.7, kind:"issue" },
+      { id:"migration-housing", name:"Difficulty Finding Housing", votes:2080, rating:4.7, kind:"issue" },
+      { id:"migration-credentials", name:"Foreign Credential Recognition", votes:1970, rating:4.7, kind:"issue" },
+      { id:"migration-school", name:"School Enrollment Navigation", votes:1530, rating:4.5, kind:"issue" },
+      { id:"migration-health", name:"Health System Navigation", votes:1490, rating:4.6, kind:"issue" },
+      { id:"migration-navigation", name:"Multilingual Newcomer Navigation Hubs", votes:2100, rating:4.6, kind:"solution" }
+    ]},
     { id:"migration-family-reunification", name:"Family Reunification Delays", votes:3000, rating:4.7, kind:"issue" },
-    { id:"migration-navigation", name:"Multilingual Newcomer Navigation Hubs", votes:2100, rating:4.6, kind:"solution" }
+    { id:"migration-refugee-support", name:"Refugee Resettlement Capacity", votes:2680, rating:4.6, kind:"issue" },
+    { id:"migration-seasonal", name:"Seasonal Worker Housing and Services", votes:2350, rating:4.6, kind:"issue" },
+    { id:"migration-community-liaisons", name:"Community Newcomer Liaison Programs", votes:1830, rating:4.5, kind:"solution" }
   ]},
   { id:"root-consumer", name:"Products, Services & Consumer Life", votes:8100, rating:4.6, kind:"issue", color:"#71879a", children:[
-    { id:"consumer-repairability", name:"Products That Are Hard to Repair", votes:3700, rating:4.7, kind:"issue" },
-    { id:"consumer-fees", name:"Hidden Fees and Confusing Pricing", votes:3500, rating:4.8, kind:"issue" },
+    { id:"consumer-repairability", name:"Products That Are Hard to Repair", votes:3700, rating:4.7, kind:"issue", children:[
+      { id:"consumer-parts", name:"Replacement Parts Unavailable", votes:2250, rating:4.7, kind:"issue" },
+      { id:"consumer-batteries", name:"Sealed or Glued-In Batteries", votes:2110, rating:4.7, kind:"issue" },
+      { id:"consumer-manuals", name:"Repair Manuals Withheld", votes:1790, rating:4.6, kind:"issue" },
+      { id:"consumer-software-lock", name:"Software Locks on Replacement Parts", votes:1740, rating:4.7, kind:"issue" },
+      { id:"consumer-tool-cost", name:"Proprietary Repair Tool Costs", votes:1480, rating:4.5, kind:"issue" },
+      { id:"consumer-repair-score", name:"Repairability Scores on Product Labels", votes:1630, rating:4.6, kind:"solution" },
+      { id:"consumer-parts-standard", name:"Long-Term Replacement Parts Standards", votes:1510, rating:4.6, kind:"solution" }
+    ]},
+    { id:"consumer-fees", name:"Hidden Fees and Confusing Pricing", votes:3500, rating:4.8, kind:"issue", children:[
+      { id:"consumer-ticket-fees", name:"Ticketing Service Fees", votes:2120, rating:4.7, kind:"issue" },
+      { id:"consumer-hotel-fees", name:"Mandatory Hotel Fees", votes:1880, rating:4.7, kind:"issue" },
+      { id:"consumer-subscription", name:"Hard-to-Cancel Subscriptions", votes:2060, rating:4.8, kind:"issue" },
+      { id:"consumer-upfront", name:"All-In Upfront Pricing", votes:1940, rating:4.7, kind:"solution" }
+    ]},
+    { id:"consumer-accessibility", name:"Inaccessible Products and Services", votes:3050, rating:4.7, kind:"issue" },
+    { id:"consumer-warranty", name:"Confusing Warranty Coverage", votes:2820, rating:4.5, kind:"issue" },
     { id:"consumer-standard-labels", name:"Plain-Language Price and Repair Labels", votes:2400, rating:4.6, kind:"solution" }
   ]}
 ];
