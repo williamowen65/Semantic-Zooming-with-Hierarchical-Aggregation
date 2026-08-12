@@ -31,8 +31,21 @@ jobs:
         shell: bash
         run: |
           mkdir -p "_site/${GITHUB_SHA}"
-          cp index.html styles.css app.js semantic-icons.js "_site/${GITHUB_SHA}/"
-          cp index.html styles.css app.js semantic-icons.js _site/
+
+          # Keep this list aligned with every local asset referenced by index.html.
+          # Missing files here work locally but 404 on GitHub Pages.
+          assets=(
+            index.html
+            styles.css
+            theme-toolbar-fix.css
+            app.js
+            enhancements.js
+            semantic-icons.js
+            theme-picker.js
+          )
+
+          cp "${assets[@]}" _site/
+          cp "${assets[@]}" "_site/${GITHUB_SHA}/"
 
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@v4
