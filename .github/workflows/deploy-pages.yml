@@ -43,6 +43,7 @@ jobs:
             environment-expansion.js
             descriptions.js
             enhancements.js
+            camera-spacing-fix.js
             semantic-icons.js
             hierarchy-links.js
             theme-picker.js
