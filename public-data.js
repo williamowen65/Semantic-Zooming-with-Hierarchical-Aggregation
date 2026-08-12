@@ -23,7 +23,12 @@
     { id: "root-consumer", name: "Products, Services & Consumer Life", votes: 8100, rating: 4.6, kind: "issue" }
   ];
 
+  // Replace every previous prototype node. There is intentionally no hierarchy yet.
   forest.splice(0, forest.length, ...roots);
+
+  // The earlier prototype hid roots with no children. Root-only mode deliberately
+  // permits them, because these are the starting umbrellas we will populate next.
+  if (typeof purgeEmptyRoots === "function") purgeEmptyRoots = () => {};
 
   if (typeof nodeById !== "undefined" && typeof parentById !== "undefined" && typeof rootById !== "undefined" && typeof annotate === "function") {
     nodeById.clear();
