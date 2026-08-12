@@ -35,7 +35,9 @@
   let current = themes[currentIndex];
 
   function updateThemeLabels() {
-    trigger.innerHTML = `<span aria-hidden="true">◐</span><span>Theme</span>`;
+    // Put the current theme directly inside the actionable pill. This avoids a
+    // separate readout competing with Depth for header space on small screens.
+    trigger.innerHTML = `<span aria-hidden="true">◐</span><span class="theme-trigger-label">${current.name}</span>`;
     trigger.setAttribute("aria-label", `Current theme ${current.name}. Activate for next theme.`);
     trigger.title = `Current theme: ${current.name}. Click for next theme.`;
     if (readout) readout.textContent = current.name;
@@ -57,10 +59,6 @@
     applyTheme(currentIndex + 1);
   }
 
-  // Use pointerup for touch/mouse so the control is not dependent on the browser
-  // synthesizing a click after the visualization's own gesture handlers run.
-  // The click fallback is reserved for keyboard activation (detail === 0), which
-  // keeps Enter/Space accessible without double-advancing after a pointer tap.
   trigger.addEventListener("pointerup", event => {
     if (event.button != null && event.button !== 0) return;
     event.preventDefault();
