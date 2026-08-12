@@ -1,12 +1,20 @@
 /* Keep the theme picker visibly in the toolbar, immediately left of Depth. */
 .theme-control {
   position: fixed;
-  z-index: 60;
+  z-index: 1000;
   top: 12px;
   right: 112px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+.theme-trigger,
+.current-theme-name {
+  pointer-events: auto;
+  touch-action: manipulation;
 }
 
 .current-theme-name {
