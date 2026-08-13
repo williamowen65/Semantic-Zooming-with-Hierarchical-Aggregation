@@ -54,14 +54,12 @@
       const gapTop = currentBottom;
       const gapBottom = next ? layerTop(next) : currentBottom + (width < 720 ? 96 : 112);
       const available = Math.max(58, gapBottom - gapTop);
-
-      // The desktop treatment was the desired one: a compact card floating
-      // within the inter-layer whitespace instead of filling that whitespace.
-      // Use that same compact height on mobile and desktop, and center it in
-      // whatever gap is available. Mobile content is allowed to wrap inside.
       const preferredCardHeight = 66;
       const cardHeight = Math.min(preferredCardHeight, Math.max(58, available - 12));
-      const y = gapTop + Math.max(6, (available - cardHeight) / 2);
+      // Bias the card slightly upward to leave visual room for the child-type
+      // segmented control immediately beneath it.
+      const centeredOffset = Math.max(6, (available - cardHeight) / 2);
+      const y = gapTop + Math.max(6, centeredOffset - 7);
 
       const x = width < 720 ? 10 : Math.max(16, width * .12);
       const cardWidth = width < 720 ? Math.max(120, width - 20) : Math.min(width - 32, width * .76);
@@ -71,6 +69,16 @@
       const html = `<div xmlns="http://www.w3.org/1999/xhtml" class="layer-context-card ${node.kind === 'solution' ? 'is-solution' : 'is-issue'}"><div class="layer-context-copy"><div class="layer-context-primary"><span class="layer-context-kind">${node.kind === 'solution' ? 'Solution' : 'Issue'}</span><span class="layer-context-name">${esc(node.name)}</span></div><div class="layer-context-description">${esc(node.description || '')}</div></div><div class="layer-context-stats">${locationHtml}<span class="layer-context-stat"><strong>${compact(node.votes)}</strong> votes</span><span class="layer-context-stat"><strong>${Number(node.rating || 0).toFixed(1)}</strong> avg</span><span class="layer-context-stat"><strong>${counts.issues}</strong> ${counts.issues === 1 ? 'issue' : 'issues'}</span><span class="layer-context-stat"><strong>${counts.solutions}</strong> ${counts.solutions === 1 ? 'solution' : 'solutions'}</span></div></div>`;
       const entry = stage.append('g').attr('class', 'layer-context-entry');
       entry.append('foreignObject').attr('x', x).attr('y', y).attr('width', cardWidth).attr('height', cardHeight).html(html);
+
+      if ((node.children || []).length) {
+        const mode = typeof window.atlasLayerKindModeFor === 'function' ? window.atlasLayerKindModeFor(node.id) : 'issue';
+        const toggleWidth = Math.min(width < 720 ? 210 : 230, cardWidth * .72);
+        const toggleHeight = 24;
+        const toggleX = x + (cardWidth - toggleWidth) / 2;
+        const toggleY = y + cardHeight + 4;
+        const toggleHtml = `<div xmlns="http://www.w3.org/1999/xhtml" class="layer-kind-toggle" role="group" aria-label="Show child issues or solutions"><button type="button" class="${mode === 'issue' ? 'is-active' : ''}" ${counts.issues ? '' : 'disabled'} onclick="window.atlasSetLayerKind && window.atlasSetLayerKind('${esc(node.id)}','issue')">Issues <span>${counts.issues}</span></button><button type="button" class="${mode === 'solution' ? 'is-active' : ''}" ${counts.solutions ? '' : 'disabled'} onclick="window.atlasSetLayerKind && window.atlasSetLayerKind('${esc(node.id)}','solution')">Solutions <span>${counts.solutions}</span></button></div>`;
+        entry.append('foreignObject').attr('class', 'layer-kind-toggle-host').attr('x', toggleX).attr('y', toggleY).attr('width', toggleWidth).attr('height', toggleHeight).html(toggleHtml);
+      }
     });
   }
 
