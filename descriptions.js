@@ -68,10 +68,7 @@
   }
 
   function seedSolutionChildren(node, parent = null) {
-    // Existing solution-under-solution relationships are implementation details
-    // in the new model, not another round of proposed solutions.
     if (parent?.kind === 'solution' && node.kind === 'solution') node.kind = 'implementation';
-
     (node.children || []).slice().forEach(child => seedSolutionChildren(child, node));
     if (node.kind !== 'solution') return;
 
@@ -105,10 +102,6 @@
   }
   forestData.forEach(describe);
 
-  // The existing layer toggle is internally two-way. Preserve the new semantic
-  // type while mapping challenges to its issue channel and implementations to
-  // its solution channel. Public labels below are corrected back to the typed
-  // language after each render.
   function bridgeKinds(node) {
     if (node.kind === 'challenge') {
       node.semanticKind = 'challenge';
@@ -121,8 +114,6 @@
   }
   forestData.forEach(bridgeKinds);
 
-  // The core maps were built before this extension script ran. Rebuild them so
-  // newly generated nodes participate in navigation.
   if (typeof nodeById?.clear === 'function' && typeof annotate === 'function') {
     nodeById.clear();
     parentById.clear();
@@ -205,9 +196,6 @@
 
   if (typeof render === 'function') render();
 
-  // layer-kind-toggle.js loads later in index.html. Wrap the final render after
-  // synchronous scripts finish so its existing two channels display the new
-  // public terminology without rewriting that mature interaction code.
   setTimeout(() => {
     if (typeof render !== 'function') return;
     const finalRender = render;
@@ -217,4 +205,15 @@
     };
     syncTypedContextLabels();
   }, 0);
+
+  const viz = document.querySelector('#viz');
+  if (viz && typeof MutationObserver !== 'undefined') {
+    const observer = new MutationObserver(mutations => {
+      const addedToggle = mutations.some(mutation => Array.from(mutation.addedNodes || []).some(node =>
+        node.nodeType === 1 && (node.matches?.('.layer-kind-toggle') || node.querySelector?.('.layer-kind-toggle'))
+      ));
+      if (addedToggle) requestAnimationFrame(syncTypedContextLabels);
+    });
+    observer.observe(viz, { childList: true, subtree: true });
+  }
 })();
