@@ -11,6 +11,7 @@
 
   const storageKey = "atlas-theme";
   const legendStorageKey = "atlas-legend-visible";
+  const verbosityStorageKey = "atlas-verbosity";
   const toolsPositionKey = "atlas-tools-position";
   const control = document.querySelector("#theme-control");
   const toolsTrigger = document.querySelector("#tools-trigger");
@@ -20,6 +21,8 @@
   const readout = document.querySelector("#current-theme-name");
   const legendToggle = document.querySelector("#legend-toggle");
   const legendToggleLabel = document.querySelector("#legend-toggle-label");
+  const verbosityToggle = document.querySelector("#verbosity-toggle");
+  const verbosityToggleLabel = document.querySelector("#verbosity-toggle-label");
   if (!control || !toolsTrigger || !toolsPanel || !themeTrigger) return;
 
   function applyFontScale(theme) {
@@ -85,6 +88,28 @@
   }
 
   function toggleLegend() { setLegendVisible(!legendIsVisible()); }
+
+  let verbosity = "high";
+  try {
+    const storedVerbosity = localStorage.getItem(verbosityStorageKey);
+    if (storedVerbosity === "low" || storedVerbosity === "high") verbosity = storedVerbosity;
+  } catch (_) {}
+
+  function setVerbosity(value, persist = true) {
+    verbosity = value === "low" ? "low" : "high";
+    document.body.dataset.verbosity = verbosity;
+    if (verbosityToggle) {
+      verbosityToggle.setAttribute("aria-pressed", String(verbosity === "high"));
+      verbosityToggle.setAttribute("aria-label", `Verbosity ${verbosity}. Activate for ${verbosity === "high" ? "low" : "high"} verbosity.`);
+      verbosityToggle.title = verbosity === "high" ? "High: title plus stats" : "Low: title only";
+    }
+    if (verbosityToggleLabel) verbosityToggleLabel.textContent = verbosity === "high" ? "High" : "Low";
+    if (persist) {
+      try { localStorage.setItem(verbosityStorageKey, verbosity); } catch (_) {}
+    }
+  }
+
+  function toggleVerbosity() { setVerbosity(verbosity === "high" ? "low" : "high"); }
 
   function setToolsOpen(open) {
     toolsPanel.hidden = !open;
@@ -212,6 +237,14 @@
     event.preventDefault(); event.stopPropagation(); if (event.detail === 0) toggleLegend();
   });
 
+  verbosityToggle?.addEventListener("pointerup", event => {
+    if (event.button != null && event.button !== 0) return;
+    event.preventDefault(); event.stopPropagation(); toggleVerbosity();
+  }, { capture: true });
+  verbosityToggle?.addEventListener("click", event => {
+    event.preventDefault(); event.stopPropagation(); if (event.detail === 0) toggleVerbosity();
+  });
+
   document.addEventListener("pointerdown", event => {
     if (!toolsPanel.hidden && !control.contains(event.target)) setToolsOpen(false);
   }, { capture: true });
@@ -241,4 +274,5 @@
   setToolsOpen(false);
   applyTheme(currentIndex, false);
   setLegendVisible(initialLegendVisible, false);
+  setVerbosity(verbosity, false);
 })();
