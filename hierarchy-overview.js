@@ -1,9 +1,9 @@
 // Layer-height control for the hierarchy.
 //
-// This intentionally does not zoom, scale, stretch, or change the width of the
-// visualization. It only changes the vertical height assigned to each hierarchy
-// layer before the Voronoi layout is rendered. The header, breadcrumbs, cards,
-// floating tools, legend, and viewport all remain at their normal size.
+// The former hierarchy-wide zoom behavior has been removed. This control now
+// changes only the vertical height assigned to each depth layer before the
+// Voronoi layout is rendered. Width, viewport scale, header, breadcrumbs,
+// cards, legend, and floating tools stay completely unchanged.
 (() => {
   if (typeof render !== 'function' || typeof levelGeometry !== 'function') return;
 
@@ -11,6 +11,14 @@
   const plus = document.querySelector('#hierarchy-zoom-in');
   const readout = document.querySelector('#hierarchy-zoom-readout');
   if (!minus || !plus || !readout) return;
+
+  // Update the existing half-pill markup in place so this change does not depend
+  // on a new HTML structure.
+  const setting = readout.closest('.hierarchy-zoom-setting');
+  const settingLabel = setting?.querySelector('.theme-setting-label');
+  if (settingLabel) settingLabel.textContent = 'Layer height';
+  minus.setAttribute('aria-label', 'Decrease layer height');
+  plus.setAttribute('aria-label', 'Increase layer height');
 
   const presets = [
     { id: 'compact', label: 'Compact', percent: 55, factor: .55 },
@@ -38,7 +46,7 @@
     minus.disabled = presetIndex === 0;
     plus.disabled = presetIndex === presets.length - 1;
     document.body.dataset.layerHeight = preset.id;
-    delete document.body.dataset.hierarchyZoom;
+    if (document.body.dataset.hierarchyZoom) delete document.body.dataset.hierarchyZoom;
   }
 
   function applyPreset(index, persist = true) {
