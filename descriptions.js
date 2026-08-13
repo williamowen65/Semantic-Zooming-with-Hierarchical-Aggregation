@@ -147,12 +147,11 @@
     if (kind === 'solution') {
       return [score, `${counts.challenge} ${counts.challenge === 1 ? 'challenge' : 'challenges'} · ${counts.implementation} ${counts.implementation === 1 ? 'implementation' : 'implementations'}`];
     }
-    if (kind === 'challenge') return [score, 'Challenge'];
-    if (kind === 'implementation') return [score, 'Implementation'];
+    if (kind === 'challenge' || kind === 'implementation') return [score, ''];
     return [score, `${counts.issue} ${counts.issue === 1 ? 'sub-issue' : 'sub-issues'} · ${counts.solution} ${counts.solution === 1 ? 'sub-solution' : 'sub-solutions'}`];
   };
 
-  metadataText = item => metadataLines(item).join(' · ');
+  metadataText = item => metadataLines(item).filter(Boolean).join(' · ');
   semanticGlyph = item => ({ solution: '✓', challenge: '!', implementation: '→' }[semanticKind(item)] || '⚠');
 
   function typedCountLabel(kind, count) {
