@@ -4,7 +4,7 @@
 .theme-control[data-side="left"] { left:0; right:auto; }
 .theme-control[data-side="right"] { right:0; left:auto; }
 .theme-control.is-dragging { transition:none; }
-.tools-trigger { width:50px; height:58px; display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--border); border-right:0; border-radius:999px 0 0 999px; background:var(--panel); color:var(--ink); box-shadow:0 8px 24px rgba(20,30,40,.14); backdrop-filter:blur(12px); cursor:grab; touch-action:none; }
+.tools-trigger { width:50px; height:58px; display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--border); border-right:0; border-radius:999px 0 0 999px; background:var(--panel); color:var(--ink); box-shadow:0 8px 24px rgba(20,30,40,.14); backdrop-filter:blur(12px); cursor:grab; touch-action:none; user-select:none; }
 .theme-control.is-dragging .tools-trigger { cursor:grabbing; }
 .theme-control[data-side="left"] .tools-trigger { border-right:1px solid var(--border); border-left:0; border-radius:0 999px 999px 0; }
 .tools-trigger:focus-visible,.theme-trigger:focus-visible,.legend-toggle:focus-visible,.verbosity-toggle:focus-visible,.tools-close:focus-visible,.hierarchy-zoom-button:focus-visible { outline:2px solid var(--selected); outline-offset:2px; }
@@ -36,8 +36,11 @@
 .semantic-kind-icon { display:none !important; }
 
 /* Low verbosity keeps only the node title. High verbosity is the existing title
-   plus vote/rating/child-count statistics. */
+   plus vote/rating/child-count statistics. With the stats removed, shift the
+   title block down by half the space that had been reserved beneath it so the
+   remaining title stays visually centered in its cell. */
 body[data-verbosity="low"] .score-label { display:none !important; }
+body[data-verbosity="low"] .cell-label > tspan:not(.score-label) { transform:translateY(.42em); }
 
 /* Hierarchy overview zoom shrinks geometry, but these informational cards receive
    a moderated font counter-scale so their content remains legible. */
