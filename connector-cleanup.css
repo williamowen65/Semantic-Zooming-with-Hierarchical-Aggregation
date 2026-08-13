@@ -1,0 +1,2 @@
+/* Keep hierarchy connectors lightweight: line only, no endpoint dots. */
+.link-dot { display: none !important; }
