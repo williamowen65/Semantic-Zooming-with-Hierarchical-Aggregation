@@ -67,10 +67,34 @@
     applyCamera(false);
   }
 
+  // Card-stack mode hides the historical graphical layers, so their original Y
+  // positions are no longer meaningful. After the complete render stack has run,
+  // move the leaf destination directly below the final visible card.
+  function positionLeafForCardStack() {
+    if (!document.body.classList.contains('card-stack-mode')) return;
+    const selected = typeof currentNode === 'function' ? currentNode() : null;
+    if (!selected || (selected.children || []).length) return;
+    const leaf = stage.select('.leaf-end-layer').node();
+    const cards = stage.selectAll('.layer-context-entry foreignObject:not(.layer-kind-toggle-host)').nodes();
+    const lastCard = cards[cards.length - 1];
+    if (!leaf || !lastCard) return;
+
+    const cardY = Number(lastCard.getAttribute('y')) || 0;
+    const cardHeight = Number(lastCard.getAttribute('height')) || 66;
+    const leafHeight = Number(leaf.dataset.layerHeight) || Math.max(320, height * .60);
+    const leafY = cardY + cardHeight + 10;
+    leaf.setAttribute('transform', `translate(0,${leafY})`);
+
+    if (Array.isArray(levelCenters)) levelCenters.push(leafY + leafHeight / 2);
+    worldHeight = Math.max(height, leafY + leafHeight + 32);
+    applyCamera(false);
+  }
+
   const previousRender = render;
   render = function() {
     previousRender();
     renderLeafEndLayer();
+    requestAnimationFrame(positionLeafForCardStack);
   };
 
   function scrollSelectedContextCardDesktop() {
