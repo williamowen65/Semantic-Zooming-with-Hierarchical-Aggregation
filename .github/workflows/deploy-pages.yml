@@ -57,7 +57,7 @@ jobs:
             dense-layer-test.js
             layer-kind-toggle.js
             card-stack-layer-kind-bridge.js
-            card-stack-controls.js
+            card-stack-controls-v2.js
           )
 
           cp "${assets[@]}" _site/
@@ -71,10 +71,11 @@ jobs:
             else
               sed -E -i "s#card-stack-layer-kind-bridge\.js\?v=[^\"]+#card-stack-layer-kind-bridge.js?v=${GITHUB_SHA}#g" "$page"
             fi
-            if ! grep -q 'card-stack-controls.js' "$page"; then
-              sed -i "s#</body>#  <script src=\"card-stack-controls.js?v=${GITHUB_SHA}\"></script>\n</body>#" "$page"
+            sed -i '/card-stack-controls\.js/d' "$page"
+            if ! grep -q 'card-stack-controls-v2.js' "$page"; then
+              sed -i "s#</body>#  <script src=\"card-stack-controls-v2.js?v=${GITHUB_SHA}\"></script>\n</body>#" "$page"
             else
-              sed -E -i "s#card-stack-controls\.js\?v=[^\"]+#card-stack-controls.js?v=${GITHUB_SHA}#g" "$page"
+              sed -E -i "s#card-stack-controls-v2\.js\?v=[^\"]+#card-stack-controls-v2.js?v=${GITHUB_SHA}#g" "$page"
             fi
           done
 
