@@ -1,5 +1,6 @@
 // Keep the selected hierarchy branch in the URL so reloads and shared links
-// reopen the same part of the tree. Example: #path=root-environment/environment-biodiversity
+// reopen the same part of the tree. focusPath stores node IDs, not node objects.
+// Example: #path=root-environment/environment-biodiversity
 (() => {
   if (typeof render !== "function" || typeof forestData === "undefined") return;
 
@@ -7,9 +8,17 @@
   let restoring = false;
   let lastSerialized = null;
 
+  function idFromPathEntry(entry) {
+    if (typeof entry === "string") return entry;
+    if (entry && typeof entry.id === "string") return entry.id;
+    return null;
+  }
+
   function serializePath(path = focusPath) {
     if (!Array.isArray(path) || !path.length) return "";
-    return path.map(node => encodeURIComponent(node.id)).join("/");
+    const ids = path.map(idFromPathEntry);
+    if (ids.some(id => !id)) return "";
+    return ids.map(id => encodeURIComponent(id)).join("/");
   }
 
   function pathFromSerialized(serialized) {
@@ -18,16 +27,17 @@
       try { return decodeURIComponent(part); } catch (_) { return part; }
     });
     if (!ids.length) return [];
+    if (ids.some(id => !id || id === "undefined" || id === "null")) return null;
 
-    const resolved = [];
+    // Validate that the IDs form one real parent -> child chain, but return IDs
+    // because that is the representation used by focusPath throughout the app.
     let choices = forestData;
     for (const id of ids) {
       const node = Array.isArray(choices) ? choices.find(item => item.id === id) : null;
       if (!node) return null;
-      resolved.push(node);
       choices = node.children || [];
     }
-    return resolved;
+    return ids;
   }
 
   function serializedFromLocation() {
@@ -36,25 +46,33 @@
     return params.get(hashKey) || "";
   }
 
+  function replaceHash(serialized) {
+    const url = new URL(window.location.href);
+    url.hash = serialized ? `${hashKey}=${serialized}` : "";
+    history.replaceState(history.state, "", url);
+  }
+
   function syncUrlFromFocus() {
     if (restoring) return;
     const serialized = serializePath();
     if (serialized === lastSerialized) return;
     lastSerialized = serialized;
-
-    const url = new URL(window.location.href);
-    if (serialized) url.hash = `${hashKey}=${serialized}`;
-    else url.hash = "";
-    history.replaceState(history.state, "", url);
+    replaceHash(serialized);
   }
 
   function restoreFromUrl({ animate = false } = {}) {
     const serialized = serializedFromLocation();
     const resolved = pathFromSerialized(serialized);
     if (resolved == null) {
-      // Do not strand the page on a stale or malformed branch link.
-      lastSerialized = null;
-      syncUrlFromFocus();
+      // A stale/malformed hash (including the previous undefined/undefined bug)
+      // should never strand the visualization in a phantom branch.
+      restoring = true;
+      focusPath = [];
+      cameraY = 0;
+      render();
+      restoring = false;
+      lastSerialized = "";
+      replaceHash("");
       return false;
     }
 
@@ -79,8 +97,6 @@
 
   window.addEventListener("hashchange", () => restoreFromUrl({ animate: true }));
 
-  // The app has already performed its initial render by the time this last script
-  // runs. Re-render once only when the incoming link identifies a branch.
   const incoming = serializedFromLocation();
   if (incoming) restoreFromUrl({ animate: false });
   else syncUrlFromFocus();
