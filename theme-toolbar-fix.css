@@ -34,7 +34,10 @@
 .hierarchy-zoom-button:disabled { opacity:.34; cursor:default; }
 .hierarchy-zoom-readout { min-height:40px; display:flex; align-items:center; justify-content:center; padding:7px 8px; border:1px solid rgba(27,43,61,.08); border-radius:11px; background:rgba(247,247,244,.55); color:var(--muted); text-align:center; font-size:10.5px; line-height:1.15; font-weight:700; }
 #visual-key[hidden],#visual-key.is-hidden { display:none !important; }
-.semantic-kind-icon { display:none !important; }
+
+/* Issue/solution identity is now communicated by the layer toggle and card text,
+   so node-level semantic icons are intentionally removed. */
+.semantic-kind-icon,.issue-icon,.solution-icon { display:none !important; }
 
 /* Keep boundaries light at every density and in every theme. Because the cell
    strokes are non-scaling, the old widths became disproportionately heavy in
