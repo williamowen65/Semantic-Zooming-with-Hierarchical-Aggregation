@@ -41,6 +41,7 @@ jobs:
             layer-context.css
             leaf-end-state.css
             app.js
+            personal-scope-data.js
             environment-expansion.js
             descriptions.js
             enhancements.js
