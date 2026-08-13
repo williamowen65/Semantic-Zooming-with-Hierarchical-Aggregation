@@ -1,173 +1,48 @@
-// Direct card toggles for the experimental card-stack hierarchy.
-// Clicking a card itself shows/hides that card's child layer. The current/bottom
-// card defaults on; historical cards default off. If a node is selected from a
-// temporarily reopened historical layer, the path change closes that old layer.
+// Card-stack navigation. The root layer now uses the same card/layer pattern as
+// every selected hierarchy level.
 (() => {
-  if (typeof render !== 'function' || typeof stage === 'undefined') return;
-
-  const childVisibility = new Map();
-  let previousPath = [];
-
-  const style = document.createElement('style');
-  style.textContent = `
+  if(typeof render!=='function'||typeof stage==='undefined')return;
+  document.body.classList.add('card-stack-mode');
+  const visible=new Map();let rootOpen=true,previous=[];
+  const style=document.createElement('style');
+  style.textContent=`
+    body.card-stack-mode.has-card-stack .context-cluster,
+    body.card-stack-mode.has-card-stack .root-layer-label,
+    body.card-stack-mode.has-card-stack path.hierarchy-link,
+    body.card-stack-mode.has-card-stack circle.link-dot{display:none!important}
     body.card-stack-mode.has-card-stack .context-cluster.card-stack-layer-visible{display:inline!important}
+    body.card-stack-mode.has-card-stack.root-card-layer-visible .root-layer-label{display:initial!important}
     body.card-stack-mode.has-card-stack .child-cluster.card-stack-layer-hidden{display:none!important}
-    body.card-stack-mode .layer-context-entry foreignObject:not(.layer-kind-toggle-host){pointer-events:auto}
+    body.card-stack-mode .layer-context-entry foreignObject:not(.layer-kind-toggle-host),body.card-stack-mode .root-context-entry foreignObject{pointer-events:auto}
     body.card-stack-mode .layer-context-card{pointer-events:auto;cursor:pointer;transition:box-shadow .18s ease,background-color .18s ease}
     body.card-stack-mode .layer-context-card.children-visible{box-shadow:0 5px 14px rgba(20,30,40,.08)}
-  `;
-  document.head.appendChild(style);
-
-  const translate = node => {
-    const match = (node?.getAttribute('transform') || '').match(/translate\(\s*([-\d.]+)(?:[ ,]+)([-\d.]+)/);
-    return match ? { x:Number(match[1]), y:Number(match[2]) } : { x:0, y:0 };
-  };
-  const clusterHeight = node => {
-    const declared = Number(node?.dataset?.layerHeight);
-    if (Number.isFinite(declared) && declared > 0) return declared;
-    try { return node?.querySelector('.cluster-outline')?.getBBox?.().height || 0; } catch (_) { return 0; }
-  };
-  const samePath = path => path.length === previousPath.length && path.every((id,index) => id === previousPath[index]);
-
-  function syncDefaults() {
-    const path = Array.isArray(focusPath) ? focusPath : [];
-    if (samePath(path)) return;
-
-    // Every navigation change resets the stack to the simple default:
-    // historical cards closed, newest/current card open.
-    childVisibility.clear();
-    path.forEach((id,index) => childVisibility.set(id,index === path.length - 1));
-    previousPath = [...path];
+  `;document.head.appendChild(style);
+  const tr=n=>{const m=(n?.getAttribute('transform')||'').match(/translate\(\s*([-\d.]+)(?:[ ,]+)([-\d.]+)/);return m?{x:+m[1],y:+m[2]}:{x:0,y:0};};
+  const h=n=>{const d=+n?.dataset?.layerHeight;if(Number.isFinite(d)&&d>0)return d;try{return n?.querySelector('.cluster-outline')?.getBBox?.().height||0;}catch(_){return 0;}};
+  const same=p=>p.length===previous.length&&p.every((id,i)=>id===previous[i]);
+  const setY=(n,y,a)=>{if(!n)return;const t=tr(n),v=`translate(${t.x},${y})`,s=d3.select(n).interrupt();a&&!matchMedia('(prefers-reduced-motion: reduce)').matches?s.transition().duration(220).ease(d3.easeCubicOut).attr('transform',v):n.setAttribute('transform',v);};
+  const setCardY=(n,y,a)=>{if(!n)return;const s=d3.select(n).interrupt();a&&!matchMedia('(prefers-reduced-motion: reduce)').matches?s.transition().duration(200).ease(d3.easeCubicOut).attr('y',y):s.attr('y',y);};
+  function sync(){const p=Array.isArray(focusPath)?focusPath:[];if(same(p))return;rootOpen=p.length===0;visible.clear();p.forEach((id,i)=>visible.set(id,i===p.length-1));previous=[...p];}
+  function rootLayer(){return (focusPath?.length?stage.select('.context-cluster.depth-0'):stage.select('.child-cluster')).node();}
+  function layerFor(i,last){return (i===last?stage.select('.child-cluster'):stage.select(`.context-cluster.depth-${i+1}`)).node();}
+  function box(){const w=width<720?Math.max(120,width-20):Math.min(width-32,width*.76);return{x:width<720?10:Math.max(16,width*.12),w};}
+  function rootCard(y){
+    stage.selectAll('.root-context-entry').remove();const b=box(),ch=66,votes=(forestData||[]).reduce((s,n)=>s+(+n.votes||0),0),voteText=votes>=1000?`${(votes/1000).toFixed(1)}k`:String(votes);
+    const html=`<div xmlns="http://www.w3.org/1999/xhtml" class="layer-context-card is-issue ${rootOpen?'children-visible':''}" role="button" tabindex="0" aria-pressed="${rootOpen}"><div class="layer-context-copy"><div class="layer-context-primary"><span class="layer-context-kind">Issue collection</span><span class="layer-context-name">Root issues</span></div><div class="layer-context-description">Top-level issues across the full Atlas hierarchy.</div></div><div class="layer-context-stats"><span class="layer-context-stat"><strong>${voteText}</strong> votes</span><span class="layer-context-stat"><strong>${(forestData||[]).length}</strong> roots</span></div></div>`;
+    const fo=stage.append('g').attr('class','root-context-entry').append('foreignObject').attr('x',b.x).attr('y',y).attr('width',b.w).attr('height',ch).html(html).node(),card=fo?.querySelector('.layer-context-card');
+    const toggle=()=>{rootOpen=!rootOpen;layout(true);};if(card){card.setAttribute('aria-label',`${rootOpen?'Hide':'Show'} root issues`);card.onclick=e=>{e.preventDefault();e.stopPropagation();toggle();};card.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle();}};}return ch;
   }
-
-  function targetLayer(index,lastIndex) {
-    return index === lastIndex
-      ? stage.select('.child-cluster').node()
-      : stage.select(`.context-cluster.depth-${index + 1}`).node();
+  function wire(entry,id){
+    const fo=entry.querySelector('foreignObject:not(.layer-kind-toggle-host)'),card=fo?.querySelector('.layer-context-card'),node=nodeById.get(id);if(!fo||!card||!node)return null;
+    const children=(node.children||[]).length>0,open=children&&visible.get(id)===true;card.classList.toggle('children-visible',open);card.setAttribute('role','button');card.setAttribute('tabindex','0');card.setAttribute('aria-pressed',String(open));card.setAttribute('aria-label',`${open?'Hide':'Show'} child layer for ${node.name}`);
+    const toggle=()=>{if(!children)return;visible.set(id,visible.get(id)!==true);layout(true);};card.onclick=e=>{e.preventDefault();e.stopPropagation();toggle();};card.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle();}};return fo;
   }
-
-  function setY(node,y,animate) {
-    if (!node) return;
-    const t = translate(node);
-    const value = `translate(${t.x},${y})`;
-    const selection = d3.select(node).interrupt();
-    if (animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      selection.transition().duration(220).ease(d3.easeCubicOut).attr('transform',value);
-    } else {
-      node.setAttribute('transform',value);
-    }
+  function layout(animate=false){
+    sync();const path=Array.isArray(focusPath)?focusPath:[],entries=stage.selectAll('.layer-context-entry').nodes();document.body.classList.add('has-card-stack');document.body.classList.toggle('root-card-layer-visible',rootOpen&&path.length>0);
+    stage.selectAll('.context-cluster').classed('card-stack-layer-visible',false);stage.select('.child-cluster').classed('card-stack-layer-hidden',false);stage.selectAll('.card-stack-controls-host-v2').remove();let y=width<720?132:98;
+    y+=rootCard(y)+10;const root=rootLayer();if(rootOpen&&root){path.length?root.classList.add('card-stack-layer-visible'):root.classList.remove('card-stack-layer-hidden');setY(root,y,animate);y+=h(root)+12;}else if(!path.length&&root)root.classList.add('card-stack-layer-hidden');
+    entries.forEach((entry,i)=>{const id=path[i],fo=wire(entry,id);if(!id||!fo)return;entry.removeAttribute('transform');fo.removeAttribute('transform');setCardY(fo,y,animate);const ch=+fo.getAttribute('height')||66,node=nodeById.get(id),open=visible.get(id)===true&&(node?.children||[]).length>0,layer=layerFor(i,entries.length-1),toggle=entry.querySelector('foreignObject.layer-kind-toggle-host');if(toggle){toggle.removeAttribute('transform');toggle.style.display=open&&layer?'':'none';}if(open&&layer){i<entries.length-1?layer.classList.add('card-stack-layer-visible'):layer.classList.remove('card-stack-layer-hidden');const th=toggle?(+toggle.getAttribute('height')||24):0,ty=y+ch+4;if(toggle)d3.select(toggle).attr('y',ty);const top=ty+th/2;setY(layer,top,animate);y=top+h(layer)+12;}else{if(i===entries.length-1&&layer)layer.classList.add('card-stack-layer-hidden');y+=ch+10;}});
+    stage.selectAll('text.canvas-caption').filter(function(){return(d3.select(this).text()||'').includes('· children');}).remove();if(Array.isArray(levelCenters)){levelCenters.length=0;const r=stage.select('.root-context-entry foreignObject').node();if(r)levelCenters.push((+r.getAttribute('y')||0)+(+r.getAttribute('height')||66)/2);entries.forEach(e=>{const c=e.querySelector('foreignObject:not(.layer-kind-toggle-host)');if(c)levelCenters.push((+c.getAttribute('y')||0)+(+c.getAttribute('height')||66)/2);});}worldHeight=Math.max(height,y+96);if(typeof applyCamera==='function')applyCamera(false);
   }
-
-  function setCardY(card,y,animate) {
-    if (!card) return;
-    const selection = d3.select(card).interrupt();
-    if (animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      selection.transition().duration(200).ease(d3.easeCubicOut).attr('y',y);
-    } else {
-      selection.attr('y',y);
-    }
-  }
-
-  function configureCard(entry,nodeId) {
-    const cardFO = entry.querySelector('foreignObject:not(.layer-kind-toggle-host)');
-    const card = cardFO?.querySelector('.layer-context-card');
-    const node = nodeById.get(nodeId);
-    if (!cardFO || !card || !node) return null;
-
-    const hasChildren = (node.children || []).length > 0;
-    const visible = hasChildren && childVisibility.get(nodeId) === true;
-    card.classList.toggle('children-visible',visible);
-    card.setAttribute('role','button');
-    card.setAttribute('tabindex','0');
-    card.setAttribute('aria-pressed',String(visible));
-    card.setAttribute('aria-label',`${visible ? 'Hide' : 'Show'} child layer for ${node.name}`);
-
-    const toggle = () => {
-      if (!hasChildren) return;
-      childVisibility.set(nodeId,childVisibility.get(nodeId) !== true);
-      layout(true);
-    };
-    card.onclick = event => {
-      event.preventDefault();
-      event.stopPropagation();
-      toggle();
-    };
-    card.onkeydown = event => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        toggle();
-      }
-    };
-    return cardFO;
-  }
-
-  function layout(animate=false) {
-    if (!Array.isArray(focusPath) || !focusPath.length || !document.body.classList.contains('card-stack-mode')) return;
-    syncDefaults();
-
-    const entries = stage.selectAll('.layer-context-entry').nodes();
-    stage.selectAll('.context-cluster').classed('card-stack-layer-visible',false);
-    stage.select('.child-cluster').classed('card-stack-layer-hidden',false);
-    stage.selectAll('.card-stack-controls-host-v2').remove();
-
-    let y = width < 720 ? 132 : 98;
-
-    entries.forEach((entry,index) => {
-      const id = focusPath[index];
-      const cardFO = configureCard(entry,id);
-      if (!id || !cardFO) return;
-
-      entry.removeAttribute('transform');
-      cardFO.removeAttribute('transform');
-      setCardY(cardFO,y,animate);
-
-      const cardH = Number(cardFO.getAttribute('height')) || 66;
-      const node = nodeById.get(id);
-      const show = childVisibility.get(id) === true && (node?.children || []).length > 0;
-      const layer = targetLayer(index,entries.length - 1);
-      const kindToggle = entry.querySelector('foreignObject.layer-kind-toggle-host');
-
-      if (kindToggle) {
-        kindToggle.removeAttribute('transform');
-        kindToggle.style.display = show && layer ? '' : 'none';
-      }
-
-      if (show && layer) {
-        if (index < entries.length - 1) layer.classList.add('card-stack-layer-visible');
-        else layer.classList.remove('card-stack-layer-hidden');
-
-        const toggleHeight = kindToggle ? (Number(kindToggle.getAttribute('height')) || 24) : 0;
-        const toggleY = y + cardH + 4;
-        if (kindToggle) d3.select(kindToggle).attr('y',toggleY);
-        const layerTop = toggleY + toggleHeight / 2;
-        setY(layer,layerTop,animate);
-        y = layerTop + clusterHeight(layer) + 12;
-      } else {
-        if (index === entries.length - 1 && layer) layer.classList.add('card-stack-layer-hidden');
-        y += cardH + 10;
-      }
-    });
-
-    if (Array.isArray(levelCenters)) {
-      levelCenters.length = 0;
-      entries.forEach(entry => {
-        const card = entry.querySelector('foreignObject:not(.layer-kind-toggle-host)');
-        if (card) levelCenters.push((Number(card.getAttribute('y')) || 0) + (Number(card.getAttribute('height')) || 66) / 2);
-      });
-    }
-
-    worldHeight = Math.max(height,y + 96);
-    if (typeof applyCamera === 'function') applyCamera(false);
-  }
-
-  window.atlasChildrenVisibleFor = nodeId => childVisibility.get(nodeId) === true;
-
-  const baseRender = render;
-  render = function(...args) {
-    const result = baseRender(...args);
-    layout(false);
-    return result;
-  };
-
-  requestAnimationFrame(() => layout(false));
+  window.atlasChildrenVisibleFor=id=>visible.get(id)===true;const baseRender=render;render=function(...args){const r=baseRender(...args);layout(false);return r;};requestAnimationFrame(()=>layout(false));
 })();
