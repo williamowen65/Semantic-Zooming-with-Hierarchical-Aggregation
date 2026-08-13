@@ -54,6 +54,7 @@ jobs:
             scroll-to-card.js
             leaf-end-state.js
             hierarchy-overview.js
+            overview-gap-spacing.js
             url-state.js
             dense-layer-test.js
             layer-kind-toggle.js
