@@ -27,7 +27,6 @@
   function parentAndModeFor(options) {
     const className = String(options?.className || '');
 
-    // Root overview and the root context layer are always root issues.
     if (className === 'root-overview' || /context-cluster\s+depth-0\b/.test(className)) {
       return { root: true, parent: null, mode: 'issue' };
     }
@@ -60,8 +59,6 @@
 
     if (!context.parent) return baseRenderCluster(options);
 
-    // Strict separation: an Issues view contains only issues and a Solutions
-    // view contains only solutions. Never fall back to the mixed original list.
     const filtered = options.items.filter(item =>
       (item.kind === 'solution' ? 'solution' : 'issue') === context.mode
     );
@@ -78,6 +75,25 @@
     return availableMode(parent, selectedChild?.kind);
   };
 
+  window.atlasGetLayerKindState = function() {
+    return Object.fromEntries(layerKindByParent.entries());
+  };
+
+  window.atlasRestoreLayerKindState = function(state) {
+    layerKindByParent.clear();
+    Object.entries(state || {}).forEach(([parentId, kind]) => {
+      const parent = nodeById.get(parentId);
+      if (!parent || (kind !== 'issue' && kind !== 'solution')) return;
+      const counts = kindCounts(parent);
+      if (kind === 'issue' && counts.issues) layerKindByParent.set(parentId, kind);
+      if (kind === 'solution' && counts.solutions) layerKindByParent.set(parentId, kind);
+    });
+  };
+
+  if (window.__atlasPendingLayerKinds) {
+    window.atlasRestoreLayerKindState(window.__atlasPendingLayerKinds);
+  }
+
   window.atlasSetLayerKind = function(parentId, kind) {
     const parent = nodeById.get(parentId);
     if (!parent) return;
@@ -88,10 +104,9 @@
     layerKindByParent.set(parentId, desired);
     if (window.stopHierarchyMomentum) window.stopHierarchyMomentum();
 
-    // Treat the card's toggle like selecting that parent: clear anything deeper
-    // so the newly displayed issue/solution layer begins with no selected child.
     if (typeof pathForNode === 'function') focusPath = pathForNode(parentId);
     render();
+    if (typeof window.atlasSyncUrlState === 'function') window.atlasSyncUrlState();
     requestAnimationFrame(() => {
       if (typeof scrollToDepth === 'function') scrollToDepth(Math.max(0, focusPath.length - 1), true);
     });
