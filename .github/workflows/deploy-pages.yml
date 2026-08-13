@@ -56,6 +56,12 @@ jobs:
             url-state.js
             dense-layer-test.js
             layer-kind-toggle.js
+            layer-kind-state.js
+            layer-kind-filter.js
+            layer-kind-api.js
+            layer-kind-actions.js
+            root-layer-label.js
+            layer-kind-clicks.js
             card-stack-layer-kind-bridge.js
             card-stack-controls-v2.js
           )
