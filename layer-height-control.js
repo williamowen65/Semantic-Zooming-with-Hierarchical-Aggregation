@@ -9,9 +9,11 @@
   if (!minus || !plus || !readout) return;
 
   const presets = [
-    { id: 'compact', label: 'Compact', percent: 55, factor: .55 },
-    { id: 'short', label: 'Short', percent: 72, factor: .72 },
-    { id: 'medium', label: 'Medium', percent: 86, factor: .86 },
+    { id: 'tiny', label: 'Very compact', percent: 20, factor: .20 },
+    { id: 'compact', label: 'Compact', percent: 35, factor: .35 },
+    { id: 'short', label: 'Short', percent: 55, factor: .55 },
+    { id: 'medium', label: 'Medium', percent: 72, factor: .72 },
+    { id: 'tall', label: 'Tall', percent: 86, factor: .86 },
     { id: 'standard', label: 'Standard', percent: 100, factor: 1 }
   ];
 
@@ -25,7 +27,7 @@
   levelGeometry = function(compactMobile, contentTop) {
     const geometry = baseLevelGeometry(compactMobile, contentTop);
     const factor = presets[presetIndex]?.factor || 1;
-    return { ...geometry, h: Math.max(120, geometry.h * factor) };
+    return { ...geometry, h: Math.max(64, geometry.h * factor) };
   };
 
   function updateReadout() {
