@@ -41,6 +41,52 @@
     return 1;
   }
 
+  function overviewSafePadding() {
+    const id = presets[presetIndex]?.id;
+    if (id === 'far') return 14;
+    if (id === 'wide') return 11;
+    if (id === 'overview') return 8;
+    return 0;
+  }
+
+  function labelFitsPolygon(text, anchorX, anchorY, scale, padding) {
+    const cell = text.closest('g.cell');
+    const datum = cell && typeof d3 !== 'undefined' ? d3.select(cell).datum() : null;
+    const polygon = datum?.polygon;
+    if (!polygon?.length || typeof d3?.polygonContains !== 'function') return true;
+
+    let box;
+    try { box = text.getBBox(); } catch (_) { return true; }
+
+    const left = anchorX + (box.x - anchorX) * scale - padding;
+    const right = anchorX + (box.x + box.width - anchorX) * scale + padding;
+    const top = anchorY + (box.y - anchorY) * scale - padding;
+    const bottom = anchorY + (box.y + box.height - anchorY) * scale + padding;
+    const midX = (left + right) / 2;
+    const midY = (top + bottom) / 2;
+    const probes = [
+      [left, top], [midX, top], [right, top],
+      [right, midY], [right, bottom], [midX, bottom],
+      [left, bottom], [left, midY]
+    ];
+    return probes.every(point => d3.polygonContains(polygon, point));
+  }
+
+  function paddedOverviewScale(text, anchorX, anchorY, requestedScale, fitScale) {
+    const padding = overviewSafePadding();
+    if (!padding) return requestedScale;
+
+    // Prefer shrinking over moving. This preserves the title's centered anchor
+    // and creates a consistent visual buffer between all label text and the tile
+    // perimeter. Small or awkward cells simply use a slightly smaller label.
+    const minimumScale = Math.max(.08, fitScale * .48);
+    let scale = requestedScale;
+    while (scale > minimumScale && !labelFitsPolygon(text, anchorX, anchorY, scale, padding)) {
+      scale *= .95;
+    }
+    return Math.max(minimumScale, scale);
+  }
+
   let fixingLabels = false;
   let labelFixQueued = false;
   function restoreOverviewLabelAnchors() {
@@ -57,11 +103,10 @@
       if (!Number.isFinite(x) || !Number.isFinite(y)) return;
 
       // Keep the title's fitted polygon centroid as the authoritative anchor.
-      // At wider overview levels, shave a little off the rendered label scale so
-      // larger titles can stay at that center instead of being forced toward a
-      // wider edge of the polygon. The farthest overview gets the strongest,
-      // but still modest, reduction.
-      const scale = fitScale * overviewFactor;
+      // At wider overview levels, start slightly smaller and then shrink only as
+      // much as necessary to maintain a clean inset from the polygon boundary.
+      const requestedScale = fitScale * overviewFactor;
+      const scale = paddedOverviewScale(text, x, y, requestedScale, fitScale);
       const desired = `translate(${x},${y}) scale(${scale}) translate(${-x},${-y})`;
       if (text.getAttribute('transform') !== desired) text.setAttribute('transform', desired);
     });
