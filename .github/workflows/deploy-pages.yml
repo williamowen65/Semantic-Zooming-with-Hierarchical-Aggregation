@@ -56,6 +56,7 @@ jobs:
             url-state.js
             dense-layer-test.js
             layer-kind-toggle.js
+            card-stack-layer-kind-bridge.js
             card-stack-controls.js
           )
 
@@ -65,6 +66,11 @@ jobs:
           for page in "_site/index.html" "_site/${GITHUB_SHA}/index.html"; do
             sed -E -i "s#hierarchy-overview\.js\?v=[^\"]+#hierarchy-overview.js?v=${GITHUB_SHA}#g" "$page"
             sed -E -i "s#layer-kind-toggle\.js\?v=[^\"]+#layer-kind-toggle.js?v=${GITHUB_SHA}#g" "$page"
+            if ! grep -q 'card-stack-layer-kind-bridge.js' "$page"; then
+              sed -i "s#</body>#  <script src=\"card-stack-layer-kind-bridge.js?v=${GITHUB_SHA}\"></script>\n</body>#" "$page"
+            else
+              sed -E -i "s#card-stack-layer-kind-bridge\.js\?v=[^\"]+#card-stack-layer-kind-bridge.js?v=${GITHUB_SHA}#g" "$page"
+            fi
             if ! grep -q 'card-stack-controls.js' "$page"; then
               sed -i "s#</body>#  <script src=\"card-stack-controls.js?v=${GITHUB_SHA}\"></script>\n</body>#" "$page"
             else
