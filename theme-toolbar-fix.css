@@ -7,7 +7,7 @@
 .tools-trigger { width:50px; height:58px; display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--border); border-right:0; border-radius:999px 0 0 999px; background:var(--panel); color:var(--ink); box-shadow:0 8px 24px rgba(20,30,40,.14); backdrop-filter:blur(12px); cursor:grab; touch-action:none; user-select:none; }
 .theme-control.is-dragging .tools-trigger { cursor:grabbing; }
 .theme-control[data-side="left"] .tools-trigger { border-right:1px solid var(--border); border-left:0; border-radius:0 999px 999px 0; }
-.tools-trigger:focus-visible,.theme-trigger:focus-visible,.legend-toggle:focus-visible,.verbosity-toggle:focus-visible,.tools-close:focus-visible,.hierarchy-zoom-button:focus-visible { outline:2px solid var(--selected); outline-offset:2px; }
+.tools-trigger:focus-visible,.theme-trigger:focus-visible,.legend-toggle:focus-visible,.verbosity-toggle:focus-visible,.stress-test-select:focus-visible,.tools-close:focus-visible,.hierarchy-zoom-button:focus-visible { outline:2px solid var(--selected); outline-offset:2px; }
 .tools-icon { font-size:22px; line-height:1; transform:translateX(-1px); pointer-events:none; }
 .theme-control[data-side="left"] .tools-icon { transform:translateX(1px); }
 .tools-panel { position:absolute; right:58px; left:auto; top:50%; transform:translateY(-50%); width:min(360px,calc(100vw - 84px)); padding:12px; border:1px solid var(--border); border-radius:18px; background:rgba(255,255,255,.96); color:var(--ink); box-shadow:0 18px 48px rgba(20,30,40,.20); backdrop-filter:blur(18px); user-select:text; touch-action:auto; }
@@ -16,16 +16,17 @@
 .tools-panel-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; font-size:12px; }
 .tools-close { width:30px; height:30px; display:inline-flex; align-items:center; justify-content:center; border:0; border-radius:999px; background:rgba(27,43,61,.06); color:var(--muted); font-size:20px; line-height:1; cursor:pointer; }
 .display-settings-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:9px; align-items:end; }
-.theme-setting,.legend-setting,.verbosity-setting,.hierarchy-zoom-setting { display:grid; gap:6px; }
-.verbosity-setting,.hierarchy-zoom-setting { margin-top:10px; }
+.theme-setting,.legend-setting,.verbosity-setting,.stress-test-setting,.hierarchy-zoom-setting { display:grid; gap:6px; }
+.verbosity-setting,.stress-test-setting,.hierarchy-zoom-setting { margin-top:10px; }
 .theme-setting-label { color:var(--muted); font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; }
-.theme-trigger,.legend-toggle,.verbosity-toggle { min-height:42px; display:flex; align-items:center; gap:10px; border:1px solid var(--border); border-radius:12px; padding:9px 11px; background:rgba(247,247,244,.84); color:var(--ink); cursor:pointer; touch-action:manipulation; }
+.theme-trigger,.legend-toggle,.verbosity-toggle,.stress-test-select { min-height:42px; display:flex; align-items:center; gap:10px; border:1px solid var(--border); border-radius:12px; padding:9px 11px; background:rgba(247,247,244,.84); color:var(--ink); cursor:pointer; touch-action:manipulation; }
 .theme-trigger { width:100%; justify-content:space-between; text-align:left; }
 .legend-toggle { min-width:78px; justify-content:center; font-size:12px; font-weight:700; }
 .legend-toggle.is-off { color:var(--muted); background:rgba(247,247,244,.48); }
 .legend-toggle-icon { font-size:16px; line-height:1; }
 .verbosity-toggle { width:100%; justify-content:space-between; font-size:12px; font-weight:700; }
 .verbosity-choice { color:var(--muted); font-size:11px; font-weight:700; }
+.stress-test-select { width:100%; appearance:auto; font-size:12px; font-weight:700; }
 .current-theme-name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; font-weight:700; }
 .theme-next { flex:0 0 auto; color:var(--muted); font-size:20px; line-height:1; }
 .hierarchy-zoom-control { display:grid; grid-template-columns:42px minmax(0,1fr) 42px; align-items:center; gap:7px; }
