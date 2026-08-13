@@ -45,6 +45,12 @@
 .cell-shape { stroke-width:1.6px !important; }
 .cell.is-selected .cell-shape { stroke-width:2.8px !important; }
 
+/* Neighbor branches stay visually secondary through their faded geometry, but
+   their titles remain fully legible so they still work as navigation choices.
+   Only the secondary stats stay de-emphasized. */
+.cell.is-faded .cell-label { opacity:1 !important; fill:var(--ink) !important; stroke:rgba(255,255,255,.9) !important; stroke-width:1.35px !important; }
+.cell.is-faded .score-label { opacity:.5 !important; fill:var(--muted) !important; }
+
 /* Low verbosity keeps only the node title. High verbosity is the existing title
    plus vote/rating/child-count statistics. With the stats removed, shift the
    title block down by half the space that had been reserved beneath it so the
