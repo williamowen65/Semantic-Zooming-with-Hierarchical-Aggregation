@@ -89,14 +89,14 @@
       const currentGap = currentTop - (previousTop + layerHeight(previous));
       const extra = Math.max(0, targetLogicalGap - currentGap);
 
-      // The context UI belongs in this gap. Move it by the same accumulated
-      // offset as its owning layer, plus half of the newly inserted space so it
-      // remains visually centered between the two layers.
+      // Preserve the same visual relationship the context UI has at 100%.
+      // The gap can grow to compensate for overview zoom, but the card should
+      // remain anchored near the bottom of its owning layer instead of drifting
+      // toward the middle of the newly enlarged gap.
       const entry = contextEntries[i - 1];
-      if (entry) {
+      if (entry && cumulative) {
         const old = entry.getAttribute('transform') || '';
-        const shift = cumulative + extra / 2;
-        if (shift) entry.setAttribute('transform', `translate(0,${shift}) ${old}`);
+        entry.setAttribute('transform', `translate(0,${cumulative}) ${old}`);
       }
 
       if (extra) {
