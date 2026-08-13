@@ -53,6 +53,7 @@ jobs:
             scroll-to-card.js
             leaf-end-state.js
             hierarchy-overview.js
+            url-state.js
           )
 
           cp "${assets[@]}" _site/
