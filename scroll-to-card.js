@@ -1,4 +1,4 @@
-// Align automatic hierarchy navigation to the selected node's context card.
+// Align automatic hierarchy navigation to the requested level's context card.
 // Manual panning remains unchanged; this only affects click/breadcrumb scroll-to.
 (() => {
   if (typeof scrollToDepth !== 'function' || typeof applyCamera !== 'function') return;
@@ -16,10 +16,11 @@
     return Number.isFinite(scale) && scale > 0 ? scale : 1;
   }
 
-  function selectedCardTop() {
+  function cardTopForDepth(index) {
     if (!Array.isArray(focusPath) || !focusPath.length) return null;
     const entries = stage.selectAll('.layer-context-entry').nodes();
-    const entry = entries[focusPath.length - 1];
+    const safeIndex = Math.max(0, Math.min(entries.length - 1, index));
+    const entry = entries[safeIndex];
     const foreignObject = entry && entry.querySelector('foreignObject');
     if (!foreignObject) return null;
     const y = Number(foreignObject.getAttribute('y'));
@@ -31,7 +32,6 @@
     const breadcrumbRect = breadcrumbs?.getBoundingClientRect();
     if (!toolbarRect || !breadcrumbRect) return null;
 
-    // Measure, don't estimate: header portion above the breadcrumb + breadcrumb row.
     const headerHeight = Math.max(0, breadcrumbRect.top - toolbarRect.top);
     const breadcrumbHeight = Math.max(0, breadcrumbRect.height);
     const total = headerHeight + breadcrumbHeight;
@@ -39,7 +39,7 @@
   }
 
   scrollToDepth = function(index, animate = true) {
-    const cardY = selectedCardTop();
+    const cardY = cardTopForDepth(index);
     const occupiedHeight = measuredHeaderAndBreadcrumbHeight();
     if (cardY == null || occupiedHeight == null) {
       fallbackScrollToDepth(index, animate);
