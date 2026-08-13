@@ -1,6 +1,8 @@
 // Hierarchy-wide overview zoom. This is deliberately separate from each layer's
-// own pan/zoom: it scales the complete hierarchy, cards and connectors together.
-// Text receives a moderated counter-scale so overview modes remain readable.
+// own pan/zoom. Overview zoom now compresses only the hierarchy's vertical axis,
+// so every layer continues to span the full viewport width while more levels fit
+// on screen. Cell labels are counter-scaled vertically so their letterforms stay
+// readable instead of being squashed by the hierarchy compression.
 (() => {
   if (typeof stage === 'undefined' || typeof applyCamera !== 'function') return;
 
@@ -23,11 +25,9 @@
 
   window.atlasHierarchyScale = presets[presetIndex].scale;
 
-  function readableScale() {
+  function labelCounterScale() {
     const scale = window.atlasHierarchyScale || 1;
-    // Counter only part of the geometry shrink. At 64% geometry, labels are
-    // roughly 80% of their standard screen size rather than becoming tiny.
-    return Math.pow(1 / scale, 0.48);
+    return 1 / scale;
   }
 
   function updateReadout() {
@@ -36,7 +36,6 @@
     minus.disabled = presetIndex === 0;
     plus.disabled = presetIndex === presets.length - 1;
     document.body.dataset.hierarchyZoom = preset.id;
-    document.documentElement.style.setProperty('--hierarchy-readable-scale', readableScale().toFixed(3));
   }
 
   function hierarchyCameraBounds() {
@@ -57,8 +56,11 @@
   applyCamera = function(animate = false) {
     const scale = window.atlasHierarchyScale || 1;
     cameraY = clampCamera(cameraY);
-    const x = (width - width * scale) / 2;
-    const transform = `translate(${x},${cameraY}) scale(${scale})`;
+
+    // Keep the hierarchy at full viewport width. Only vertical distances are
+    // compressed/expanded so zooming out reveals more of the path without
+    // shrinking the treemaps and cards into a narrow centered column.
+    const transform = `translate(0,${cameraY}) scale(1,${scale})`;
     stage.interrupt();
     if (animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       stage.transition().duration(520).ease(d3.easeCubicOut).attr('transform', transform);
@@ -77,12 +79,12 @@
   };
 
   function applyLabelReadability() {
-    const counter = readableScale();
+    const counterY = labelCounterScale();
     document.querySelectorAll('#viz text.cell-label').forEach(text => {
       const fit = Number(text.dataset.fitScale || 1);
       const ax = Number(text.dataset.fitAnchorX || text.getAttribute('x') || 0);
       const ay = Number(text.dataset.fitAnchorY || text.getAttribute('y') || 0);
-      text.setAttribute('transform', `translate(${ax},${ay}) scale(${fit * counter}) translate(${-ax},${-ay})`);
+      text.setAttribute('transform', `translate(${ax},${ay}) scale(${fit},${fit * counterY}) translate(${-ax},${-ay})`);
     });
   }
 
@@ -91,8 +93,8 @@
     presetIndex = Math.max(0, Math.min(presets.length - 1, index));
     const nextScale = presets[presetIndex].scale;
 
-    // Keep the current viewport center approximately anchored while changing
-    // hierarchy scale, instead of jumping back to the top of the document.
+    // Keep the same world position near the viewport center while changing the
+    // vertical hierarchy scale, instead of jumping back to the top.
     const viewportCenter = height * .5;
     const worldAtCenter = (viewportCenter - cameraY) / previousScale;
     window.atlasHierarchyScale = nextScale;
