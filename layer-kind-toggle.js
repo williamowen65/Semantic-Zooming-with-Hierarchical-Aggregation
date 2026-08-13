@@ -55,12 +55,17 @@
 
     if (context.root) {
       const issues = options.items.filter(item => item.kind !== 'solution');
-      return baseRenderCluster({ ...options, items: issues.length ? issues : options.items });
+      return baseRenderCluster({ ...options, items: issues });
     }
 
     if (!context.parent) return baseRenderCluster(options);
-    const filtered = options.items.filter(item => (item.kind === 'solution' ? 'solution' : 'issue') === context.mode);
-    return baseRenderCluster({ ...options, items: filtered.length ? filtered : options.items });
+
+    // Strict separation: an Issues view contains only issues and a Solutions
+    // view contains only solutions. Never fall back to the mixed original list.
+    const filtered = options.items.filter(item =>
+      (item.kind === 'solution' ? 'solution' : 'issue') === context.mode
+    );
+    return baseRenderCluster({ ...options, items: filtered });
   };
 
   window.atlasLayerKindModeFor = function(parentId) {
