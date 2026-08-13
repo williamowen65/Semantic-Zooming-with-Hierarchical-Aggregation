@@ -33,6 +33,47 @@
     };
   }
 
+  function overviewLabelScaleFactor() {
+    const id = presets[presetIndex]?.id;
+    if (id === 'far') return .88;
+    if (id === 'wide') return .94;
+    if (id === 'overview') return .97;
+    return 1;
+  }
+
+  let fixingLabels = false;
+  let labelFixQueued = false;
+  function restoreOverviewLabelAnchors() {
+    labelFixQueued = false;
+    const preset = presets[presetIndex];
+    if (!preset || preset.id === 'standard') return;
+
+    fixingLabels = true;
+    const overviewFactor = overviewLabelScaleFactor();
+    host.querySelectorAll('text.cell-label').forEach(text => {
+      const x = Number(text.getAttribute('data-fit-anchor-x'));
+      const y = Number(text.getAttribute('data-fit-anchor-y'));
+      const fitScale = Number(text.getAttribute('data-fit-scale')) || 1;
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+
+      // Keep the title's fitted polygon centroid as the authoritative anchor.
+      // At wider overview levels, shave a little off the rendered label scale so
+      // larger titles can stay at that center instead of being forced toward a
+      // wider edge of the polygon. The farthest overview gets the strongest,
+      // but still modest, reduction.
+      const scale = fitScale * overviewFactor;
+      const desired = `translate(${x},${y}) scale(${scale}) translate(${-x},${-y})`;
+      if (text.getAttribute('transform') !== desired) text.setAttribute('transform', desired);
+    });
+    fixingLabels = false;
+  }
+
+  function queueOverviewLabelFix() {
+    if (fixingLabels || labelFixQueued || presets[presetIndex]?.id === 'standard') return;
+    labelFixQueued = true;
+    requestAnimationFrame(restoreOverviewLabelAnchors);
+  }
+
   function updateReadout() {
     const preset = presets[presetIndex];
     readout.textContent = `${preset.label} · ${preset.percent}%`;
@@ -87,6 +128,7 @@
 
     render();
     if (typeof applyCamera === 'function') applyCamera(false);
+    queueOverviewLabelFix();
   }
 
   function applyPreset(index, persist = true) {
@@ -110,6 +152,19 @@
     event.stopPropagation();
     applyPreset(presetIndex + 1);
   });
+
+  // semantic-icons.js intentionally tracks labels with a panned/zoomed layer.
+  // Keep that behavior at Standard, but restore the polygon-centered anchor after
+  // any later transform mutation while an overview preset is active.
+  if (typeof MutationObserver !== 'undefined') {
+    const observer = new MutationObserver(mutations => {
+      if (fixingLabels || presets[presetIndex]?.id === 'standard') return;
+      if (mutations.some(m => m.type === 'childList' || (m.type === 'attributes' && m.target?.matches?.('text.cell-label')))) {
+        queueOverviewLabelFix();
+      }
+    });
+    observer.observe(host, { subtree: true, childList: true, attributes: true, attributeFilter: ['transform', 'data-fit-anchor-x', 'data-fit-anchor-y', 'data-fit-scale'] });
+  }
 
   window.addEventListener('resize', () => requestAnimationFrame(renderAtPreset));
 
