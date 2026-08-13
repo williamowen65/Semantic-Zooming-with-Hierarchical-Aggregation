@@ -1,30 +1,22 @@
 // Layer-height control for the hierarchy.
-//
-// The former hierarchy-wide zoom behavior has been removed. This control now
-// changes only the vertical height assigned to each depth layer before the
-// Voronoi layout is rendered. Width, viewport scale, header, breadcrumbs,
-// cards, legend, and floating tools stay completely unchanged.
 (() => {
   if (typeof render !== 'function' || typeof levelGeometry !== 'function') return;
-
   const minus = document.querySelector('#hierarchy-zoom-out');
   const plus = document.querySelector('#hierarchy-zoom-in');
   const readout = document.querySelector('#hierarchy-zoom-readout');
   if (!minus || !plus || !readout) return;
-
-  // Update the existing half-pill markup in place so this change does not depend
-  // on a new HTML structure.
-  const setting = readout.closest('.hierarchy-zoom-setting');
-  const settingLabel = setting?.querySelector('.theme-setting-label');
+  const settingLabel = readout.closest('.hierarchy-zoom-setting')?.querySelector('.theme-setting-label');
   if (settingLabel) settingLabel.textContent = 'Layer height';
   minus.setAttribute('aria-label', 'Decrease layer height');
   plus.setAttribute('aria-label', 'Increase layer height');
 
   const presets = [
-    { id: 'compact', label: 'Compact', percent: 55, factor: .55 },
-    { id: 'short', label: 'Short', percent: 72, factor: .72 },
-    { id: 'medium', label: 'Medium', percent: 86, factor: .86 },
-    { id: 'standard', label: 'Standard', percent: 100, factor: 1 }
+    { id:'tiny', label:'Very compact', percent:20, factor:.20 },
+    { id:'compact', label:'Compact', percent:35, factor:.35 },
+    { id:'short', label:'Short', percent:55, factor:.55 },
+    { id:'medium', label:'Medium', percent:72, factor:.72 },
+    { id:'tall', label:'Tall', percent:86, factor:.86 },
+    { id:'standard', label:'Standard', percent:100, factor:1 }
   ];
 
   const storageKey = 'atlas-layer-height';
@@ -37,7 +29,7 @@
   levelGeometry = function(compactMobile, contentTop) {
     const geometry = baseLevelGeometry(compactMobile, contentTop);
     const factor = presets[presetIndex]?.factor || 1;
-    return { ...geometry, h: Math.max(120, geometry.h * factor) };
+    return { ...geometry, h: Math.max(64, geometry.h * factor) };
   };
 
   function updateReadout() {
@@ -64,7 +56,6 @@
     event.stopPropagation();
     applyPreset(presetIndex - 1);
   });
-
   plus.addEventListener('click', event => {
     event.preventDefault();
     event.stopPropagation();
