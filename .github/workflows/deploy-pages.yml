@@ -32,8 +32,6 @@ jobs:
         run: |
           mkdir -p "_site/${GITHUB_SHA}"
 
-          # Keep this list aligned with every local asset referenced by index.html.
-          # Missing files here work locally but 404 on GitHub Pages.
           assets=(
             index.html
             styles.css
@@ -62,6 +60,13 @@ jobs:
 
           cp "${assets[@]}" _site/
           cp "${assets[@]}" "_site/${GITHUB_SHA}/"
+
+          # The former hierarchy-overview asset now controls layer height only.
+          # Give it a commit-specific query string so mobile browsers cannot keep
+          # serving the old hierarchy-wide zoom implementation from cache.
+          for page in "_site/index.html" "_site/${GITHUB_SHA}/index.html"; do
+            sed -E -i "s#hierarchy-overview\.js\?v=[^\"]+#hierarchy-overview.js?v=${GITHUB_SHA}#g" "$page"
+          done
 
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@v4
