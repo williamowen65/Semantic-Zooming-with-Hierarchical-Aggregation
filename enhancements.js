@@ -47,6 +47,31 @@ polygonPath=function(poly){if(!poly||poly.length<2)return"";let d=`M${poly[0][0]
 const baseRenderBreadcrumbs=renderBreadcrumbs;
 renderBreadcrumbs=function(){
   baseRenderBreadcrumbs();
+
+  // A breadcrumb is hierarchy navigation, not merely a camera shortcut. Clicking
+  // a crumb makes that node the active selection exactly as if the user had
+  // selected it in the visualization: descendants are removed from focusPath,
+  // so the clicked node's children become the visible, entirely unselected layer.
+  const crumbButtons=Array.from(breadcrumbHost.querySelectorAll("button"));
+  crumbButtons.slice(1).forEach((button,buttonIndex)=>{
+    const pathLength=buttonIndex+1;
+    button.addEventListener("click",event=>{
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if(window.stopHierarchyMomentum)window.stopHierarchyMomentum();
+      focusPath=focusPath.slice(0,pathLength);
+      const selected=focusPath[focusPath.length-1];
+      render();
+      requestAnimationFrame(()=>scrollToDepth(Math.max(0,pathLength-1),true));
+      if(selected){
+        const childCount=(selected.children||[]).length;
+        statusHost.textContent=childCount
+          ?`${selected.name} selected. Showing ${childCount} children.`
+          :`${selected.name} selected. No child nodes have been added yet.`;
+      }
+    },{capture:true});
+  });
+
   requestAnimationFrame(()=>{
     const current=breadcrumbHost.querySelector("button.current")||breadcrumbHost.lastElementChild;
     if(current&&current.scrollIntoView){current.scrollIntoView({behavior:"auto",block:"nearest",inline:"end"});}
