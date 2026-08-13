@@ -1,9 +1,16 @@
-// Hierarchy-wide overview zoom. Instead of stretching the rendered SVG on one
-// axis, overview zoom asks each hierarchy layer to lay itself out again at a
-// shorter/taller height. That keeps the visualization full-width without making
-// circles, text, cards, or Voronoi cells look vertically squashed.
+// Hierarchy-wide overview zoom.
+//
+// The overview control emulates a wider screen. It does NOT scale or reflow the
+// hierarchy vertically. Each preset only increases/decreases the logical layout
+// width, while the SVG maps that wider x-axis back into the physical viewport.
+// Vertical coordinates, layer heights, gaps, cards, and scrolling remain at
+// their normal size.
 (() => {
   if (typeof stage === 'undefined' || typeof applyCamera !== 'function' || typeof render !== 'function') return;
+
+  const host = document.querySelector('#viz');
+  const svgNode = host && host.querySelector('svg');
+  if (!host || !svgNode) return;
 
   const presets = [
     { id: 'wide', label: 'Wide overview', scale: 0.64 },
@@ -23,13 +30,18 @@
   if (presetIndex < 0) presetIndex = 2;
   window.atlasHierarchyScale = presets[presetIndex].scale;
 
-  // Reflow each treemap at the requested height instead of applying a
-  // non-uniform SVG scale after rendering. Width stays exactly viewport width.
+  // Preserve the app's original layer-height calculation. During a widened
+  // render the global `width` is intentionally larger, so temporarily restore
+  // the physical width only while the layer height is calculated. Then return
+  // the widened logical width with the untouched physical-screen height.
   const baseLevelGeometry = levelGeometry;
   levelGeometry = function(compactMobile, contentTop) {
+    const logicalWidth = width;
+    const physicalWidth = host.getBoundingClientRect().width || logicalWidth;
+    width = physicalWidth;
     const geometry = baseLevelGeometry(compactMobile, contentTop);
-    const scale = window.atlasHierarchyScale || 1;
-    return { ...geometry, h: geometry.h * scale };
+    width = logicalWidth;
+    return { ...geometry, x: 0, w: logicalWidth };
   };
 
   function updateReadout() {
@@ -40,8 +52,35 @@
     document.body.dataset.hierarchyZoom = preset.id;
   }
 
-  // The reflowed render already changes worldHeight and levelCenters, so camera
-  // math remains in ordinary screen/world coordinates. No stage scaling here.
+  // Render as though #viz itself were wider. `clientWidth` is read once at the
+  // beginning of app.js render(), so an own-property override is enough. The
+  // property is immediately restored after rendering.
+  function renderAtPreset() {
+    const scale = window.atlasHierarchyScale || 1;
+    const physicalWidth = host.getBoundingClientRect().width || host.clientWidth;
+    const logicalWidth = physicalWidth / scale;
+    const ownDescriptor = Object.getOwnPropertyDescriptor(host, 'clientWidth');
+
+    try {
+      Object.defineProperty(host, 'clientWidth', {
+        configurable: true,
+        value: logicalWidth
+      });
+      render();
+    } finally {
+      if (ownDescriptor) Object.defineProperty(host, 'clientWidth', ownDescriptor);
+      else delete host.clientWidth;
+    }
+
+    // A wider viewBox with preserveAspectRatio="none" changes x only. The SVG
+    // viewport's y-axis is still exactly the physical viewport height, so there
+    // is no vertical stretching, shrinking, or reflow at any zoom preset.
+    svgNode.setAttribute('viewBox', `0 0 ${logicalWidth} ${height}`);
+    svgNode.setAttribute('preserveAspectRatio', 'none');
+  }
+
+  // Camera math stays entirely vertical and therefore uses the same coordinates
+  // at every hierarchy-width preset.
   function hierarchyCameraBounds() {
     const bottomAllowance = 54;
     return {
@@ -70,30 +109,22 @@
   scrollToDepth = function(index, animate = true) {
     if (!levelCenters.length) return;
     const safeIndex = Math.max(0, Math.min(levelCenters.length - 1, index));
-    const viewportTarget = height * (width < 720 ? .48 : .5);
+    const physicalWidth = host.getBoundingClientRect().width || 0;
+    const viewportTarget = height * (physicalWidth < 720 ? .48 : .5);
     cameraY = viewportTarget - levelCenters[safeIndex];
     applyCamera(animate);
   };
 
   function applyPreset(index, persist = true) {
-    const previousScale = window.atlasHierarchyScale || 1;
-    const oldWorldHeight = Math.max(1, worldHeight);
-    const viewportCenter = height * .5;
-    const oldWorldAtCenter = viewportCenter - cameraY;
-    const oldProgress = oldWorldAtCenter / oldWorldHeight;
-
     presetIndex = Math.max(0, Math.min(presets.length - 1, index));
     window.atlasHierarchyScale = presets[presetIndex].scale;
     updateReadout();
 
-    // Re-rendering recomputes the Voronoi cells for the new aspect ratio. This
-    // is the key difference from the previous "squishy" vertical transform.
-    render();
-
-    // Keep approximately the same place in the hierarchy under the viewport
-    // center after the reflow rather than jumping to the top.
-    const newWorldAtCenter = oldProgress * Math.max(1, worldHeight);
-    cameraY = viewportCenter - newWorldAtCenter;
+    // Width is the only geometry dimension changed. Preserve the current
+    // vertical camera position exactly.
+    const oldCameraY = cameraY;
+    renderAtPreset();
+    cameraY = oldCameraY;
     applyCamera(true);
 
     if (persist) {
@@ -113,15 +144,15 @@
   });
 
   window.addEventListener('resize', () => requestAnimationFrame(() => {
-    render();
+    const oldCameraY = cameraY;
+    renderAtPreset();
+    cameraY = oldCameraY;
     applyCamera(false);
   }));
 
   updateReadout();
-  // app.js rendered once before this file loaded. Re-render once so a stored
-  // non-standard preset is applied as geometry, not as a stale transform.
   requestAnimationFrame(() => {
-    render();
+    renderAtPreset();
     applyCamera(false);
   });
 })();
