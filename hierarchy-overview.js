@@ -51,6 +51,13 @@
   `;
   document.head.appendChild(style);
   let rootsVisible=false;
+  stage.node()?.addEventListener('click',event=>{
+    if(!rootsVisible)return;
+    const cell=event.target?.closest?.('.context-cluster.depth-0 .cell');
+    if(!cell)return;
+    rootsVisible=false;
+    document.body.classList.remove('show-all-roots');
+  },true);
   function parseTranslate(node){const m=(node?.getAttribute('transform')||'').match(/translate\(\s*([-\d.]+)(?:[ ,]+)([-\d.]+)/);return m?{x:Number(m[1]),y:Number(m[2])}:{x:0,y:0};}
   function moveToY(node,y){if(!node||!Number.isFinite(y))return;const t=parseTranslate(node);node.setAttribute('transform',`translate(${t.x},${y})`);}
   function layerHeight(node){const h=Number(node?.dataset?.layerHeight);if(Number.isFinite(h)&&h>0)return h;try{return node?.querySelector('.cluster-outline')?.getBBox?.().height||0;}catch(_){return 0;}}
