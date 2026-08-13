@@ -91,12 +91,32 @@
     const controlHeight=renderRootsControl(y);
     y+=controlHeight+10;
     entries.forEach((entry,index)=>{entry.removeAttribute('transform');const card=entry.querySelector('foreignObject:not(.layer-kind-toggle-host)');if(!card)return;card.removeAttribute('transform');card.setAttribute('y',y);const h=Number(card.getAttribute('height'))||66;const toggle=entry.querySelector('foreignObject.layer-kind-toggle-host'),current=index===entries.length-1;if(toggle){toggle.removeAttribute('transform');toggle.style.display=current?'':'none';if(current){toggle.setAttribute('y',y+h+4);y+=h+4+(Number(toggle.getAttribute('height'))||24);}else y+=h+10;}else y+=h+10;});
-    // The old child-layer caption is redundant now that the current card and
-    // issue/solution toggle identify what the graphical layer contains.
     stage.selectAll('text.canvas-caption').filter(function(){return (d3.select(this).text()||'').includes('· children');}).remove();
     const child=stage.select('.child-cluster').node();
     if(child){const toggle=entries.length?entries[entries.length-1].querySelector('foreignObject.layer-kind-toggle-host'):null;const toggleHeight=toggle&&toggle.style.display!=='none'?(Number(toggle.getAttribute('height'))||24):0;const overlap=Math.max(0,toggleHeight/2);const childTop=y-overlap;moveToY(child,childTop);if(Array.isArray(levelCenters)){levelCenters.length=0;if(rootsVisible&&rootCluster)levelCenters.push(parseTranslate(rootCluster).y+layerHeight(rootCluster)/2);entries.forEach(entry=>{const card=entry.querySelector('foreignObject:not(.layer-kind-toggle-host)');if(card)levelCenters.push((Number(card.getAttribute('y'))||0)+(Number(card.getAttribute('height'))||66)/2);});levelCenters.push(childTop+layerHeight(child)/2);}worldHeight=Math.max(height,childTop+layerHeight(child)+96);}else worldHeight=Math.max(height,y+96);
     if(typeof applyCamera==='function')applyCamera(false);
   }
-  const baseRender=render;render=function(...args){const result=baseRender(...args);arrange();return result;};requestAnimationFrame(arrange);
+  const baseRender=render;render=function(...args){const result=baseRender(...args);arrange();return result;};
+
+  // scroll-to-card.js aligns a selected card under the fixed toolbar. For the
+  // first card, the roots control belongs above it, so anchor the whole stack
+  // there instead of letting navigation push the control underneath the toolbar.
+  if(typeof scrollToDepth==='function'&&typeof applyCamera==='function'){
+    const baseScrollToDepth=scrollToDepth;
+    scrollToDepth=function(index,animate=true){
+      if(index!==0){baseScrollToDepth(index,animate);return;}
+      const control=stage.select('.show-all-roots-control').node();
+      const controlY=Number(control?.getAttribute('y'));
+      const toolbar=document.querySelector('.toolbar');
+      const toolbarBottom=toolbar?.getBoundingClientRect?.().bottom;
+      if(!Number.isFinite(controlY)||!Number.isFinite(toolbarBottom)){baseScrollToDepth(index,animate);return;}
+      const host=document.querySelector('#viz');
+      const hostRect=host?.getBoundingClientRect?.();
+      const logicalHeight=host?.offsetHeight||host?.clientHeight||hostRect?.height||1;
+      const scaleY=hostRect&&logicalHeight?hostRect.height/logicalHeight:1;
+      cameraY=((toolbarBottom+8)-(hostRect?.top||0))/(Number.isFinite(scaleY)&&scaleY>0?scaleY:1)-controlY;
+      applyCamera(animate);
+    };
+  }
+  requestAnimationFrame(arrange);
 })();
