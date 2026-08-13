@@ -71,8 +71,13 @@
       const cardHeight = preserveViewportSize
         ? preferredCardHeight
         : Math.min(preferredCardHeight, Math.max(58, available - 12));
-      const centeredOffset = Math.max(6, (available - (preserveViewportSize ? preferredCardHeight / hierarchyScale : cardHeight)) / 2);
-      const y = gapTop + Math.max(6, centeredOffset - 7);
+      // Standard view keeps the existing centered treatment. At overview zoom,
+      // anchor the card to the upper layer with the same 6px *screen* inset as
+      // Standard instead of centering it inside the enlarged logical gap.
+      const centeredOffset = Math.max(6, (available - cardHeight) / 2);
+      const y = preserveViewportSize
+        ? gapTop + (6 / hierarchyScale)
+        : gapTop + Math.max(6, centeredOffset - 7);
 
       // The hierarchy canvas itself is scaled at overview presets. Keep these UI
       // controls screen-sized, like the header, by counter-scaling only the
