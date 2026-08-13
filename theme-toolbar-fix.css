@@ -36,6 +36,12 @@
 #visual-key[hidden],#visual-key.is-hidden { display:none !important; }
 .semantic-kind-icon { display:none !important; }
 
+/* Keep boundaries light at every density and in every theme. Because the cell
+   strokes are non-scaling, the old widths became disproportionately heavy in
+   dense 50-1000 item layers. */
+.cell-shape { stroke-width:1.6px !important; }
+.cell.is-selected .cell-shape { stroke-width:2.8px !important; }
+
 /* Low verbosity keeps only the node title. High verbosity is the existing title
    plus vote/rating/child-count statistics. With the stats removed, shift the
    title block down by half the space that had been reserved beneath it so the
