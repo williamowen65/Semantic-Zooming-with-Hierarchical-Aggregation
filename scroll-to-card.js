@@ -47,7 +47,8 @@
     }
 
     const toolbarTop = toolbar.getBoundingClientRect().top;
-    const desiredPhysicalTop = toolbarTop + occupiedHeight;
+    const buffer = 20;
+    const desiredPhysicalTop = toolbarTop + occupiedHeight + buffer;
     const hostTop = host ? host.getBoundingClientRect().top : 0;
     const scaleY = hierarchyScaleY();
 
