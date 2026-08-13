@@ -1,10 +1,6 @@
 // Keep the vertical space between hierarchy layers screen-sized at overview zoom.
-// The hierarchy canvas is globally scaled at 80/64/52%, but the selected-topic
-// card and issue/solution toggle are counter-scaled. Expand the logical layer gap
-// so the visible gap remains the same size it has at Standard (100%).
 (() => {
   if (typeof render !== 'function' || typeof stage === 'undefined') return;
-
   const baseRender = render;
 
   function hierarchyScale() {
@@ -62,13 +58,30 @@
     });
   }
 
+  function alignContextEntries(contextClusters) {
+    const entries = stage.selectAll('.layer-context-entry').nodes();
+    entries.forEach((entry, index) => {
+      const owner = contextClusters[index];
+      const card = entry?.querySelector('foreignObject:not(.layer-kind-toggle-host)');
+      if (!owner || !card) return;
+      const toggle = entry.querySelector('foreignObject.layer-kind-toggle-host');
+      card.removeAttribute('transform');
+      if (toggle) toggle.removeAttribute('transform');
+      const ownerRect = owner.getBoundingClientRect();
+      const cardRect = card.getBoundingClientRect();
+      const correction = ownerRect.bottom + 6 - cardRect.top;
+      if (!Number.isFinite(correction) || Math.abs(correction) < .25) return;
+      const tx = `translate(0,${correction})`;
+      card.setAttribute('transform', tx);
+      if (toggle) toggle.setAttribute('transform', tx);
+    });
+  }
+
   function preserveGapSize() {
     const scale = hierarchyScale();
     if (scale >= .995 || !Array.isArray(focusPath) || !focusPath.length) return;
 
-    const contextClusters = focusPath
-      .map((_, i) => stage.select(`.context-cluster.depth-${i}`).node())
-      .filter(Boolean);
+    const contextClusters = focusPath.map((_, i) => stage.select(`.context-cluster.depth-${i}`).node()).filter(Boolean);
     const childCluster = stage.select('.child-cluster').node();
     const ordered = childCluster ? [...contextClusters, childCluster] : contextClusters;
     if (ordered.length < 2) return;
@@ -81,24 +94,17 @@
     let cumulative = 0;
     for (let i = 1; i < ordered.length; i += 1) {
       if (cumulative) moveCluster(ordered[i], cumulative);
-
       const previous = ordered[i - 1];
       const current = ordered[i];
       const previousTop = translateOf(previous).y;
       const currentTop = translateOf(current).y;
       const currentGap = currentTop - (previousTop + layerHeight(previous));
       const extra = Math.max(0, targetLogicalGap - currentGap);
-
-      // Preserve the same visual relationship the context UI has at 100%.
-      // The gap can grow to compensate for overview zoom, but the card should
-      // remain anchored near the bottom of its owning layer instead of drifting
-      // toward the middle of the newly enlarged gap.
       const entry = contextEntries[i - 1];
       if (entry && cumulative) {
         const old = entry.getAttribute('transform') || '';
         entry.setAttribute('transform', `translate(0,${cumulative}) ${old}`);
       }
-
       if (extra) {
         moveCluster(current, extra);
         cumulative += extra;
@@ -122,6 +128,8 @@
 
     retargetLinks(contextClusters, childCluster);
     if (typeof applyCamera === 'function') applyCamera(false);
+    alignContextEntries(contextClusters);
+    requestAnimationFrame(() => alignContextEntries(contextClusters));
   }
 
   render = function() {
