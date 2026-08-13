@@ -66,6 +66,10 @@ jobs:
           for page in "_site/index.html" "_site/${GITHUB_SHA}/index.html"; do
             sed -E -i "s#hierarchy-overview\.js\?v=[^\"]+#hierarchy-overview.js?v=${GITHUB_SHA}#g" "$page"
             sed -E -i "s#layer-kind-toggle\.js\?v=[^\"]+#layer-kind-toggle.js?v=${GITHUB_SHA}#g" "$page"
+
+            sed -E -i "s#leaf-end-state\.css\?v=[^\"]+#leaf-end-state.css?v=${GITHUB_SHA}#g" "$page"
+            sed -E -i "s#leaf-end-state\.js\?v=[^\"]+#leaf-end-state.js?v=${GITHUB_SHA}#g" "$page"
+            
             if ! grep -q 'card-stack-layer-kind-bridge.js' "$page"; then
               sed -i "s#</body>#  <script src=\"card-stack-layer-kind-bridge.js?v=${GITHUB_SHA}\"></script>\n</body>#" "$page"
             else
