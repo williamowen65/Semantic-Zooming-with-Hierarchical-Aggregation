@@ -33,12 +33,11 @@
     };
   }
 
-  function overviewLabelScaleFactor() {
-    const id = presets[presetIndex]?.id;
-    if (id === 'far') return .88;
-    if (id === 'wide') return .94;
-    if (id === 'overview') return .97;
-    return 1;
+  function hierarchyScreenScale() {
+    const logicalWidth = host.offsetWidth || host.clientWidth || 1;
+    const physicalWidth = host.getBoundingClientRect().width || logicalWidth;
+    const scale = physicalWidth / logicalWidth;
+    return Number.isFinite(scale) && scale > 0 ? scale : 1;
   }
 
   function overviewSafePadding() {
@@ -72,19 +71,38 @@
     return probes.every(point => d3.polygonContains(polygon, point));
   }
 
-  function paddedOverviewScale(text, anchorX, anchorY, requestedScale, fitScale) {
+  function largestPaddedOverviewScale(text, anchorX, anchorY, fitScale) {
     const padding = overviewSafePadding();
-    if (!padding) return requestedScale;
+    const screenScale = hierarchyScreenScale();
 
-    // Prefer shrinking over moving. This preserves the title's centered anchor
-    // and creates a consistent visual buffer between all label text and the tile
-    // perimeter. Small or awkward cells simply use a slightly smaller label.
+    // The hierarchy itself gets physically smaller at overview presets. Start by
+    // counter-scaling the label so its on-screen size can stay close to 100%, then
+    // back it down only when the actual reshaped Voronoi polygon cannot contain it.
+    // This makes every node use the largest readable label its current shape allows.
+    const desiredScale = Math.max(fitScale, fitScale / Math.max(screenScale, .001));
     const minimumScale = Math.max(.08, fitScale * .48);
-    let scale = requestedScale;
+    let scale = desiredScale;
+
     while (scale > minimumScale && !labelFitsPolygon(text, anchorX, anchorY, scale, padding)) {
-      scale *= .95;
+      scale *= .965;
     }
     return Math.max(minimumScale, scale);
+  }
+
+  function preserveOverviewCaptionSize() {
+    const preset = presets[presetIndex];
+    if (!preset || preset.id === 'standard') return;
+    const screenScale = hierarchyScreenScale();
+    const inverse = 1 / Math.max(screenScale, .001);
+
+    // Layer/section captions such as ROOT ISSUES should behave like interface
+    // labels, not like tiny map content. Counter-scale them around their own
+    // anchor so zooming the hierarchy changes layout but not readability.
+    host.querySelectorAll('text.canvas-caption').forEach(text => {
+      const x = Number(text.getAttribute('x')) || 0;
+      const y = Number(text.getAttribute('y')) || 0;
+      text.setAttribute('transform', `translate(${x},${y}) scale(${inverse}) translate(${-x},${-y})`);
+    });
   }
 
   let fixingLabels = false;
@@ -95,21 +113,20 @@
     if (!preset || preset.id === 'standard') return;
 
     fixingLabels = true;
-    const overviewFactor = overviewLabelScaleFactor();
     host.querySelectorAll('text.cell-label').forEach(text => {
       const x = Number(text.getAttribute('data-fit-anchor-x'));
       const y = Number(text.getAttribute('data-fit-anchor-y'));
       const fitScale = Number(text.getAttribute('data-fit-scale')) || 1;
       if (!Number.isFinite(x) || !Number.isFinite(y)) return;
 
-      // Keep the title's fitted polygon centroid as the authoritative anchor.
-      // At wider overview levels, start slightly smaller and then shrink only as
-      // much as necessary to maintain a clean inset from the polygon boundary.
-      const requestedScale = fitScale * overviewFactor;
-      const scale = paddedOverviewScale(text, x, y, requestedScale, fitScale);
+      // Keep the polygon-centered title anchor, but maximize the local text scale
+      // for the polygon's *current* overview shape. The global hierarchy scale is
+      // no longer allowed to make labels unnecessarily miniature.
+      const scale = largestPaddedOverviewScale(text, x, y, fitScale);
       const desired = `translate(${x},${y}) scale(${scale}) translate(${-x},${-y})`;
       if (text.getAttribute('transform') !== desired) text.setAttribute('transform', desired);
     });
+    preserveOverviewCaptionSize();
     fixingLabels = false;
   }
 
@@ -149,9 +166,8 @@
     }
 
     // Render #viz as a genuinely wider canvas, then uniformly fit that canvas
-    // back to the phone width. Because both width and height are enlarged by the
-    // same factor, Voronoi cells, cards, text, connectors, and spacing retain
-    // their natural proportions: no horizontal or vertical stretching.
+    // back to the phone width. The Voronoi geometry gets a wider layout while
+    // interface-like context controls and labels can counter-scale separately.
     const logicalWidth = Math.max(physical.width, preset.width);
     const scale = physical.width / logicalWidth;
     const logicalHeight = physical.height / scale;
@@ -199,16 +215,16 @@
   });
 
   // semantic-icons.js intentionally tracks labels with a panned/zoomed layer.
-  // Keep that behavior at Standard, but restore the polygon-centered anchor after
-  // any later transform mutation while an overview preset is active.
+  // Keep that behavior at Standard, but restore the polygon-centered, maximum-fit
+  // overview presentation after any later transform mutation.
   if (typeof MutationObserver !== 'undefined') {
     const observer = new MutationObserver(mutations => {
       if (fixingLabels || presets[presetIndex]?.id === 'standard') return;
-      if (mutations.some(m => m.type === 'childList' || (m.type === 'attributes' && m.target?.matches?.('text.cell-label')))) {
+      if (mutations.some(m => m.type === 'childList' || (m.type === 'attributes' && m.target?.matches?.('text.cell-label, text.canvas-caption')))) {
         queueOverviewLabelFix();
       }
     });
-    observer.observe(host, { subtree: true, childList: true, attributes: true, attributeFilter: ['transform', 'data-fit-anchor-x', 'data-fit-anchor-y', 'data-fit-scale'] });
+    observer.observe(host, { subtree: true, childList: true, attributes: true, attributeFilter: ['transform', 'data-fit-anchor-x', 'data-fit-anchor-y', 'data-fit-scale', 'x', 'y'] });
   }
 
   window.addEventListener('resize', () => requestAnimationFrame(renderAtPreset));
