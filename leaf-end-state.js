@@ -14,7 +14,13 @@
     if (!host || !card) return;
 
     const cardHeight = Number(host.getAttribute('height')) || 66;
-    const flowHeight = Math.max(320, height - cardHeight - 24);
+    const cardRect = card.getBoundingClientRect();
+    const hostRect = host.getBoundingClientRect();
+    const viewportHeight = window.visualViewport?.height || window.innerHeight || height;
+    const visibleRemaining = Math.max(0, viewportHeight - cardRect.bottom);
+    const screenScaleY = hostRect.height > 0 ? hostRect.height / cardHeight : 1;
+    const flowHeight = Math.max(180, visibleRemaining / Math.max(screenScaleY, 0.01));
+
     card.style.height = `${cardHeight}px`;
     host.classList.add('leaf-flow-host');
     host.setAttribute('height', String(cardHeight + flowHeight));
