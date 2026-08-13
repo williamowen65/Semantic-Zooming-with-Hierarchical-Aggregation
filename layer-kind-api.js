@@ -1,0 +1,26 @@
+(() => {
+  const state = window.__atlasLayerKinds;
+  if (!state) return;
+
+  window.atlasLayerKindModeFor = parentId => {
+    const parent = nodeById.get(parentId);
+    if (!parent) return 'issue';
+    const depth = focusPath.indexOf(parentId);
+    const selected = depth >= 0 && focusPath[depth + 1] ? nodeById.get(focusPath[depth + 1]) : null;
+    return state.availableMode(parent, selected?.kind);
+  };
+
+  window.atlasGetLayerKindState = () => Object.fromEntries(state.layerKindByParent.entries());
+
+  window.atlasRestoreLayerKindState = saved => {
+    state.layerKindByParent.clear();
+    Object.entries(saved || {}).forEach(([parentId, kind]) => {
+      const parent = nodeById.get(parentId);
+      const counts = state.kindCounts(parent);
+      if (kind === 'issue' && counts.issues) state.layerKindByParent.set(parentId, kind);
+      if (kind === 'solution' && counts.solutions) state.layerKindByParent.set(parentId, kind);
+    });
+  };
+
+  if (window.__atlasPendingLayerKinds) window.atlasRestoreLayerKindState(window.__atlasPendingLayerKinds);
+})();
