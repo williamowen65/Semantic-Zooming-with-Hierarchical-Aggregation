@@ -1,10 +1,11 @@
-// Keep the selected hierarchy branch in the URL so reloads and shared links
-// reopen the same part of the tree. focusPath stores node IDs, not node objects.
-// Example: #path=root-environment/environment-biodiversity
+// Keep the selected hierarchy branch and per-layer issue/solution toggles in the
+// URL so reloads and shared links reopen the same view.
+// Example: #path=root-environment/environment-biodiversity&layers=root-environment:solution
 (() => {
   if (typeof render !== "function" || typeof forestData === "undefined") return;
 
-  const hashKey = "path";
+  const pathHashKey = "path";
+  const layersHashKey = "layers";
   let restoring = false;
   let lastSerialized = null;
 
@@ -29,8 +30,6 @@
     if (!ids.length) return [];
     if (ids.some(id => !id || id === "undefined" || id === "null")) return null;
 
-    // Validate that the IDs form one real parent -> child chain, but return IDs
-    // because that is the representation used by focusPath throughout the app.
     let choices = forestData;
     for (const id of ids) {
       const node = Array.isArray(choices) ? choices.find(item => item.id === id) : null;
@@ -40,40 +39,84 @@
     return ids;
   }
 
-  function serializedFromLocation() {
-    const hash = window.location.hash.replace(/^#/, "");
-    const params = new URLSearchParams(hash);
-    return params.get(hashKey) || "";
+  function serializeLayerKinds() {
+    const state = typeof window.atlasGetLayerKindState === "function"
+      ? window.atlasGetLayerKindState()
+      : (window.__atlasPendingLayerKinds || {});
+    return Object.entries(state || {})
+      .filter(([, kind]) => kind === "issue" || kind === "solution")
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([id, kind]) => `${encodeURIComponent(id)}:${kind === "solution" ? "s" : "i"}`)
+      .join(",");
   }
 
-  function replaceHash(serialized) {
+  function layerKindsFromSerialized(serialized) {
+    const result = {};
+    if (!serialized) return result;
+    serialized.split(",").filter(Boolean).forEach(entry => {
+      const splitAt = entry.lastIndexOf(":");
+      if (splitAt < 1) return;
+      let id = entry.slice(0, splitAt);
+      try { id = decodeURIComponent(id); } catch (_) {}
+      const code = entry.slice(splitAt + 1);
+      if (!id || (code !== "i" && code !== "s")) return;
+      result[id] = code === "s" ? "solution" : "issue";
+    });
+    return result;
+  }
+
+  function stateFromLocation() {
+    const hash = window.location.hash.replace(/^#/, "");
+    const params = new URLSearchParams(hash);
+    return {
+      path: params.get(pathHashKey) || "",
+      layers: params.get(layersHashKey) || ""
+    };
+  }
+
+  function serializedState() {
+    return `${serializePath()}|${serializeLayerKinds()}`;
+  }
+
+  function replaceHash(pathSerialized, layersSerialized) {
     const url = new URL(window.location.href);
-    url.hash = serialized ? `${hashKey}=${serialized}` : "";
+    const params = new URLSearchParams();
+    if (pathSerialized) params.set(pathHashKey, pathSerialized);
+    if (layersSerialized) params.set(layersHashKey, layersSerialized);
+    url.hash = params.toString();
     history.replaceState(history.state, "", url);
   }
 
   function syncUrlFromFocus() {
     if (restoring) return;
-    const serialized = serializePath();
-    if (serialized === lastSerialized) return;
-    lastSerialized = serialized;
-    replaceHash(serialized);
+    const pathSerialized = serializePath();
+    const layersSerialized = serializeLayerKinds();
+    const combined = `${pathSerialized}|${layersSerialized}`;
+    if (combined === lastSerialized) return;
+    lastSerialized = combined;
+    replaceHash(pathSerialized, layersSerialized);
   }
 
   function restoreFromUrl({ animate = false } = {}) {
-    const serialized = serializedFromLocation();
-    const resolved = pathFromSerialized(serialized);
+    const incoming = stateFromLocation();
+    const resolved = pathFromSerialized(incoming.path);
     if (resolved == null) {
-      // A stale/malformed hash (including the previous undefined/undefined bug)
-      // should never strand the visualization in a phantom branch.
       restoring = true;
       focusPath = [];
       cameraY = 0;
+      window.__atlasPendingLayerKinds = {};
+      if (typeof window.atlasRestoreLayerKindState === "function") window.atlasRestoreLayerKindState({});
       render();
       restoring = false;
-      lastSerialized = "";
-      replaceHash("");
+      lastSerialized = "|";
+      replaceHash("", "");
       return false;
+    }
+
+    const layerKinds = layerKindsFromSerialized(incoming.layers);
+    window.__atlasPendingLayerKinds = layerKinds;
+    if (typeof window.atlasRestoreLayerKindState === "function") {
+      window.atlasRestoreLayerKindState(layerKinds);
     }
 
     restoring = true;
@@ -84,7 +127,7 @@
       requestAnimationFrame(() => scrollToDepth(focusPath.length - 1, animate));
     }
     restoring = false;
-    lastSerialized = serializePath();
+    lastSerialized = serializedState();
     return true;
   }
 
@@ -95,9 +138,10 @@
     return result;
   };
 
+  window.atlasSyncUrlState = syncUrlFromFocus;
   window.addEventListener("hashchange", () => restoreFromUrl({ animate: true }));
 
-  const incoming = serializedFromLocation();
-  if (incoming) restoreFromUrl({ animate: false });
+  const incoming = stateFromLocation();
+  if (incoming.path || incoming.layers) restoreFromUrl({ animate: false });
   else syncUrlFromFocus();
 })();
