@@ -5,7 +5,7 @@
 
   const fallbackScrollToDepth = scrollToDepth;
   const host = document.querySelector('#viz');
-  const toolbar = document.querySelector('.toolbar');
+  const breadcrumbs = document.querySelector('#breadcrumbs');
 
   function hierarchyScaleY() {
     if (!host) return 1;
@@ -25,6 +25,14 @@
     return Number.isFinite(y) ? y : null;
   }
 
+  function breadcrumbBottom() {
+    if (breadcrumbs) {
+      const rect = breadcrumbs.getBoundingClientRect();
+      if (Number.isFinite(rect.bottom) && rect.bottom > 0) return rect.bottom;
+    }
+    return window.innerWidth < 720 ? 126 : 76;
+  }
+
   scrollToDepth = function(index, animate = true) {
     const cardY = selectedCardTop();
     if (cardY == null) {
@@ -32,10 +40,10 @@
       return;
     }
 
-    // The toolbar contains the breadcrumb and is fixed at normal UI size.
-    // Put the selected card directly beneath it, with a small breathing gap.
-    const toolbarBottom = toolbar ? toolbar.getBoundingClientRect().bottom : (window.innerWidth < 720 ? 126 : 76);
-    const desiredPhysicalTop = toolbarBottom + 8;
+    // Use the actual rendered breadcrumb row as the anchor. This matters on
+    // mobile because the header can be taller than its CSS minimum height and
+    // because browser chrome / responsive wrapping can move the breadcrumb.
+    const desiredPhysicalTop = breadcrumbBottom() + 12;
     const hostTop = host ? host.getBoundingClientRect().top : 0;
     const scaleY = hierarchyScaleY();
 
