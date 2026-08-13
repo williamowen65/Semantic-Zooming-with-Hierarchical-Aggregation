@@ -49,6 +49,7 @@ jobs:
             hierarchy-links.js
             theme-picker.js
             layer-context.js
+            scroll-to-card.js
             leaf-end-state.js
             hierarchy-overview.js
           )
