@@ -1,5 +1,6 @@
-// Preserve the normal child-layer scroll behavior even when the selected node is a leaf.
-// A leaf gets an empty next-layer area with a clear end-of-hierarchy message.
+// Preserve the normal drill-down experience when the selected node is a leaf.
+// A leaf gets a full, spacious next-layer area explaining that the branch has no
+// sub-content yet and inviting someone to create it.
 (() => {
   if (typeof render !== 'function' || typeof focusNode !== 'function') return;
 
@@ -21,71 +22,48 @@
     const lastCluster = stage.select(`.context-cluster.depth-${focusPath.length - 1}`).node();
     if (!lastCluster) return;
 
+    // This is intentionally much taller than a compacted graphical layer. A leaf
+    // should feel like a real destination/end state rather than a tiny footnote.
+    const sectionHeight = Math.max(320, Math.min(compactMobile ? 520 : 560, height * .60));
     const y = parseTranslateY(lastCluster) + geometry.h + gap;
-    const group = stage.append('g').attr('class', 'leaf-end-layer').attr('transform', `translate(0,${y})`);
+    const group = stage.append('g')
+      .attr('class', 'leaf-end-layer')
+      .attr('data-layer-height', sectionHeight)
+      .attr('transform', `translate(0,${y})`);
+    group.node().dataset.layerHeight = String(sectionHeight);
 
     group.append('rect')
       .attr('class', 'leaf-end-background')
-      .attr('x', 0).attr('y', 0).attr('width', width).attr('height', geometry.h);
+      .attr('x', 0).attr('y', 0).attr('width', width).attr('height', sectionHeight);
 
     const label = selected.kind === 'solution' ? 'solution' : 'issue';
     const cx = width / 2;
-    const cy = Math.min(geometry.h * .30, compactMobile ? 108 : 140);
-    const panelWidth = compactMobile ? Math.max(260, width - 48) : Math.min(720, width - 80);
-    const panelHeight = compactMobile ? 184 : 150;
-    const panelX = cx - panelWidth / 2;
-    const panelY = cy - 56;
-
-    group.append('rect')
-      .attr('class', 'leaf-end-card')
-      .attr('x', panelX).attr('y', panelY)
-      .attr('width', panelWidth).attr('height', panelHeight)
-      .attr('rx', compactMobile ? 18 : 16);
+    const cy = sectionHeight / 2;
+    const textWidth = compactMobile ? Math.max(250, width - 64) : Math.min(660, width - 96);
 
     group.append('text')
       .attr('class', 'leaf-end-title')
-      .attr('x', cx).attr('y', panelY + 34)
+      .attr('x', cx).attr('y', cy - 54)
       .attr('text-anchor', 'middle')
-      .text('End of this branch');
+      .text('Nothing below this yet');
 
     const kindAndName = group.append('text')
       .attr('class', 'leaf-end-node-name')
-      .attr('x', cx).attr('y', panelY + 66)
+      .attr('x', cx).attr('y', cy - 22)
       .attr('text-anchor', 'middle');
     kindAndName.append('tspan').attr('class', 'leaf-end-kind').text(`${label.toUpperCase()}  `);
+    kindAndName.append('tspan').text(selected.name);
 
-    const nameText = selected.name;
-    if (compactMobile && nameText.length > 30) {
-      const words = nameText.split(/\s+/);
-      let first = '', second = '';
-      words.forEach(word => {
-        if (!second && `${first} ${word}`.trim().length <= 27) first = `${first} ${word}`.trim();
-        else second = `${second} ${word}`.trim();
-      });
-      kindAndName.append('tspan').text(first);
-      if (second) kindAndName.append('tspan').attr('x', cx).attr('dy', 18).text(second);
-    } else {
-      kindAndName.append('tspan').text(nameText);
-    }
+    const message = group.append('foreignObject')
+      .attr('class', 'leaf-end-message-host')
+      .attr('x', cx - textWidth / 2)
+      .attr('y', cy + 2)
+      .attr('width', textWidth)
+      .attr('height', 110);
+    message.html(`<div xmlns="http://www.w3.org/1999/xhtml" class="leaf-end-message-copy">No more sub-issues or solutions have been created for this ${label}. Someone would need to create the next content for this branch.</div>`);
 
-    const nameLines = compactMobile && nameText.length > 30 ? 2 : 1;
-    const messageY = panelY + 66 + ((nameLines - 1) * 18) + 32;
-    const message = group.append('text')
-      .attr('class', 'leaf-end-message')
-      .attr('x', cx).attr('y', messageY)
-      .attr('text-anchor', 'middle');
-
-    if (compactMobile) {
-      message.append('tspan').attr('x', cx).attr('dy', 0)
-        .text('No sub-issues or sub-solutions');
-      message.append('tspan').attr('x', cx).attr('dy', 18)
-        .text(`have been created for this ${label} yet.`);
-    } else {
-      message.text(`No sub-issues or sub-solutions have been created for this ${label} yet.`);
-    }
-
-    levelCenters.push(y + geometry.h / 2);
-    worldHeight = Math.max(worldHeight, y + geometry.h + 24);
+    levelCenters.push(y + sectionHeight / 2);
+    worldHeight = Math.max(worldHeight, y + sectionHeight + 32);
     applyCamera(false);
   }
 
@@ -97,14 +75,12 @@
 
   function scrollSelectedContextCardDesktop() {
     if (width < 720) return false;
-    const cards = stage.selectAll('.layer-context-entry foreignObject').nodes();
+    const cards = stage.selectAll('.layer-context-entry foreignObject:not(.layer-kind-toggle-host)').nodes();
     const card = cards[cards.length - 1];
     if (!card) return false;
     const cardY = Number(card.getAttribute('y'));
     if (!Number.isFinite(cardY)) return false;
 
-    // Desktop should frame the drill-down exactly like mobile: selected-topic card
-    // immediately below the fixed header, followed by the next layer/end state.
     const toolbar = document.querySelector('.toolbar');
     const toolbarBottom = toolbar ? toolbar.getBoundingClientRect().bottom : 78;
     const viewportTarget = Math.max(88, toolbarBottom + 12);
@@ -119,9 +95,6 @@
     focusPath = pathForNode(id);
     render();
 
-    // Preserve the existing mobile behavior. On desktop, explicitly anchor the
-    // newly rendered selected-topic card under the toolbar instead of centering
-    // the layer, which could appear not to scroll on tall desktop viewports.
     if (!scrollSelectedContextCardDesktop()) {
       scrollToDepth(focusPath.length, true);
     }
@@ -129,6 +102,6 @@
     const hasChildren = (node.children || []).length > 0;
     statusHost.textContent = hasChildren
       ? `${node.name} selected. Showing ${node.children.length} example children.`
-      : `${node.name} selected. No sub-issues or sub-solutions have been created yet.`;
+      : `${node.name} selected. No sub-issues or solutions have been created yet.`;
   };
 })();
