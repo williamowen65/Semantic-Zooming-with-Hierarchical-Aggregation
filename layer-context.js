@@ -76,7 +76,9 @@
         const toggleHeight = 24;
         const toggleX = x + (cardWidth - toggleWidth) / 2;
         const toggleY = y + cardHeight + 4;
-        const toggleHtml = `<div xmlns="http://www.w3.org/1999/xhtml" class="layer-kind-toggle" role="group" aria-label="Show child issues or solutions"><button type="button" class="${mode === 'issue' ? 'is-active' : ''}" ${counts.issues ? '' : 'disabled'} onclick="window.atlasSetLayerKind && window.atlasSetLayerKind('${esc(node.id)}','issue')">Issues <span>${counts.issues}</span></button><button type="button" class="${mode === 'solution' ? 'is-active' : ''}" ${counts.solutions ? '' : 'disabled'} onclick="window.atlasSetLayerKind && window.atlasSetLayerKind('${esc(node.id)}','solution')">Solutions <span>${counts.solutions}</span></button></div>`;
+        const issueLabel = `${counts.issues} ${counts.issues === 1 ? 'sub-issue' : 'sub-issues'}`;
+        const solutionLabel = `${counts.solutions} ${counts.solutions === 1 ? 'solution' : 'solutions'}`;
+        const toggleHtml = `<div xmlns="http://www.w3.org/1999/xhtml" class="layer-kind-toggle" role="group" aria-label="Show child issues or solutions"><button type="button" class="${mode === 'issue' ? 'is-active' : ''}" ${counts.issues ? '' : 'disabled'} onclick="window.atlasSetLayerKind && window.atlasSetLayerKind('${esc(node.id)}','issue')">${issueLabel}</button><button type="button" class="${mode === 'solution' ? 'is-active' : ''}" ${counts.solutions ? '' : 'disabled'} onclick="window.atlasSetLayerKind && window.atlasSetLayerKind('${esc(node.id)}','solution')">${solutionLabel}</button></div>`;
         entry.append('foreignObject').attr('class', 'layer-kind-toggle-host').attr('x', toggleX).attr('y', toggleY).attr('width', toggleWidth).attr('height', toggleHeight).html(toggleHtml);
       }
     });
