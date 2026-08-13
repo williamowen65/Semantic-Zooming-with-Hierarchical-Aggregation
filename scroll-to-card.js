@@ -5,6 +5,7 @@
 
   const fallbackScrollToDepth = scrollToDepth;
   const host = document.querySelector('#viz');
+  const toolbar = document.querySelector('.toolbar');
   const breadcrumbs = document.querySelector('#breadcrumbs');
 
   function hierarchyScaleY() {
@@ -25,25 +26,28 @@
     return Number.isFinite(y) ? y : null;
   }
 
-  function breadcrumbBottom() {
-    if (breadcrumbs) {
-      const rect = breadcrumbs.getBoundingClientRect();
-      if (Number.isFinite(rect.bottom) && rect.bottom > 0) return rect.bottom;
-    }
-    return window.innerWidth < 720 ? 126 : 76;
+  function measuredHeaderAndBreadcrumbHeight() {
+    const toolbarRect = toolbar?.getBoundingClientRect();
+    const breadcrumbRect = breadcrumbs?.getBoundingClientRect();
+    if (!toolbarRect || !breadcrumbRect) return null;
+
+    // Measure, don't estimate: header portion above the breadcrumb + breadcrumb row.
+    const headerHeight = Math.max(0, breadcrumbRect.top - toolbarRect.top);
+    const breadcrumbHeight = Math.max(0, breadcrumbRect.height);
+    const total = headerHeight + breadcrumbHeight;
+    return Number.isFinite(total) && total > 0 ? total : null;
   }
 
   scrollToDepth = function(index, animate = true) {
     const cardY = selectedCardTop();
-    if (cardY == null) {
+    const occupiedHeight = measuredHeaderAndBreadcrumbHeight();
+    if (cardY == null || occupiedHeight == null) {
       fallbackScrollToDepth(index, animate);
       return;
     }
 
-    // Use the actual rendered breadcrumb row as the anchor. This matters on
-    // mobile because the header can be taller than its CSS minimum height and
-    // because browser chrome / responsive wrapping can move the breadcrumb.
-    const desiredPhysicalTop = breadcrumbBottom() + 12;
+    const toolbarTop = toolbar.getBoundingClientRect().top;
+    const desiredPhysicalTop = toolbarTop + occupiedHeight;
     const hostTop = host ? host.getBoundingClientRect().top : 0;
     const scaleY = hierarchyScaleY();
 
