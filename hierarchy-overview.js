@@ -33,20 +33,61 @@
   if (typeof render !== 'function' || typeof stage === 'undefined') return;
   document.body.classList.add('card-stack-mode');
   const style=document.createElement('style');
-  style.textContent='body.card-stack-mode.has-card-stack .context-cluster,body.card-stack-mode.has-card-stack .root-layer-label,body.card-stack-mode.has-card-stack path.hierarchy-link,body.card-stack-mode.has-card-stack circle.link-dot{display:none!important}';
+  style.textContent=`
+    body.card-stack-mode.has-card-stack .context-cluster,
+    body.card-stack-mode.has-card-stack .root-layer-label,
+    body.card-stack-mode.has-card-stack path.hierarchy-link,
+    body.card-stack-mode.has-card-stack circle.link-dot{display:none!important}
+    body.card-stack-mode.has-card-stack.show-all-roots .context-cluster.depth-0,
+    body.card-stack-mode.has-card-stack.show-all-roots .root-layer-label{display:initial!important}
+    .show-all-roots-control{overflow:visible}
+    .show-all-roots-control button{
+      width:100%;height:30px;border:1px solid rgba(70,82,75,.28);border-radius:999px;
+      background:rgba(255,255,255,.94);color:#3e4b43;font:600 12px/1 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      box-shadow:0 1px 4px rgba(40,50,44,.10);cursor:pointer
+    }
+    .show-all-roots-control button:hover{background:#fff}
+    .show-all-roots-control button:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+  `;
   document.head.appendChild(style);
+  let rootsVisible=false;
   function parseTranslate(node){const m=(node?.getAttribute('transform')||'').match(/translate\(\s*([-\d.]+)(?:[ ,]+)([-\d.]+)/);return m?{x:Number(m[1]),y:Number(m[2])}:{x:0,y:0};}
   function moveToY(node,y){if(!node||!Number.isFinite(y))return;const t=parseTranslate(node);node.setAttribute('transform',`translate(${t.x},${y})`);}
   function layerHeight(node){const h=Number(node?.dataset?.layerHeight);if(Number.isFinite(h)&&h>0)return h;try{return node?.querySelector('.cluster-outline')?.getBBox?.().height||0;}catch(_){return 0;}}
+  function renderRootsControl(y){
+    stage.selectAll('.show-all-roots-control').remove();
+    const active=Array.isArray(focusPath)&&focusPath.length>0;
+    if(!active)return 0;
+    const controlWidth=132,controlHeight=30;
+    const x=Math.max(10,(width-controlWidth)/2);
+    const html=`<button xmlns="http://www.w3.org/1999/xhtml" type="button" aria-pressed="${rootsVisible?'true':'false'}">${rootsVisible?'Hide all roots':'Show all roots'}</button>`;
+    const host=stage.append('foreignObject').attr('class','show-all-roots-control').attr('x',x).attr('y',y).attr('width',controlWidth).attr('height',controlHeight).html(html);
+    const button=host.node()?.querySelector('button');
+    if(button)button.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();rootsVisible=!rootsVisible;document.body.classList.toggle('show-all-roots',rootsVisible);arrange();});
+    return controlHeight;
+  }
   function arrange(){
-    const active=Array.isArray(focusPath)&&focusPath.length>0;document.body.classList.toggle('has-card-stack',active);if(!active)return;
-    const entries=stage.selectAll('.layer-context-entry').nodes();let y=width<720?132:98;
+    const active=Array.isArray(focusPath)&&focusPath.length>0;
+    document.body.classList.toggle('has-card-stack',active);
+    if(!active){rootsVisible=false;document.body.classList.remove('show-all-roots');stage.selectAll('.show-all-roots-control').remove();return;}
+    document.body.classList.toggle('show-all-roots',rootsVisible);
+    const entries=stage.selectAll('.layer-context-entry').nodes();
+    const baseTop=width<720?92:58;
+    const rootCluster=stage.select('.context-cluster.depth-0').node();
+    let y=baseTop;
+    if(rootsVisible&&rootCluster){
+      const rootTop=parseTranslate(rootCluster).y;
+      const rootBottom=rootTop+layerHeight(rootCluster);
+      y=Math.max(baseTop,rootBottom+10);
+    }
+    const controlHeight=renderRootsControl(y);
+    y+=controlHeight+10;
     entries.forEach((entry,index)=>{entry.removeAttribute('transform');const card=entry.querySelector('foreignObject:not(.layer-kind-toggle-host)');if(!card)return;card.removeAttribute('transform');card.setAttribute('y',y);const h=Number(card.getAttribute('height'))||66;const toggle=entry.querySelector('foreignObject.layer-kind-toggle-host'),current=index===entries.length-1;if(toggle){toggle.removeAttribute('transform');toggle.style.display=current?'':'none';if(current){toggle.setAttribute('y',y+h+4);y+=h+4+(Number(toggle.getAttribute('height'))||24);}else y+=h+10;}else y+=h+10;});
     // The old child-layer caption is redundant now that the current card and
     // issue/solution toggle identify what the graphical layer contains.
     stage.selectAll('text.canvas-caption').filter(function(){return (d3.select(this).text()||'').includes('· children');}).remove();
     const child=stage.select('.child-cluster').node();
-    if(child){const toggle=entries.length?entries[entries.length-1].querySelector('foreignObject.layer-kind-toggle-host'):null;const toggleHeight=toggle&&toggle.style.display!=='none'?(Number(toggle.getAttribute('height'))||24):0;const overlap=Math.max(0,toggleHeight/2);const childTop=y-overlap;moveToY(child,childTop);if(Array.isArray(levelCenters)){levelCenters.length=0;entries.forEach(entry=>{const card=entry.querySelector('foreignObject:not(.layer-kind-toggle-host)');if(card)levelCenters.push((Number(card.getAttribute('y'))||0)+(Number(card.getAttribute('height'))||66)/2);});levelCenters.push(childTop+layerHeight(child)/2);}worldHeight=Math.max(height,childTop+layerHeight(child)+96);}else worldHeight=Math.max(height,y+96);
+    if(child){const toggle=entries.length?entries[entries.length-1].querySelector('foreignObject.layer-kind-toggle-host'):null;const toggleHeight=toggle&&toggle.style.display!=='none'?(Number(toggle.getAttribute('height'))||24):0;const overlap=Math.max(0,toggleHeight/2);const childTop=y-overlap;moveToY(child,childTop);if(Array.isArray(levelCenters)){levelCenters.length=0;if(rootsVisible&&rootCluster)levelCenters.push(parseTranslate(rootCluster).y+layerHeight(rootCluster)/2);entries.forEach(entry=>{const card=entry.querySelector('foreignObject:not(.layer-kind-toggle-host)');if(card)levelCenters.push((Number(card.getAttribute('y'))||0)+(Number(card.getAttribute('height'))||66)/2);});levelCenters.push(childTop+layerHeight(child)/2);}worldHeight=Math.max(height,childTop+layerHeight(child)+96);}else worldHeight=Math.max(height,y+96);
     if(typeof applyCamera==='function')applyCamera(false);
   }
   const baseRender=render;render=function(...args){const result=baseRender(...args);arrange();return result;};requestAnimationFrame(arrange);
