@@ -54,6 +54,7 @@ jobs:
             leaf-end-state.js
             hierarchy-overview.js
             url-state.js
+            dense-layer-test.js
           )
 
           cp "${assets[@]}" _site/
