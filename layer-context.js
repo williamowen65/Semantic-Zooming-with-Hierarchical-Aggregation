@@ -23,6 +23,15 @@
   };
   const esc = value => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 
+  function hierarchyViewportScale() {
+    const host = document.querySelector('#viz');
+    if (!host) return 1;
+    const logicalWidth = host.offsetWidth || width || 1;
+    const physicalWidth = host.getBoundingClientRect().width || logicalWidth;
+    const scale = physicalWidth / logicalWidth;
+    return Number.isFinite(scale) && scale > 0 ? scale : 1;
+  }
+
   function layerTop(cluster) {
     return parseTranslateY(cluster);
   }
@@ -44,6 +53,10 @@
     if (!focusPath?.length) return;
     const clusters = focusPath.map((_, index) => stage.select(`.context-cluster.depth-${index}`).node());
     const childCluster = stage.select('.child-cluster').node();
+    const hierarchyScale = hierarchyViewportScale();
+    const inverseHierarchyScale = 1 / hierarchyScale;
+    const physicalViewportWidth = window.innerWidth || document.documentElement.clientWidth || width;
+    const preserveViewportSize = hierarchyScale < .995;
 
     focusPath.forEach((id, index) => {
       const node = nodeById.get(id), current = clusters[index];
@@ -55,24 +68,38 @@
       const gapBottom = next ? layerTop(next) : currentBottom + (width < 720 ? 96 : 112);
       const available = Math.max(58, gapBottom - gapTop);
       const preferredCardHeight = 66;
-      const cardHeight = Math.min(preferredCardHeight, Math.max(58, available - 12));
-      // Bias the card slightly upward to leave visual room for the child-type
-      // segmented control immediately beneath it.
-      const centeredOffset = Math.max(6, (available - cardHeight) / 2);
+      const cardHeight = preserveViewportSize
+        ? preferredCardHeight
+        : Math.min(preferredCardHeight, Math.max(58, available - 12));
+      const centeredOffset = Math.max(6, (available - (preserveViewportSize ? preferredCardHeight / hierarchyScale : cardHeight)) / 2);
       const y = gapTop + Math.max(6, centeredOffset - 7);
 
-      const x = width < 720 ? 10 : Math.max(16, width * .12);
-      const cardWidth = width < 720 ? Math.max(120, width - 20) : Math.min(width - 32, width * .76);
+      // The hierarchy canvas itself is scaled at overview presets. Keep these UI
+      // controls screen-sized, like the header, by counter-scaling only the
+      // context entry around its visual center/top anchor. Their widths are based
+      // on the real device viewport rather than the emulated wide canvas.
+      const visualCenterX = width / 2;
+      const desiredCardWidth = Math.max(120, physicalViewportWidth - 20);
+      const cardWidth = preserveViewportSize
+        ? desiredCardWidth
+        : (width < 720 ? Math.max(120, width - 20) : Math.min(width - 32, width * .76));
+      const x = preserveViewportSize
+        ? visualCenterX - cardWidth / 2
+        : (width < 720 ? 10 : Math.max(16, width * .12));
+
       const locations = affectedLocationCount(node);
       const counts = childKindCounts(node);
       const locationHtml = locations == null ? '' : `<span class="layer-context-stat affected-location-stat"><strong>${locations}</strong> affected location${locations === 1 ? '' : 's'}</span>`;
       const html = `<div xmlns="http://www.w3.org/1999/xhtml" class="layer-context-card ${node.kind === 'solution' ? 'is-solution' : 'is-issue'}"><div class="layer-context-copy"><div class="layer-context-primary"><span class="layer-context-kind">${node.kind === 'solution' ? 'Solution' : 'Issue'}</span><span class="layer-context-name">${esc(node.name)}</span></div><div class="layer-context-description">${esc(node.description || '')}</div></div><div class="layer-context-stats">${locationHtml}<span class="layer-context-stat"><strong>${compact(node.votes)}</strong> votes</span><span class="layer-context-stat"><strong>${Number(node.rating || 0).toFixed(1)}</strong> avg</span><span class="layer-context-stat"><strong>${counts.issues}</strong> ${counts.issues === 1 ? 'issue' : 'issues'}</span><span class="layer-context-stat"><strong>${counts.solutions}</strong> ${counts.solutions === 1 ? 'solution' : 'solutions'}</span></div></div>`;
       const entry = stage.append('g').attr('class', 'layer-context-entry');
+      if (preserveViewportSize) {
+        entry.attr('transform', `translate(${visualCenterX},${y}) scale(${inverseHierarchyScale}) translate(${-visualCenterX},${-y})`);
+      }
       entry.append('foreignObject').attr('x', x).attr('y', y).attr('width', cardWidth).attr('height', cardHeight).html(html);
 
       if ((node.children || []).length) {
         const mode = typeof window.atlasLayerKindModeFor === 'function' ? window.atlasLayerKindModeFor(node.id) : 'issue';
-        const toggleWidth = Math.min(width < 720 ? 210 : 230, cardWidth * .72);
+        const toggleWidth = Math.min(physicalViewportWidth < 720 ? 210 : 230, cardWidth * .72);
         const toggleHeight = 24;
         const toggleX = x + (cardWidth - toggleWidth) / 2;
         const toggleY = y + cardHeight + 4;
