@@ -1,38 +1,173 @@
-// Fixed-layout expandable controls for the card stack. The compact card itself
-// never changes its internal layout; clicking only reveals a small attached
-// drawer below it containing the Show children switch.
+// Direct card toggles for the experimental card-stack hierarchy.
+// Clicking a card itself shows/hides that card's child layer. The current/bottom
+// card defaults on; historical cards default off. If a node is selected from a
+// temporarily reopened historical layer, the path change closes that old layer.
 (() => {
   if (typeof render !== 'function' || typeof stage === 'undefined') return;
-  const expanded=new Set(),childVisibility=new Map(),explicitVisibility=new Set();let previousPath=[];
-  const style=document.createElement('style');style.textContent=`
-  body.card-stack-mode.has-card-stack .context-cluster.card-stack-layer-visible{display:inline!important}
-  body.card-stack-mode.has-card-stack .child-cluster.card-stack-layer-hidden{display:none!important}
-  body.card-stack-mode .layer-context-entry foreignObject:not(.layer-kind-toggle-host){pointer-events:auto}
-  body.card-stack-mode .layer-context-card{pointer-events:auto;cursor:pointer;transition:box-shadow .18s ease,border-radius .18s ease}
-  body.card-stack-mode .layer-context-card.card-controls-open{box-shadow:0 7px 18px rgba(20,30,40,.08);border-bottom-left-radius:7px;border-bottom-right-radius:7px}
-  .card-stack-controls-host-v2{pointer-events:auto;overflow:visible;opacity:0;transition:opacity .15s ease}
-  .card-stack-controls-host-v2.is-open{opacity:1}
-  .card-stack-controls-drawer-v2{height:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:flex-end;padding:4px 10px 6px;border:1px solid rgba(27,43,61,.10);border-top:0;border-radius:0 0 12px 12px;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-  .card-stack-show-children-v2{height:25px;display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(27,43,61,.12);border-radius:999px;padding:2px 4px 2px 10px;background:rgba(247,247,244,.94);color:var(--muted);font:750 9.5px/1 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;cursor:pointer;touch-action:manipulation}
-  .card-stack-show-children-v2 .switch-track{width:31px;height:18px;padding:2px;border-radius:999px;background:rgba(27,43,61,.16);display:flex;align-items:center;box-sizing:border-box;transition:background .18s ease}
-  .card-stack-show-children-v2 .switch-knob{width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(20,30,40,.22);transform:translateX(0);transition:transform .18s ease}
-  .card-stack-show-children-v2.is-on{color:var(--ink)} .card-stack-show-children-v2.is-on .switch-track{background:var(--ink)} .card-stack-show-children-v2.is-on .switch-knob{transform:translateX(13px)}
-  @media(max-width:720px){.card-stack-controls-drawer-v2{padding:3px 8px 5px}.card-stack-show-children-v2{height:23px;font-size:9px}}
-  `;document.head.appendChild(style);
-  const translate=n=>{const m=(n?.getAttribute('transform')||'').match(/translate\(\s*([-\d.]+)(?:[ ,]+)([-\d.]+)/);return m?{x:+m[1],y:+m[2]}:{x:0,y:0}};
-  const clusterHeight=n=>{const h=Number(n?.dataset?.layerHeight);if(Number.isFinite(h)&&h>0)return h;try{return n?.querySelector('.cluster-outline')?.getBBox?.().height||0}catch(_){return 0}};
-  const samePath=p=>p.length===previousPath.length&&p.every((id,i)=>id===previousPath[i]);
-  function syncDefaults(){const p=Array.isArray(focusPath)?focusPath:[];if(samePath(p))return;const oldLast=previousPath.at(-1),newLast=p.at(-1);if(oldLast&&oldLast!==newLast&&!explicitVisibility.has(oldLast))childVisibility.set(oldLast,false);p.forEach((id,i)=>{if(!explicitVisibility.has(id))childVisibility.set(id,i===p.length-1)});previousPath=[...p]}
-  function ensureHost(entry,nodeId,cardFO){let host=entry.querySelector('foreignObject.card-stack-controls-host-v2');if(host)return host;host=document.createElementNS('http://www.w3.org/2000/svg','foreignObject');host.setAttribute('class','card-stack-controls-host-v2');host.setAttribute('height','0');const drawer=document.createElement('div');drawer.setAttribute('xmlns','http://www.w3.org/1999/xhtml');drawer.className='card-stack-controls-drawer-v2';const button=document.createElement('button');button.type='button';button.className='card-stack-show-children-v2';button.innerHTML='<span>Show children</span><span class="switch-track" aria-hidden="true"><span class="switch-knob"></span></span>';button.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();window.atlasToggleCardChildrenV2?.(nodeId)});drawer.appendChild(button);host.appendChild(drawer);entry.insertBefore(host,cardFO.nextSibling);return host}
-  function configure(entry,nodeId,cardFO){const card=cardFO?.querySelector('.layer-context-card'),node=nodeById.get(nodeId);if(!card||!node)return null;const open=expanded.has(nodeId),visible=childVisibility.get(nodeId)===true,host=ensureHost(entry,nodeId,cardFO);card.classList.toggle('card-controls-open',open);card.setAttribute('role','button');card.setAttribute('tabindex','0');card.setAttribute('aria-expanded',String(open));card.onclick=e=>{if(e.target.closest('.card-stack-show-children-v2'))return;window.atlasToggleCardControlsV2?.(nodeId)};card.onkeydown=e=>{if((e.key==='Enter'||e.key===' ')&&!e.target.closest('.card-stack-show-children-v2')){e.preventDefault();window.atlasToggleCardControlsV2?.(nodeId)}};const button=host.querySelector('.card-stack-show-children-v2'),hasChildren=(node.children||[]).length>0;button.disabled=!hasChildren;button.classList.toggle('is-on',visible&&hasChildren);button.setAttribute('aria-pressed',String(visible&&hasChildren));button.setAttribute('aria-label',`${visible?'Hide':'Show'} children for ${node.name}`);return{host,open}}
-  function targetLayer(i,last){return i===last?stage.select('.child-cluster').node():stage.select(`.context-cluster.depth-${i+1}`).node()}
-  function setY(n,y,animate){if(!n)return;const t=translate(n),v=`translate(${t.x},${y})`,s=d3.select(n).interrupt();if(animate&&!matchMedia('(prefers-reduced-motion: reduce)').matches)s.transition().duration(220).ease(d3.easeCubicOut).attr('transform',v);else n.setAttribute('transform',v)}
-  function setAttr(n,name,value,animate){if(!n)return;const s=d3.select(n).interrupt();if(animate&&!matchMedia('(prefers-reduced-motion: reduce)').matches)s.transition().duration(200).ease(d3.easeCubicOut).attr(name,value);else s.attr(name,value)}
-  function layout(animate=false){if(!Array.isArray(focusPath)||!focusPath.length||!document.body.classList.contains('card-stack-mode'))return;syncDefaults();const entries=stage.selectAll('.layer-context-entry').nodes();stage.selectAll('.context-cluster').classed('card-stack-layer-visible',false);stage.select('.child-cluster').classed('card-stack-layer-hidden',false);let y=width<720?132:98;const drawerH=width<720?32:34;
-    entries.forEach((entry,index)=>{const id=focusPath[index],cardFO=entry.querySelector('foreignObject:not(.layer-kind-toggle-host):not(.card-stack-controls-host-v2)');if(!id||!cardFO)return;entry.removeAttribute('transform');cardFO.removeAttribute('transform');const cardH=Number(cardFO.getAttribute('height'))||66,cardX=Number(cardFO.getAttribute('x'))||0,cardW=Number(cardFO.getAttribute('width'))||Math.max(120,width-20);setAttr(cardFO,'y',y,animate);const conf=configure(entry,id,cardFO);if(!conf)return;const{host,open}=conf;host.classList.toggle('is-open',open);host.setAttribute('x',cardX);host.setAttribute('width',cardW);host.setAttribute('y',y+cardH-1);setAttr(host,'height',open?drawerH:0,animate);const node=nodeById.get(id),show=childVisibility.get(id)===true&&(node?.children||[]).length>0,layer=targetLayer(index,entries.length-1),kindToggle=entry.querySelector('foreignObject.layer-kind-toggle-host'),afterCard=y+cardH+(open?drawerH-1:0);if(kindToggle){kindToggle.removeAttribute('transform');kindToggle.style.display=show&&layer?'':'none'}if(show&&layer){if(index<entries.length-1)layer.classList.add('card-stack-layer-visible');else layer.classList.remove('card-stack-layer-hidden');const toggleH=kindToggle?(Number(kindToggle.getAttribute('height'))||24):0,toggleY=afterCard+4;if(kindToggle)d3.select(kindToggle).attr('y',toggleY);const layerTop=toggleY+toggleH/2;setY(layer,layerTop,animate);y=layerTop+clusterHeight(layer)+12}else{if(index===entries.length-1&&layer)layer.classList.add('card-stack-layer-hidden');y=afterCard+10}});
-    if(Array.isArray(levelCenters)){levelCenters.length=0;entries.forEach(entry=>{const card=entry.querySelector('foreignObject:not(.layer-kind-toggle-host):not(.card-stack-controls-host-v2)');if(card)levelCenters.push((Number(card.getAttribute('y'))||0)+(Number(card.getAttribute('height'))||66)/2)})}worldHeight=Math.max(height,y+96);if(typeof applyCamera==='function')applyCamera(false)}
-  window.atlasToggleCardControlsV2=id=>{expanded.has(id)?expanded.delete(id):expanded.add(id);layout(true)};
-  window.atlasToggleCardChildrenV2=id=>{explicitVisibility.add(id);childVisibility.set(id,childVisibility.get(id)!==true);layout(true)};
-  window.atlasChildrenVisibleFor=id=>childVisibility.get(id)===true;
-  const baseRender=render;render=function(...args){const r=baseRender(...args);layout(false);return r};requestAnimationFrame(()=>layout(false));
+
+  const childVisibility = new Map();
+  let previousPath = [];
+
+  const style = document.createElement('style');
+  style.textContent = `
+    body.card-stack-mode.has-card-stack .context-cluster.card-stack-layer-visible{display:inline!important}
+    body.card-stack-mode.has-card-stack .child-cluster.card-stack-layer-hidden{display:none!important}
+    body.card-stack-mode .layer-context-entry foreignObject:not(.layer-kind-toggle-host){pointer-events:auto}
+    body.card-stack-mode .layer-context-card{pointer-events:auto;cursor:pointer;transition:box-shadow .18s ease,background-color .18s ease}
+    body.card-stack-mode .layer-context-card.children-visible{box-shadow:0 5px 14px rgba(20,30,40,.08)}
+  `;
+  document.head.appendChild(style);
+
+  const translate = node => {
+    const match = (node?.getAttribute('transform') || '').match(/translate\(\s*([-\d.]+)(?:[ ,]+)([-\d.]+)/);
+    return match ? { x:Number(match[1]), y:Number(match[2]) } : { x:0, y:0 };
+  };
+  const clusterHeight = node => {
+    const declared = Number(node?.dataset?.layerHeight);
+    if (Number.isFinite(declared) && declared > 0) return declared;
+    try { return node?.querySelector('.cluster-outline')?.getBBox?.().height || 0; } catch (_) { return 0; }
+  };
+  const samePath = path => path.length === previousPath.length && path.every((id,index) => id === previousPath[index]);
+
+  function syncDefaults() {
+    const path = Array.isArray(focusPath) ? focusPath : [];
+    if (samePath(path)) return;
+
+    // Every navigation change resets the stack to the simple default:
+    // historical cards closed, newest/current card open.
+    childVisibility.clear();
+    path.forEach((id,index) => childVisibility.set(id,index === path.length - 1));
+    previousPath = [...path];
+  }
+
+  function targetLayer(index,lastIndex) {
+    return index === lastIndex
+      ? stage.select('.child-cluster').node()
+      : stage.select(`.context-cluster.depth-${index + 1}`).node();
+  }
+
+  function setY(node,y,animate) {
+    if (!node) return;
+    const t = translate(node);
+    const value = `translate(${t.x},${y})`;
+    const selection = d3.select(node).interrupt();
+    if (animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      selection.transition().duration(220).ease(d3.easeCubicOut).attr('transform',value);
+    } else {
+      node.setAttribute('transform',value);
+    }
+  }
+
+  function setCardY(card,y,animate) {
+    if (!card) return;
+    const selection = d3.select(card).interrupt();
+    if (animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      selection.transition().duration(200).ease(d3.easeCubicOut).attr('y',y);
+    } else {
+      selection.attr('y',y);
+    }
+  }
+
+  function configureCard(entry,nodeId) {
+    const cardFO = entry.querySelector('foreignObject:not(.layer-kind-toggle-host)');
+    const card = cardFO?.querySelector('.layer-context-card');
+    const node = nodeById.get(nodeId);
+    if (!cardFO || !card || !node) return null;
+
+    const hasChildren = (node.children || []).length > 0;
+    const visible = hasChildren && childVisibility.get(nodeId) === true;
+    card.classList.toggle('children-visible',visible);
+    card.setAttribute('role','button');
+    card.setAttribute('tabindex','0');
+    card.setAttribute('aria-pressed',String(visible));
+    card.setAttribute('aria-label',`${visible ? 'Hide' : 'Show'} child layer for ${node.name}`);
+
+    const toggle = () => {
+      if (!hasChildren) return;
+      childVisibility.set(nodeId,childVisibility.get(nodeId) !== true);
+      layout(true);
+    };
+    card.onclick = event => {
+      event.preventDefault();
+      event.stopPropagation();
+      toggle();
+    };
+    card.onkeydown = event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        toggle();
+      }
+    };
+    return cardFO;
+  }
+
+  function layout(animate=false) {
+    if (!Array.isArray(focusPath) || !focusPath.length || !document.body.classList.contains('card-stack-mode')) return;
+    syncDefaults();
+
+    const entries = stage.selectAll('.layer-context-entry').nodes();
+    stage.selectAll('.context-cluster').classed('card-stack-layer-visible',false);
+    stage.select('.child-cluster').classed('card-stack-layer-hidden',false);
+    stage.selectAll('.card-stack-controls-host-v2').remove();
+
+    let y = width < 720 ? 132 : 98;
+
+    entries.forEach((entry,index) => {
+      const id = focusPath[index];
+      const cardFO = configureCard(entry,id);
+      if (!id || !cardFO) return;
+
+      entry.removeAttribute('transform');
+      cardFO.removeAttribute('transform');
+      setCardY(cardFO,y,animate);
+
+      const cardH = Number(cardFO.getAttribute('height')) || 66;
+      const node = nodeById.get(id);
+      const show = childVisibility.get(id) === true && (node?.children || []).length > 0;
+      const layer = targetLayer(index,entries.length - 1);
+      const kindToggle = entry.querySelector('foreignObject.layer-kind-toggle-host');
+
+      if (kindToggle) {
+        kindToggle.removeAttribute('transform');
+        kindToggle.style.display = show && layer ? '' : 'none';
+      }
+
+      if (show && layer) {
+        if (index < entries.length - 1) layer.classList.add('card-stack-layer-visible');
+        else layer.classList.remove('card-stack-layer-hidden');
+
+        const toggleHeight = kindToggle ? (Number(kindToggle.getAttribute('height')) || 24) : 0;
+        const toggleY = y + cardH + 4;
+        if (kindToggle) d3.select(kindToggle).attr('y',toggleY);
+        const layerTop = toggleY + toggleHeight / 2;
+        setY(layer,layerTop,animate);
+        y = layerTop + clusterHeight(layer) + 12;
+      } else {
+        if (index === entries.length - 1 && layer) layer.classList.add('card-stack-layer-hidden');
+        y += cardH + 10;
+      }
+    });
+
+    if (Array.isArray(levelCenters)) {
+      levelCenters.length = 0;
+      entries.forEach(entry => {
+        const card = entry.querySelector('foreignObject:not(.layer-kind-toggle-host)');
+        if (card) levelCenters.push((Number(card.getAttribute('y')) || 0) + (Number(card.getAttribute('height')) || 66) / 2);
+      });
+    }
+
+    worldHeight = Math.max(height,y + 96);
+    if (typeof applyCamera === 'function') applyCamera(false);
+  }
+
+  window.atlasChildrenVisibleFor = nodeId => childVisibility.get(nodeId) === true;
+
+  const baseRender = render;
+  render = function(...args) {
+    const result = baseRender(...args);
+    layout(false);
+    return result;
+  };
+
+  requestAnimationFrame(() => layout(false));
 })();
