@@ -5,13 +5,14 @@
     'layer-kind-filter.js',
     'layer-kind-api.js',
     'layer-kind-actions.js',
-    'root-layer-label.js'
+    'root-layer-label.js',
+    'card-stack-layer-kind-bridge.js'
   ];
 
   function load(index) {
     if (index >= modules.length) return;
     const script = document.createElement('script');
-    script.src = `${modules[index]}?v=20260813-1400`;
+    script.src = `${modules[index]}?v=20260813-1428`;
     script.onload = () => load(index + 1);
     document.head.appendChild(script);
   }
