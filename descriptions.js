@@ -27,6 +27,7 @@
   const lower = value => value ? value.charAt(0).toLowerCase() + value.slice(1) : value;
   const clampRating = value => Math.max(1, Math.min(5, Number(value) || 3));
   const derivedVotes = (node, share) => Math.max(1, Math.round(Math.max(1, Number(node.votes) || 1) * share));
+  const semanticKind = node => node?.semanticKind || node?.kind;
 
   function generatedSolutionChildren(node) {
     const baseRating = clampRating(node.rating);
@@ -66,10 +67,12 @@
     ];
   }
 
-  function seedSolutionChildren(node) {
-    // Visit the existing tree first so nested solutions receive their own layer
-    // before generated children are appended to their parent.
-    (node.children || []).slice().forEach(seedSolutionChildren);
+  function seedSolutionChildren(node, parent = null) {
+    // Existing solution-under-solution relationships are implementation details
+    // in the new model, not another round of proposed solutions.
+    if (parent?.kind === 'solution' && node.kind === 'solution') node.kind = 'implementation';
+
+    (node.children || []).slice().forEach(child => seedSolutionChildren(child, node));
     if (node.kind !== 'solution') return;
 
     const children = Array.isArray(node.children) ? node.children : (node.children = []);
@@ -79,16 +82,7 @@
     if (!kinds.has('implementation')) children.push(...generated.filter(child => child.kind === 'implementation'));
   }
 
-  forestData.forEach(seedSolutionChildren);
-
-  // The core maps were built before this extension script ran. Rebuild them so
-  // newly generated challenge/implementation nodes participate in navigation.
-  if (typeof nodeById?.clear === 'function' && typeof annotate === 'function') {
-    nodeById.clear();
-    parentById.clear();
-    rootById.clear();
-    forestData.forEach(root => annotate(root));
-  }
+  forestData.forEach(root => seedSolutionChildren(root));
 
   function makeDescription(node) {
     if (rootDescriptions[node.id]) return rootDescriptions[node.id];
@@ -105,18 +99,42 @@
     return `An issue concerning ${subject}.`;
   }
 
-  function visit(node) {
+  function describe(node) {
     if (!node.description) node.description = makeDescription(node);
-    (node.children || []).forEach(visit);
+    (node.children || []).forEach(describe);
   }
-  forestData.forEach(visit);
+  forestData.forEach(describe);
 
-  // Keep the compact node metadata aligned with the parent type. Issues expose
-  // sub-issues/solutions; solutions expose challenges/implementations.
+  // The existing layer toggle is internally two-way. Preserve the new semantic
+  // type while mapping challenges to its issue channel and implementations to
+  // its solution channel. Public labels below are corrected back to the typed
+  // language after each render.
+  function bridgeKinds(node) {
+    if (node.kind === 'challenge') {
+      node.semanticKind = 'challenge';
+      node.kind = 'issue';
+    } else if (node.kind === 'implementation') {
+      node.semanticKind = 'implementation';
+      node.kind = 'solution';
+    }
+    (node.children || []).forEach(bridgeKinds);
+  }
+  forestData.forEach(bridgeKinds);
+
+  // The core maps were built before this extension script ran. Rebuild them so
+  // newly generated nodes participate in navigation.
+  if (typeof nodeById?.clear === 'function' && typeof annotate === 'function') {
+    nodeById.clear();
+    parentById.clear();
+    rootById.clear();
+    forestData.forEach(root => annotate(root));
+  }
+
   const countsFor = item => {
     const counts = { issue: 0, solution: 0, challenge: 0, implementation: 0 };
     (item?.children || []).forEach(child => {
-      if (Object.prototype.hasOwnProperty.call(counts, child.kind)) counts[child.kind] += 1;
+      const kind = semanticKind(child);
+      if (Object.prototype.hasOwnProperty.call(counts, kind)) counts[kind] += 1;
     });
     return counts;
   };
@@ -133,17 +151,70 @@
 
   metadataLines = function(item) {
     const counts = countsFor(item);
+    const kind = semanticKind(item);
     const score = `${compact(item.votes || 0)} votes · avg ${averageVote(item)}`;
-    if (item.kind === 'solution') {
+    if (kind === 'solution') {
       return [score, `${counts.challenge} ${counts.challenge === 1 ? 'challenge' : 'challenges'} · ${counts.implementation} ${counts.implementation === 1 ? 'implementation' : 'implementations'}`];
     }
-    if (item.kind === 'challenge') return [score, 'Challenge'];
-    if (item.kind === 'implementation') return [score, 'Implementation'];
+    if (kind === 'challenge') return [score, 'Challenge'];
+    if (kind === 'implementation') return [score, 'Implementation'];
     return [score, `${counts.issue} ${counts.issue === 1 ? 'sub-issue' : 'sub-issues'} · ${counts.solution} ${counts.solution === 1 ? 'sub-solution' : 'sub-solutions'}`];
   };
 
   metadataText = item => metadataLines(item).join(' · ');
-  semanticGlyph = item => ({ solution: '✓', challenge: '!', implementation: '→' }[item?.kind] || '⚠');
+  semanticGlyph = item => ({ solution: '✓', challenge: '!', implementation: '→' }[semanticKind(item)] || '⚠');
+
+  function typedCountLabel(kind, count) {
+    if (kind === 'challenge') return `${count} ${count === 1 ? 'challenge' : 'challenges'}`;
+    if (kind === 'implementation') return `${count} ${count === 1 ? 'implementation' : 'implementations'}`;
+    return `${count}`;
+  }
+
+  function syncTypedContextLabels() {
+    const entries = Array.from(document.querySelectorAll('#viz .layer-context-entry'));
+    entries.forEach((entry, index) => {
+      const id = focusPath?.[index];
+      const node = id ? nodeById.get(id) : null;
+      if (!node) return;
+      const kind = semanticKind(node);
+      const kindEl = entry.querySelector('.layer-context-kind');
+      if (kindEl) kindEl.textContent = ({ issue: 'Issue', solution: 'Solution', challenge: 'Challenge', implementation: 'Implementation' })[kind] || 'Topic';
+
+      const card = entry.querySelector('.layer-context-card');
+      if (card) {
+        card.classList.remove('is-issue', 'is-solution', 'is-challenge', 'is-implementation');
+        card.classList.add(`is-${kind}`);
+      }
+
+      if (kind === 'solution') {
+        const counts = countsFor(node);
+        const stats = Array.from(entry.querySelectorAll('.layer-context-stat'));
+        if (stats.length >= 4) {
+          const first = stats[stats.length - 2], second = stats[stats.length - 1];
+          first.textContent = typedCountLabel('challenge', counts.challenge);
+          second.textContent = typedCountLabel('implementation', counts.implementation);
+        }
+        const buttons = Array.from(entry.querySelectorAll('.layer-kind-toggle button'));
+        if (buttons[0]) buttons[0].textContent = typedCountLabel('challenge', counts.challenge);
+        if (buttons[1]) buttons[1].textContent = typedCountLabel('implementation', counts.implementation);
+        const group = entry.querySelector('.layer-kind-toggle');
+        if (group) group.setAttribute('aria-label', 'Show solution challenges or implementations');
+      }
+    });
+  }
 
   if (typeof render === 'function') render();
+
+  // layer-kind-toggle.js loads later in index.html. Wrap the final render after
+  // synchronous scripts finish so its existing two channels display the new
+  // public terminology without rewriting that mature interaction code.
+  setTimeout(() => {
+    if (typeof render !== 'function') return;
+    const finalRender = render;
+    render = function() {
+      finalRender();
+      syncTypedContextLabels();
+    };
+    syncTypedContextLabels();
+  }, 0);
 })();
