@@ -64,32 +64,6 @@
     const box = clusterNode.getBBox(); return pointToStage(clusterNode, box.x + box.width / 2, box.y);
   }
 
-  function appendDot(point, role) {
-    stage.append("circle").attr("class", `link-dot link-dot-${role}`).attr("cx", point.x).attr("cy", point.y).attr("r", 4).attr("fill", "#526070").style("pointer-events", "none");
-  }
-
-  // Find where a cubic connector crosses a horizontal edge. Context cards are
-  // deliberately opaque, so these markers make the hidden continuation explicit.
-  function cubicPoint(source, target, t) {
-    const midY = (source.y + target.y) / 2, mt = 1 - t;
-    const p0=source,p1={x:source.x,y:midY},p2={x:target.x,y:midY},p3=target;
-    return {x:mt*mt*mt*p0.x+3*mt*mt*t*p1.x+3*mt*t*t*p2.x+t*t*t*p3.x,y:mt*mt*mt*p0.y+3*mt*mt*t*p1.y+3*mt*t*t*p2.y+t*t*t*p3.y};
-  }
-  function crossingAtY(source,target,y){
-    const minY=Math.min(source.y,target.y),maxY=Math.max(source.y,target.y);
-    if(y<=minY||y>=maxY)return null;
-    let lo=0,hi=1;
-    for(let i=0;i<28;i++){const mid=(lo+hi)/2,p=cubicPoint(source,target,mid);if((target.y>=source.y&&p.y<y)||(target.y<source.y&&p.y>y))lo=mid;else hi=mid;}
-    return cubicPoint(source,target,(lo+hi)/2);
-  }
-  function cardBoundaryDots(source,target){
-    stage.selectAll("g.layer-context-entry foreignObject").nodes().forEach(card=>{
-      const y=Number(card.getAttribute("y")),h=Number(card.getAttribute("height"));
-      if(!Number.isFinite(y)||!Number.isFinite(h))return;
-      [y,y+h].forEach((edgeY,index)=>{const p=crossingAtY(source,target,edgeY);if(p)appendDot(p,index===0?"card-entry":"card-exit");});
-    });
-  }
-
   function renderHierarchyLinks() {
     stage.selectAll("path.hierarchy-link, circle.link-dot").remove();
     if (!Array.isArray(focusPath) || !focusPath.length) return;
@@ -102,16 +76,12 @@
       if (!source || !target) return;
       const midY = (source.y + target.y) / 2;
       stage.insert("path", ":first-child").attr("class", "hierarchy-link").attr("d", `M${source.x},${source.y} C${source.x},${midY} ${target.x},${midY} ${target.x},${target.y}`).attr("fill", "none").attr("stroke", "#526070").attr("stroke-width", 2.2).attr("stroke-linecap", "round").attr("vector-effect", "non-scaling-stroke").style("pointer-events", "none");
-      appendDot(source, "exit"); appendDot(target, "entry");
-      cardBoundaryDots(source,target);
     });
   }
 
-  // Layer pan/zoom changes the transform on `g.layer-content`. The old connector
-  // updater only moved one endpoint dot and used centroid positions, so the newer
-  // perimeter/card dots could drift away from the line. Recompute the complete
-  // connector geometry whenever a layer transform changes so every dot and the
-  // line are derived from exactly the same current geometry.
+  // Layer pan/zoom changes the transform on `g.layer-content`. Recompute the
+  // connector geometry whenever a layer transform changes so the line stays
+  // attached to the current selected-cell perimeter.
   let refreshFrame = 0;
   function scheduleHierarchyRefresh() {
     if (refreshFrame) return;
