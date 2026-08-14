@@ -71,24 +71,39 @@
     return (parent?.children || []).find(child => child.kind === 'relationship' && (child.relationshipId === relationshipId || child.id === relationshipId || child.id?.startsWith(`${relationshipId}--`))) || null;
   }
 
-  function selectWithoutRescrolling(id, message) {
+  function viewportHeight() {
+    return window.visualViewport?.height || window.innerHeight || document.documentElement.clientHeight;
+  }
+
+  function alignSelectedRelationshipToBottom() {
+    const entries = [...document.querySelectorAll('#viz .layer-context-entry')];
+    const entry = entries[focusPath.length - 1] || entries[entries.length - 1];
+    const card = entry?.querySelector('.layer-context-card');
+    if (!card) return;
+
+    const currentScroll = window.scrollY || document.documentElement.scrollTop || 0;
+    const rect = card.getBoundingClientRect();
+    const desiredScroll = currentScroll + rect.bottom - viewportHeight();
+    const maxScroll = Math.max(0, document.documentElement.scrollHeight - viewportHeight());
+    const targetScroll = Math.max(0, Math.min(maxScroll, desiredScroll));
+
+    // Set the result directly: the related card's bottom sits at the bottom of
+    // the viewport whenever document bounds allow it. If there is not enough
+    // content above or below to reach that exact alignment, use the nearest
+    // legal document position instead.
+    window.scrollTo({ top: targetScroll, left: 0, behavior: 'auto' });
+  }
+
+  function selectRelationshipInNewContext(id, message) {
     if (!nodeById.has(id)) return;
     if (window.stopHierarchyMomentum) window.stopHierarchyMomentum();
-    const preservedCameraY = cameraY;
-    const preservedDocumentScroll = window.scrollY || document.documentElement.scrollTop || 0;
 
     focusPath = pathForNode(id);
     render();
 
-    // Keep both scroll systems exactly where they were. The document-flow
-    // adapter will reconcile the hierarchy camera with the unchanged page
-    // position after rendering, so a context switch changes the parent branch
-    // without visually jumping the selected relationship card.
-    cameraY = preservedCameraY;
-    applyCamera(false);
-    if ((window.scrollY || 0) !== preservedDocumentScroll) {
-      window.scrollTo({ top: preservedDocumentScroll, left: 0, behavior: 'auto' });
-    }
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      alignSelectedRelationshipToBottom();
+    }));
 
     if (typeof window.atlasSyncUrlState === 'function') window.atlasSyncUrlState();
     if (message) statusHost.textContent = message;
@@ -102,9 +117,12 @@
     const relationshipId = node.relationshipId || node.id.split('--from-')[0];
     const relatedAppearance = relationshipAppearanceUnder(target, relationshipId);
     if (relatedAppearance) {
-      selectWithoutRescrolling(relatedAppearance.id, `${node.name} selected in the ${target.name} branch.`);
+      selectRelationshipInNewContext(relatedAppearance.id, `${node.name} selected in the ${target.name} branch.`);
     } else {
-      selectWithoutRescrolling(target.id, `Switched context to ${target.name}.`);
+      focusPath = pathForNode(target.id);
+      render();
+      if (typeof window.atlasSyncUrlState === 'function') window.atlasSyncUrlState();
+      statusHost.textContent = `Switched context to ${target.name}.`;
     }
   }
 
