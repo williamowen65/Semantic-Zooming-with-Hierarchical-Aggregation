@@ -30,6 +30,16 @@
       kind: "issue",
       color: "#71879a",
       children: []
+    },
+    {
+      id: "root-unimplemented-great-ideas",
+      name: "What are some great ideas that have never been implemented?",
+      votes: 0,
+      rating: 0,
+      kind: "issue",
+      semanticKind: "challenge",
+      color: "#71879a",
+      children: []
     }
   ];
 
