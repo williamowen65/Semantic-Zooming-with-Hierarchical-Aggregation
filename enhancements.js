@@ -12,8 +12,6 @@ function balancedLayoutWeights(items){
   const mid=Math.floor(sorted.length/2);
   const median=sorted.length%2?sorted[mid]:(sorted[mid-1]+sorted[mid])/2;
   return scores.map(score=>{
-    // Square-root compression preserves rank while reducing descendant-count
-    // amplification. A floor/cap then guarantees a practical sibling range.
     const relative=Math.sqrt(score/Math.max(1,median));
     return Math.max(.58,Math.min(2.55,relative));
   });
@@ -47,11 +45,6 @@ polygonPath=function(poly){if(!poly||poly.length<2)return"";let d=`M${poly[0][0]
 const baseRenderBreadcrumbs=renderBreadcrumbs;
 renderBreadcrumbs=function(){
   baseRenderBreadcrumbs();
-
-  // A breadcrumb is hierarchy navigation, not merely a camera shortcut. Clicking
-  // a crumb makes that node the active selection exactly as if the user had
-  // selected it in the visualization: descendants are removed from focusPath,
-  // so the clicked node's children become the visible, entirely unselected layer.
   const crumbButtons=Array.from(breadcrumbHost.querySelectorAll("button"));
   crumbButtons.slice(1).forEach((button,buttonIndex)=>{
     const pathLength=buttonIndex+1;
@@ -78,10 +71,6 @@ renderBreadcrumbs=function(){
   });
 };
 
-// Position the selected node's inter-level context card near the top of the
-// visible hierarchy. This makes the card, connector, and beginning of the child
-// layer visible together instead of centering the child layer and potentially
-// scrolling the context card above the viewport.
 function scrollSelectedContextIntoView(animate=true){
   const entries=stage.selectAll("g.layer-context-entry").nodes();
   const entry=entries[focusPath.length-1]||entries[entries.length-1];
@@ -97,9 +86,6 @@ function scrollSelectedContextIntoView(animate=true){
   applyCamera(animate);
 }
 
-// When a selected node reveals children, auto-scroll to the information card
-// between that selected layer and its children. The card's top stays visible,
-// matching the visual reading order: selected topic context, then child layer.
 focusNode=function(id){
   const node=nodeById.get(id);if(!node)return;
   if(window.stopHierarchyMomentum)window.stopHierarchyMomentum();
@@ -121,14 +107,42 @@ focusNode=function(id){
   function stopMomentum(){if(momentumFrame)cancelAnimationFrame(momentumFrame);momentumFrame=0;velocity=0;clearTimeout(wheelTimer);}
   window.stopHierarchyMomentum=stopMomentum;
   function startMomentum(){if(reducedMotion()||Math.abs(velocity)<.35||momentumFrame)return;const tick=()=>{const before=cameraY;cameraY+=velocity;applyCamera(false);const hitBoundary=Math.abs(cameraY-before)<.01&&Math.abs(velocity)>.35;velocity*=.92;if(hitBoundary||Math.abs(velocity)<.35){momentumFrame=0;velocity=0;return;}momentumFrame=requestAnimationFrame(tick);};momentumFrame=requestAnimationFrame(tick);}
-  // Once a hierarchy path is active, always route wheel input through the camera.
-  // cameraBounds() is the single source of truth for whether movement is possible.
-  // Do not gate on worldHeight here: the card stack can shrink after layers close
-  // while the camera is still scrolled, which used to strand desktop users away
-  // from the top/root card because subsequent wheel events were ignored.
-  host.addEventListener("wheel",event=>{if(!focusPath.length)return;event.preventDefault();event.stopImmediatePropagation();if(momentumFrame)cancelAnimationFrame(momentumFrame);momentumFrame=0;const movement=-event.deltaY*.78;cameraY+=movement;applyCamera(false);velocity=Math.max(-42,Math.min(42,movement*.72));clearTimeout(wheelTimer);wheelTimer=setTimeout(startMomentum,52);},{passive:false,capture:true});
+  function canYieldToPage(delta){
+    const bounds=cameraBounds();
+    const atBottom=cameraY<=bounds.min+.5;
+    const atTop=cameraY>=bounds.max-.5;
+    if(delta>0&&atBottom)return true;
+    if(delta<0&&atTop&&window.scrollY>0)return true;
+    return false;
+  }
+  host.addEventListener("wheel",event=>{
+    if(!focusPath.length)return;
+    if(canYieldToPage(event.deltaY)){stopMomentum();return;}
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if(momentumFrame)cancelAnimationFrame(momentumFrame);momentumFrame=0;
+    const movement=-event.deltaY*.78;
+    cameraY+=movement;applyCamera(false);
+    velocity=Math.max(-42,Math.min(42,movement*.72));
+    clearTimeout(wheelTimer);wheelTimer=setTimeout(startMomentum,52);
+  },{passive:false,capture:true});
   host.addEventListener("touchstart",event=>{if(!focusPath.length||event.touches.length!==1)return;event.stopImmediatePropagation();stopMomentum();const touch=event.touches[0];lastTouchY=touch.clientY;touchOriginY=touch.clientY;lastTouchTime=performance.now();touchMoved=false;},{passive:true,capture:true});
-  host.addEventListener("touchmove",event=>{if(lastTouchY==null||event.touches.length!==1||!focusPath.length)return;event.preventDefault();event.stopImmediatePropagation();const now=performance.now(),y=event.touches[0].clientY,dy=y-lastTouchY,dt=Math.max(8,now-lastTouchTime);if(Math.abs(y-touchOriginY)>6)touchMoved=true;cameraY+=dy;applyCamera(false);const instantaneous=dy*(16.667/dt);velocity=Math.max(-48,Math.min(48,velocity*.55+instantaneous*.45));lastTouchY=y;lastTouchTime=now;},{passive:false,capture:true});
+  host.addEventListener("touchmove",event=>{
+    if(lastTouchY==null||event.touches.length!==1||!focusPath.length)return;
+    const now=performance.now(),y=event.touches[0].clientY,dy=y-lastTouchY,dt=Math.max(8,now-lastTouchTime);
+    const pageDelta=-dy;
+    if(canYieldToPage(pageDelta)){
+      stopMomentum();
+      lastTouchY=y;lastTouchTime=now;
+      return;
+    }
+    event.preventDefault();event.stopImmediatePropagation();
+    if(Math.abs(y-touchOriginY)>6)touchMoved=true;
+    cameraY+=dy;applyCamera(false);
+    const instantaneous=dy*(16.667/dt);
+    velocity=Math.max(-48,Math.min(48,velocity*.55+instantaneous*.45));
+    lastTouchY=y;lastTouchTime=now;
+  },{passive:false,capture:true});
   host.addEventListener("touchend",event=>{if(lastTouchY==null)return;event.stopImmediatePropagation();lastTouchY=null;lastTouchTime=0;touchOriginY=null;startMomentum();setTimeout(()=>{touchMoved=false;},80);},{passive:true,capture:true});
   host.addEventListener("touchcancel",()=>{lastTouchY=null;lastTouchTime=0;touchOriginY=null;stopMomentum();touchMoved=false;},{passive:true,capture:true});
 })();
