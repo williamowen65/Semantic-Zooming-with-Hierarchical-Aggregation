@@ -16,8 +16,9 @@
   const childKindCounts = node => {
     let issues = 0, solutions = 0;
     (node?.children || []).forEach(child => {
-      if (child.kind === 'solution') solutions += 1;
-      else issues += 1;
+      const kind = child.semanticKind || child.kind;
+      if (kind === 'solution') solutions += 1;
+      else if (kind === 'issue') issues += 1;
     });
     return { issues, solutions };
   };
@@ -84,8 +85,6 @@
         cardFo.attr('height', cardHeight);
       }
 
-      // Always render the child-type control, even for leaves. Zero-count options
-      // remain visible but disabled so the ontology is legible before content exists.
       const mode = typeof window.atlasLayerKindModeFor === 'function' ? window.atlasLayerKindModeFor(node.id) : 'issue';
       const toggleWidth = Math.min(physicalViewportWidth < 720 ? 210 : 230, cardWidth * .72);
       const toggleHeight = 24;
