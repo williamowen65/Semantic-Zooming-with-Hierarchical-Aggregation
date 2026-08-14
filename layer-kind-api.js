@@ -16,9 +16,11 @@
     state.layerKindByParent.clear();
     Object.entries(saved || {}).forEach(([parentId, kind]) => {
       const parent = nodeById.get(parentId);
+      if (!parent) return;
       const counts = state.kindCounts(parent);
-      if (kind === 'issue' && counts.issues) state.layerKindByParent.set(parentId, kind);
-      if (kind === 'solution' && counts.solutions) state.layerKindByParent.set(parentId, kind);
+      if (state.modesFor(parent).includes(kind) && state.countForMode(counts, kind)) {
+        state.layerKindByParent.set(parentId, kind);
+      }
     });
   };
 
