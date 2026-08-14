@@ -3,6 +3,7 @@
   const solutionKinds = ['challenge', 'implementation', 'yay', 'nay', 'connection'];
   const issueKinds = ['issue', 'solution', 'connection'];
   const semanticKind = node => node?.semanticKind || node?.kind;
+  const hierarchyKind = node => node?.relationshipContentKind || semanticKind(node);
   const modeForKind = kind => kind === 'relationship' ? 'connection' : kind;
 
   function kindCounts(parent) {
@@ -25,7 +26,7 @@
   }
 
   function modesFor(parent) {
-    return semanticKind(parent) === 'solution' ? solutionKinds : issueKinds;
+    return hierarchyKind(parent) === 'solution' ? solutionKinds : issueKinds;
   }
 
   function availableMode(parent, preferred = null) {
@@ -36,5 +37,5 @@
     return modes.find(mode => countForMode(counts, mode)) || modes[0];
   }
 
-  window.__atlasLayerKinds = { layerKindByParent, kindCounts, countForMode, modesFor, availableMode, semanticKind, modeForKind };
+  window.__atlasLayerKinds = { layerKindByParent, kindCounts, countForMode, modesFor, availableMode, semanticKind, hierarchyKind, modeForKind };
 })();
