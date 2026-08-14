@@ -7,7 +7,7 @@
     const name = String(options?.className || '');
     if (!Array.isArray(options?.items)) return baseRenderCluster(options);
     if (name === 'root-overview' || name.includes('depth-0')) {
-      return baseRenderCluster({ ...options, items:options.items.filter(item => item.kind !== 'solution') });
+      return baseRenderCluster({ ...options, items: options.items.filter(item => item.kind !== 'solution') });
     }
 
     let parent = null;
@@ -22,7 +22,10 @@
 
     if (!parent) return baseRenderCluster(options);
     const mode = state.availableMode(parent, preferred);
-    const items = options.items.filter(item => (item.kind === 'solution' ? 'solution' : 'issue') === mode);
+    const items = options.items.filter(item => {
+      if (parent.kind === 'solution') return item.kind === mode;
+      return (item.kind === 'solution' ? 'solution' : 'issue') === mode;
+    });
     return baseRenderCluster({ ...options, items });
   };
 })();
