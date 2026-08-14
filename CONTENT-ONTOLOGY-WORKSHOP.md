@@ -232,7 +232,13 @@ The important thing is not the sentence form. The important thing is that the co
 
 A **Solution** is a proposed way of addressing its parent Issue.
 
-Solutions can exist at many levels. They do not need to solve an entire root Issue by themselves. A Solution can address one narrow part of a larger problem.
+> **A Solution proposes what might help. It does not need to explain exactly how to make it happen.**
+
+Solutions can exist at many levels. They do not need to solve an entire root Issue by themselves, and they do not need to arrive with a complete implementation plan. A Solution can address one narrow part of a larger problem, describe a promising intervention, or simply put an idea on the table that other people can help develop.
+
+This separation is intentional. Someone may recognize that an idea could improve a problem without knowing the operational details required to carry it out. That contribution can still be valuable. Another contributor may later add one or more Implementations that explain how the Solution could actually be put into practice.
+
+Atlas should therefore let people contribute the piece of the reasoning they actually know. A contributor should not have to solve funding, logistics, governance, staffing, technology, measurement, and execution before they are allowed to propose an idea.
 
 Useful Solution wording should make the proposed approach identifiable. It may be written as a proposal, an idea worth trying, or occasionally a question about an approach.
 
@@ -241,6 +247,7 @@ Examples of forms:
 - “Expand permanent supportive housing.”
 - “Use ranked-choice voting in more elections.”
 - “Let’s try neighborhood-based outreach teams.”
+- “Create neighborhood libraries for rarely used tools.”
 - “Could participatory moderation improve trust?”
 
 ### Questions to ask when creating a Solution
@@ -250,6 +257,7 @@ Examples of forms:
 - Can someone understand what is being proposed from the title?
 - Is it specific enough to expose meaningful Challenges?
 - Could several Solutions coexist, or are they alternatives?
+- Am I holding back a useful idea only because I do not yet know how to implement it? If so, it may still belong here.
 
 ---
 
@@ -280,6 +288,10 @@ Examples:
 
 An **Implementation** describes a concrete way to put a Solution into practice.
 
+Where a Solution answers **“What might help?”**, an Implementation answers **“How could we actually do it?”** Implementations are where an idea becomes operational: who carries it out, where it starts, what is built or changed, what sequence of steps is involved, how it is funded or coordinated when relevant, and how people might test whether it works.
+
+A Solution can have no Implementation yet, one Implementation, or several competing Implementations. Different people may contribute at different levels: one person may propose the Solution, while someone with practical, technical, local, or professional knowledge contributes a workable Implementation later.
+
 Implementations should sound actionable. Unlike a broad Solution, an Implementation should make it easier to imagine someone actually carrying out the next step.
 
 Examples:
@@ -288,6 +300,7 @@ Examples:
 - “Launch a six-month trial with three participating agencies.”
 - “Roll the service out in stages and measure outcomes after each stage.”
 - “Train an initial group of moderators and evaluate their decisions.”
+- “Have a public library maintain a tool-lending inventory that residents can reserve with their library cards.”
 
 ### Questions to ask when creating an Implementation
 
@@ -295,6 +308,7 @@ Examples:
 - Where could this begin?
 - Who would carry it out?
 - What could be piloted before scaling?
+- What resources, coordination, or infrastructure would be needed?
 - What should be measured?
 - What sequence of steps turns the Solution from an idea into something operating in the world?
 
@@ -404,10 +418,12 @@ Possible framing:
 
 **Issue:** What are we trying to understand or improve?
 
-**Solution:** What could we try?
+**Solution:** What could we try? You do not need to know how to implement it yet.
 
 **Challenge:** What could get in the way?
 
-**Implementation:** What would we actually do?
+**Implementation:** How could we actually put the Solution into practice?
+
+A useful reassurance to contributors may be: **Contribute the piece you know. You do not need an end-to-end plan before sharing a useful idea; other people can help develop the Challenges and Implementations around it.**
 
 These four questions may ultimately be easier to teach than the type definitions themselves. The more formal definitions in this document can remain useful behind the scenes for designing the product and resolving ambiguous cases.
