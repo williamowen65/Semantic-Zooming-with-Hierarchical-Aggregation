@@ -23,6 +23,7 @@
     return { issues, solutions };
   };
   const esc = value => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  const descriptionHtml = value => esc(value).replace(/\n/g, '<br/>');
 
   function hierarchyViewportScale() {
     const host = document.querySelector('#viz');
@@ -72,7 +73,7 @@
       const locations = affectedLocationCount(node);
       const counts = childKindCounts(node);
       const locationHtml = locations == null ? '' : `<span class="layer-context-stat affected-location-stat"><strong>${locations}</strong> affected location${locations === 1 ? '' : 's'}</span>`;
-      const html = `<div xmlns="http://www.w3.org/1999/xhtml" class="layer-context-card ${node.kind === 'solution' ? 'is-solution' : 'is-issue'}"><div class="layer-context-copy"><div class="layer-context-primary"><span class="layer-context-kind">${node.kind === 'solution' ? 'Solution' : 'Issue'}</span><span class="layer-context-name">${esc(node.name)}</span></div><div class="layer-context-description">${esc(node.description || '')}</div></div><div class="layer-context-stats">${locationHtml}<span class="layer-context-stat"><strong>${compact(node.votes)}</strong> votes</span><span class="layer-context-stat"><strong>${Number(node.rating || 0).toFixed(1)}</strong> avg</span><span class="layer-context-stat"><strong>${counts.issues}</strong> ${counts.issues === 1 ? 'issue' : 'issues'}</span><span class="layer-context-stat"><strong>${counts.solutions}</strong> ${counts.solutions === 1 ? 'solution' : 'solutions'}</span></div></div>`;
+      const html = `<div xmlns="http://www.w3.org/1999/xhtml" class="layer-context-card ${node.kind === 'solution' ? 'is-solution' : 'is-issue'}"><div class="layer-context-copy"><div class="layer-context-primary"><span class="layer-context-kind">${node.kind === 'solution' ? 'Solution' : 'Issue'}</span><span class="layer-context-name">${esc(node.name)}</span></div><div class="layer-context-description">${descriptionHtml(node.description || '')}</div></div><div class="layer-context-stats">${locationHtml}<span class="layer-context-stat"><strong>${compact(node.votes)}</strong> votes</span><span class="layer-context-stat"><strong>${Number(node.rating || 0).toFixed(1)}</strong> avg</span><span class="layer-context-stat"><strong>${counts.issues}</strong> ${counts.issues === 1 ? 'issue' : 'issues'}</span><span class="layer-context-stat"><strong>${counts.solutions}</strong> ${counts.solutions === 1 ? 'solution' : 'solutions'}</span></div></div>`;
       const entry = stage.append('g').attr('class', 'layer-context-entry');
       if (preserveViewportSize) entry.attr('transform', `translate(${visualCenterX},${y}) scale(${inverseHierarchyScale}) translate(${-visualCenterX},${-y})`);
       const cardFo = entry.append('foreignObject').attr('x', x).attr('y', y).attr('width', cardWidth).attr('height', cardHeight).html(html);
