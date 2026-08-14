@@ -55,7 +55,7 @@
       const showToggle=!!toggle && (open || (current && !hasChildren));
       const th=showToggle?(+toggle.getAttribute('height')||TOGGLE_HEIGHT):0;
       if(toggle){toggle.removeAttribute('transform');toggle.style.display=showToggle?'':'none';if(showToggle)d3.select(toggle).attr('y',y+ch+TOGGLE_GAP);}
-      if(open&&layer){i<entries.length-1?layer.classList.add('card-stack-layer-visible'):layer.classList.remove('card-stack-layer-hidden');const top=y+ch+(showToggle?TOGGLE_GAP+th:CARD_GAP);setY(layer,top,animate);y=top+h(layer)+CARD_GAP;}
+      if(open&&layer){i<entries.length-1?layer.classList.add('card-stack-layer-visible'):layer.classList.remove('card-stack-layer-hidden');const top=y+ch+(showToggle?TOGGLE_GAP+th/2:CARD_GAP);setY(layer,top,animate);y=top+h(layer)+CARD_GAP;}
       else{if(i===entries.length-1&&layer)layer.classList.add('card-stack-layer-hidden');y+=ch+(showToggle?TOGGLE_GAP+th+CARD_GAP:CARD_GAP);}
     });
     stage.selectAll('text.canvas-caption').filter(function(){return(d3.select(this).text()||'').includes('· children');}).remove();if(Array.isArray(levelCenters)){levelCenters.length=0;const r=stage.select('.root-context-entry foreignObject').node();if(r)levelCenters.push((+r.getAttribute('y')||0)+actualCardHeight(r)/2);entries.forEach(e=>{const c=e.querySelector('foreignObject:not(.layer-kind-toggle-host)');if(c)levelCenters.push((+c.getAttribute('y')||0)+actualCardHeight(c)/2);});}worldHeight=Math.max(height,y+96);if(typeof applyCamera==='function')applyCamera(false);
