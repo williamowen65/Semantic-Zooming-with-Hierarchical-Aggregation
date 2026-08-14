@@ -8,7 +8,7 @@
     html { background:#f7f7f4; }
     html.atlas-booting body { visibility:hidden !important; }
   </style>
-  <link rel="stylesheet" href="styles.css?v=20260814-footer" />
+  <link rel="stylesheet" href="styles.css?v=20260814-document-flow" />
   <link rel="stylesheet" href="theme-toolbar-fix.css?v=20260813-0713" />
   <link rel="stylesheet" href="layer-context.css?v=20260813-0713" />
   <link rel="stylesheet" href="leaf-end-state.css?v=20260813-1022" />
@@ -33,7 +33,7 @@
   </script>
 
   <header class="toolbar"><div class="title-block"><h1>Atlas hierarchy prototype</h1><p>Weighted tiled clusters · intentional public inquiries</p></div><nav id="breadcrumbs" class="breadcrumbs" aria-label="Hierarchy breadcrumb"></nav><button id="reset" class="reset-button" type="button">All roots</button></header>
-  <main id="viz" aria-label="Interactive weighted hierarchy visualization"></main>
+  <div id="viz-flow-shell" class="viz-flow-shell"><main id="viz" aria-label="Interactive weighted hierarchy visualization"></main></div>
   <footer class="site-footer" aria-label="Atlas prototype footer"><strong>Atlas hierarchy prototype</strong><span>Weighted tiled clusters · intentional public inquiries</span></footer>
 
   <aside id="theme-control" class="theme-control" aria-label="Visualization tools">
@@ -97,6 +97,7 @@
   <script src="dense-layer-test.js?v=20260813-0713"></script>
   <script src="layer-kind-toggle.js?v=20260813-0713"></script>
   <script src="card-stack-controls-v2.js?v=20260814-root-card-collapse"></script>
+  <script src="document-flow-scroll.js?v=20260814-document-flow"></script>
 
   <script>
     (() => {
