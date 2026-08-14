@@ -41,6 +41,7 @@ jobs:
             node-text-cleanup.css
             card-content-sizing.css
             app.js
+            intentional-forest-data.js
             node-labels-no-icons.js
             personal-scope-data.js
             environment-expansion.js
@@ -89,6 +90,14 @@ jobs:
               sed -i "s#</head>#  <link rel=\"stylesheet\" href=\"card-content-sizing.css?v=${GITHUB_SHA}\" />\n</head>#" "$page"
             else
               sed -E -i "s#card-content-sizing\.css\?v=[^\"]+#card-content-sizing.css?v=${GITHUB_SHA}#g" "$page"
+            fi
+
+            # Replace the original broad forest immediately after app.js, before
+            # expansion/description/semantic passes run against the data.
+            if ! grep -q 'intentional-forest-data.js' "$page"; then
+              sed -i "s#<script src=\"node-labels-no-icons.js#<script src=\"intentional-forest-data.js?v=${GITHUB_SHA}\"></script>\n  <script src=\"node-labels-no-icons.js#" "$page"
+            else
+              sed -E -i "s#intentional-forest-data\.js\?v=[^\"]+#intentional-forest-data.js?v=${GITHUB_SHA}#g" "$page"
             fi
 
             if ! grep -q 'issue-question-labels.js' "$page"; then
