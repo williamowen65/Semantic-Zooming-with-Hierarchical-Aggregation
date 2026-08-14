@@ -71,46 +71,46 @@
     return (parent?.children || []).find(child => child.kind === 'relationship' && (child.relationshipId === relationshipId || child.id === relationshipId || child.id?.startsWith(`${relationshipId}--`))) || null;
   }
 
-  function viewportHeight() {
-    return window.visualViewport?.height || window.innerHeight || document.documentElement.clientHeight;
-  }
-
-  function alignSelectedRelationshipToBottom() {
+  function selectedRelationshipCard() {
     const entries = [...document.querySelectorAll('#viz .layer-context-entry')];
     const entry = entries[focusPath.length - 1] || entries[entries.length - 1];
-    const card = entry?.querySelector('.layer-context-card');
-    if (!card) return;
-
-    const rect = card.getBoundingClientRect();
-    const delta = viewportHeight() - rect.bottom;
-    cameraY = clampCamera(cameraY + delta);
-    applyCamera(false);
+    return entry?.querySelector('.layer-context-card.is-relationship') || entry?.querySelector('.layer-context-card') || null;
   }
 
-  function selectRelationshipInNewContext(id, message) {
+  function selectRelationshipInNewContext(id, message, screenAnchorTop) {
     if (!nodeById.has(id)) return;
     if (window.stopHierarchyMomentum) window.stopHierarchyMomentum();
 
     focusPath = pathForNode(id);
     render();
 
+    // A related-branch switch is a context replacement, not a navigation scroll.
+    // Anchor the relationship card to the exact same screen Y coordinate it had
+    // before the branch changed. Parent layers may become longer or shorter, but
+    // they move around this stationary card. The user can then scroll normally.
     requestAnimationFrame(() => requestAnimationFrame(() => {
-      alignSelectedRelationshipToBottom();
+      const card = selectedRelationshipCard();
+      if (!card || !Number.isFinite(screenAnchorTop)) return;
+      const newTop = card.getBoundingClientRect().top;
+      const delta = screenAnchorTop - newTop;
+      cameraY = clampCamera(cameraY + delta);
+      applyCamera(false);
     }));
 
     if (typeof window.atlasSyncUrlState === 'function') window.atlasSyncUrlState();
     if (message) statusHost.textContent = message;
   }
 
-  function switchRelationshipContext(node) {
+  function switchRelationshipContext(node, sourceCard) {
     const destination = otherEndpointFor(node);
     if (!destination?.id) return;
     const target = nodeById.get(destination.id);
     if (!target) return;
     const relationshipId = node.relationshipId || node.id.split('--from-')[0];
     const relatedAppearance = relationshipAppearanceUnder(target, relationshipId);
+    const screenAnchorTop = sourceCard?.getBoundingClientRect().top;
     if (relatedAppearance) {
-      selectRelationshipInNewContext(relatedAppearance.id, `${node.name} selected in the ${target.name} branch.`);
+      selectRelationshipInNewContext(relatedAppearance.id, `${node.name} selected in the ${target.name} branch.`, screenAnchorTop);
     } else {
       focusPath = pathForNode(target.id);
       render();
@@ -148,7 +148,7 @@
         button.addEventListener('click', event => {
           event.preventDefault();
           event.stopPropagation();
-          switchRelationshipContext(node);
+          switchRelationshipContext(node, card);
         });
         card.appendChild(button);
       }
