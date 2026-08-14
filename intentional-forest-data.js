@@ -1,41 +1,49 @@
-// Intentionally empty dataset for testing the Atlas no-data state.
+// Minimal Atlas root dataset for testing the top-level experience.
+// These inquiries intentionally have no sub-issues, solutions, or other child content yet.
 (() => {
-  if (typeof forestData === "undefined") return;
+  if (typeof forestData === "undefined" || typeof annotate !== "function") return;
 
-  forestData.splice(0, forestData.length);
+  const roots = [
+    {
+      id: "root-atlas-public-think-tank",
+      name: "How can we make Atlas effective as a public think tank?",
+      votes: 0,
+      rating: 0,
+      kind: "issue",
+      color: "#71879a",
+      children: []
+    },
+    {
+      id: "root-homelessness",
+      name: "How can we effectively solve the homelessness crisis?",
+      votes: 0,
+      rating: 0,
+      kind: "issue",
+      color: "#71879a",
+      children: []
+    },
+    {
+      id: "root-help-world",
+      name: "What ideas could help make the world better?",
+      votes: 0,
+      rating: 0,
+      kind: "issue",
+      color: "#71879a",
+      children: []
+    }
+  ];
+
+  forestData.splice(0, forestData.length, ...roots);
   if (typeof nodeById !== "undefined") nodeById.clear();
   if (typeof parentById !== "undefined") parentById.clear();
   if (typeof rootById !== "undefined") rootById.clear();
+  roots.forEach(root => annotate(root));
   if (typeof focusPath !== "undefined") focusPath = [];
 
+  document.querySelector("#viz .empty-data-state")?.remove();
   if (typeof render === "function") render();
 
-  const host = document.querySelector("#viz");
-  if (host && !host.querySelector(".empty-data-state")) {
-    const message = document.createElement("div");
-    message.className = "empty-data-state";
-    message.setAttribute("role", "status");
-    message.textContent = "There is no data to display.";
-    Object.assign(message.style, {
-      position: "absolute",
-      inset: "0",
-      display: "grid",
-      placeItems: "center",
-      padding: "24px",
-      textAlign: "center",
-      fontSize: "clamp(18px, 2.4vw, 28px)",
-      fontWeight: "650",
-      color: "currentColor",
-      pointerEvents: "none"
-    });
-    if (getComputedStyle(host).position === "static") host.style.position = "relative";
-    host.appendChild(message);
-  }
-
   const status = document.querySelector("#status");
-  if (status) status.textContent = "There is no data to display.";
-
-  // The normal boot-complete check expects at least one rendered cell. In this
-  // intentional empty state there will never be one, so reveal immediately.
+  if (status) status.textContent = "Showing all Atlas root inquiries.";
   document.documentElement.classList.remove("atlas-booting");
 })();
