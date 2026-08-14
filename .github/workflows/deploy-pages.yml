@@ -77,6 +77,7 @@ jobs:
             sed -E -i "s#app\.js\?v=[^\"]+#app.js?v=${GITHUB_SHA}#g" "$page"
             sed -E -i "s#intentional-forest-data\.js\?v=[^\"]+#intentional-forest-data.js?v=${GITHUB_SHA}#g" "$page"
             sed -E -i "s#descriptions\.js\?v=[^\"]+#descriptions.js?v=${GITHUB_SHA}#g" "$page"
+            sed -E -i "s#enhancements\.js\?v=[^\"]+#enhancements.js?v=${GITHUB_SHA}#g" "$page"
             sed -E -i "s#hierarchy-overview\.js\?v=[^\"]+#hierarchy-overview.js?v=${GITHUB_SHA}#g" "$page"
             sed -E -i "s#layer-context\.js\?v=[^\"]+#layer-context.js?v=${GITHUB_SHA}#g" "$page"
             sed -E -i "s#layer-kind-toggle\.js\?v=[^\"]+#layer-kind-toggle.js?v=${GITHUB_SHA}#g" "$page"
