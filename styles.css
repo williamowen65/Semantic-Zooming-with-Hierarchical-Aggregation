@@ -191,6 +191,59 @@ svg {
 
 .status { display: none; }
 
+/* Theme palettes. These rules intentionally override the inline node fills from
+   app.js so switching the active theme also recolors the Voronoi nodes. */
+body[data-theme] .cell.is-selected .cell-label,
+body[data-theme] .cell.is-selected .score-label { fill:#fff !important; stroke:rgba(22,31,38,.42) !important; }
+
+body.theme-clean-modern { --bg:#f7f9fb; --ink:#102234; --muted:#5d7182; --selected:#3f79a6; }
+body.theme-clean-modern .cell-shape { fill:#86a7bf !important; }
+body.theme-clean-modern .cell-label { fill:#102234; stroke:rgba(255,255,255,.40); stroke-width:.75px; }
+body.theme-clean-modern .score-label { fill:#334d61; }
+body.theme-clean-modern .cell.is-selected .cell-shape { fill:#3f79a6 !important; stroke:#fff; }
+
+body.theme-bold-contrast { --bg:#f4f2ed; --ink:#12212a; --muted:#53636b; --selected:#d2a44a; }
+body.theme-bold-contrast .cell-shape { fill:#18333f !important; stroke:#f7f5ef; }
+body.theme-bold-contrast .cell-label,
+body.theme-bold-contrast .score-label { fill:#fff; stroke:rgba(0,0,0,.25); stroke-width:.8px; }
+body.theme-bold-contrast .cell.is-selected .cell-shape { fill:#9a5b36 !important; stroke:#fff; }
+
+body.theme-calm-earthy { --bg:#f4f1e8; --ink:#23312b; --muted:#68736d; --selected:#315f53; }
+body.theme-calm-earthy .cell:nth-child(6n+1) .cell-shape { fill:#8fa394 !important; }
+body.theme-calm-earthy .cell:nth-child(6n+2) .cell-shape { fill:#a5ad8c !important; }
+body.theme-calm-earthy .cell:nth-child(6n+3) .cell-shape { fill:#b3ad8e !important; }
+body.theme-calm-earthy .cell:nth-child(6n+4) .cell-shape { fill:#7c9a87 !important; }
+body.theme-calm-earthy .cell:nth-child(6n+5) .cell-shape { fill:#95a7a6 !important; }
+body.theme-calm-earthy .cell:nth-child(6n) .cell-shape { fill:#9aa18e !important; }
+body.theme-calm-earthy .cell-label { fill:#1b2823; stroke:rgba(245,242,233,.48); stroke-width:.75px; }
+body.theme-calm-earthy .score-label { fill:#394940; }
+body.theme-calm-earthy .cell.is-selected .cell-shape { fill:#426f61 !important; stroke:#eaf2ec; }
+
+body.theme-minimal-neutral { --bg:#f7f6f3; --ink:#222; --muted:#707070; --selected:#555; }
+body.theme-minimal-neutral .cell-shape { fill:#e8e6e2 !important; stroke:#d5d2cc; }
+body.theme-minimal-neutral .cell-label { fill:#222; stroke:none; }
+body.theme-minimal-neutral .score-label { fill:#555; }
+body.theme-minimal-neutral .cell.is-selected .cell-shape { fill:#6e7376 !important; stroke:#fff; }
+
+body.theme-vibrant-distinct { --bg:#f7f3ea; --ink:#1c2934; --muted:#66717b; --selected:#23384b; }
+body.theme-vibrant-distinct .cell:nth-child(8n+1) .cell-shape { fill:#3f91ab !important; }
+body.theme-vibrant-distinct .cell:nth-child(8n+2) .cell-shape { fill:#4f7ea8 !important; }
+body.theme-vibrant-distinct .cell:nth-child(8n+3) .cell-shape { fill:#6e72a8 !important; }
+body.theme-vibrant-distinct .cell:nth-child(8n+4) .cell-shape { fill:#8a6b9a !important; }
+body.theme-vibrant-distinct .cell:nth-child(8n+5) .cell-shape { fill:#d36d58 !important; }
+body.theme-vibrant-distinct .cell:nth-child(8n+6) .cell-shape { fill:#7b9c58 !important; }
+body.theme-vibrant-distinct .cell:nth-child(8n+7) .cell-shape { fill:#d38e33 !important; }
+body.theme-vibrant-distinct .cell:nth-child(8n) .cell-shape { fill:#b95448 !important; }
+body.theme-vibrant-distinct .cell-label,
+body.theme-vibrant-distinct .score-label { fill:#fff; stroke:rgba(25,30,35,.28); stroke-width:.8px; }
+body.theme-vibrant-distinct .cell.is-selected .cell-shape { fill:#273c4f !important; stroke:#fff; }
+
+body.theme-soft-refined { --bg:#f2f3ef; --ink:#203138; --muted:#66777b; --selected:#3f7479; }
+body.theme-soft-refined .cell-shape { fill:#82a0a5 !important; stroke:rgba(244,247,244,.74); }
+body.theme-soft-refined .cell-label { fill:#f8fbfa; stroke:rgba(34,53,58,.35); stroke-width:.65px; }
+body.theme-soft-refined .score-label { fill:#eef5f3; }
+body.theme-soft-refined .cell.is-selected .cell-shape { fill:#527f82 !important; stroke:#fff; }
+
 @media (max-width: 720px) {
   .toolbar {
     min-height: 122px;
