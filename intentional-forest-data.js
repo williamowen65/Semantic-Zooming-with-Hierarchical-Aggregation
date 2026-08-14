@@ -15,7 +15,7 @@
     },
     {
       id: "root-homelessness",
-      name: "How can we effectively solve the homelessness crisis?",
+      name: "Solving the Homelessness Crisis",
       votes: 0,
       rating: 0,
       kind: "issue",
