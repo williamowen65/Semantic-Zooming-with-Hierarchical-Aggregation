@@ -4,6 +4,7 @@
   if(typeof render!=='function'||typeof stage==='undefined')return;
   document.body.classList.add('card-stack-mode');
   const visible=new Map();let rootOpen=true,previous=[];
+  const CARD_GAP=12,TOGGLE_GAP=4,TOGGLE_HEIGHT=24;
   const style=document.createElement('style');
   style.textContent=`
     body.card-stack-mode.has-card-stack .context-cluster,
@@ -22,15 +23,17 @@
   const same=p=>p.length===previous.length&&p.every((id,i)=>id===previous[i]);
   const setY=(n,y,a)=>{if(!n)return;const t=tr(n),v=`translate(${t.x},${y})`,s=d3.select(n).interrupt();a&&!matchMedia('(prefers-reduced-motion: reduce)').matches?s.transition().duration(220).ease(d3.easeCubicOut).attr('transform',v):n.setAttribute('transform',v);};
   const setCardY=(n,y,a)=>{if(!n)return;const s=d3.select(n).interrupt();a&&!matchMedia('(prefers-reduced-motion: reduce)').matches?s.transition().duration(200).ease(d3.easeCubicOut).attr('y',y):s.attr('y',y);};
-  const actualCardHeight=fo=>{const card=fo?.querySelector('.layer-context-card');const styled=parseFloat(card?.style?.height||'');if(Number.isFinite(styled)&&styled>0)return styled;return +fo?.getAttribute('height')||66;};
+  const actualCardHeight=fo=>{const card=fo?.querySelector('.layer-context-card');const measured=Math.ceil(card?.scrollHeight||card?.getBoundingClientRect?.().height||0);if(measured>0)return measured;return +fo?.getAttribute('height')||66;};
   function sync(){const p=Array.isArray(focusPath)?focusPath:[];if(same(p))return;rootOpen=p.length===0;visible.clear();p.forEach((id,i)=>visible.set(id,i===p.length-1));previous=[...p];}
   function rootLayer(){return (focusPath?.length?stage.select('.context-cluster.depth-0'):stage.select('.root-overview')).node();}
   function layerFor(i,last){return (i===last?stage.select('.child-cluster'):stage.select(`.context-cluster.depth-${i+1}`)).node();}
   function box(){const w=width<720?Math.max(120,width-20):Math.min(width-32,width*.76);return{x:width<720?10:Math.max(16,width*.12),w};}
   function rootCard(y){
-    stage.selectAll('.root-context-entry').remove();const b=box(),ch=width<720?100:82;
+    stage.selectAll('.root-context-entry').remove();const b=box(),minH=width<720?100:66;
     const html=`<div xmlns="http://www.w3.org/1999/xhtml" class="layer-context-card is-issue ${rootOpen?'children-visible':''}" role="button" tabindex="0" aria-pressed="${rootOpen}"><div class="layer-context-copy"><div class="layer-context-primary"><span class="layer-context-kind">Issue collection</span><span class="layer-context-name">Root challenges</span></div><div class="layer-context-description">The value of an idea doesn’t correspond to its scale. A tiny, reproducible practice that thousands of people can copy might ultimately matter more than an enormous proposal nobody knows how to implement.</div></div><div class="layer-context-stats"><span class="layer-context-stat"><strong>${(forestData||[]).length}</strong> roots</span></div></div>`;
-    const fo=stage.append('g').attr('class','root-context-entry').append('foreignObject').attr('x',b.x).attr('y',y).attr('width',b.w).attr('height',ch).html(html).node(),card=fo?.querySelector('.layer-context-card');
+    const fo=stage.append('g').attr('class','root-context-entry').append('foreignObject').attr('x',b.x).attr('y',y).attr('width',b.w).attr('height',minH).html(html).node(),card=fo?.querySelector('.layer-context-card');
+    let ch=minH;
+    if(card){card.style.height='auto';card.style.minHeight=`${minH}px`;ch=Math.max(minH,Math.ceil(card.scrollHeight||card.getBoundingClientRect().height||minH));fo.setAttribute('height',ch);}
     const toggle=()=>{rootOpen=!rootOpen;layout(true);};if(card){card.setAttribute('aria-label',`${rootOpen?'Hide':'Show'} root challenges`);card.onclick=e=>{e.preventDefault();e.stopPropagation();toggle();};card.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle();}};}return ch;
   }
   function wire(entry,id,isCurrent){
@@ -42,19 +45,20 @@
   function layout(animate=false){
     sync();const path=Array.isArray(focusPath)?focusPath:[],entries=stage.selectAll('.layer-context-entry').nodes();document.body.classList.add('has-card-stack');
     stage.selectAll('.context-cluster').classed('card-stack-layer-visible',false);stage.select('.child-cluster').classed('card-stack-layer-hidden',false);stage.selectAll('.card-stack-controls-host-v2').remove();let y=width<720?132:98;
-    y+=rootCard(y)+12;const root=rootLayer();if(rootOpen&&root){path.length?root.classList.add('card-stack-layer-visible'):root.classList.remove('card-stack-layer-hidden');setY(root,y,animate);y+=h(root)+12;}else if(!path.length&&root)root.classList.add('card-stack-layer-hidden');
+    y+=rootCard(y)+CARD_GAP;const root=rootLayer();if(rootOpen&&root){path.length?root.classList.add('card-stack-layer-visible'):root.classList.remove('card-stack-layer-hidden');setY(root,y,animate);y+=h(root)+CARD_GAP;}else if(!path.length&&root)root.classList.add('card-stack-layer-hidden');
     entries.forEach((entry,i)=>{
       const id=path[i],current=i===entries.length-1,fo=wire(entry,id,current);if(!id||!fo)return;
       entry.removeAttribute('transform');fo.removeAttribute('transform');setCardY(fo,y,animate);
       const ch=actualCardHeight(fo),node=nodeById.get(id),hasChildren=(node?.children||[]).length>0;
+      fo.setAttribute('height',ch);
       const open=(current&&hasChildren)||(visible.get(id)===true&&hasChildren),layer=layerFor(i,entries.length-1),toggle=entry.querySelector('foreignObject.layer-kind-toggle-host');
       const showToggle=!!toggle && (open || (current && !hasChildren));
-      const th=showToggle?(+toggle.getAttribute('height')||24):0;
-      if(toggle){toggle.removeAttribute('transform');toggle.style.display=showToggle?'':'none';if(showToggle)d3.select(toggle).attr('y',y+ch+4);}
-      if(open&&layer){i<entries.length-1?layer.classList.add('card-stack-layer-visible'):layer.classList.remove('card-stack-layer-hidden');const top=y+ch+4+th/2;setY(layer,top,animate);y=top+h(layer)+12;}
-      else{if(i===entries.length-1&&layer)layer.classList.add('card-stack-layer-hidden');y+=ch+(showToggle?th+8:10);}
+      const th=showToggle?(+toggle.getAttribute('height')||TOGGLE_HEIGHT):0;
+      if(toggle){toggle.removeAttribute('transform');toggle.style.display=showToggle?'':'none';if(showToggle)d3.select(toggle).attr('y',y+ch+TOGGLE_GAP);}
+      if(open&&layer){i<entries.length-1?layer.classList.add('card-stack-layer-visible'):layer.classList.remove('card-stack-layer-hidden');const top=y+ch+(showToggle?TOGGLE_GAP+th:CARD_GAP);setY(layer,top,animate);y=top+h(layer)+CARD_GAP;}
+      else{if(i===entries.length-1&&layer)layer.classList.add('card-stack-layer-hidden');y+=ch+(showToggle?TOGGLE_GAP+th+CARD_GAP:CARD_GAP);}
     });
-    stage.selectAll('text.canvas-caption').filter(function(){return(d3.select(this).text()||'').includes('· children');}).remove();if(Array.isArray(levelCenters)){levelCenters.length=0;const r=stage.select('.root-context-entry foreignObject').node();if(r)levelCenters.push((+r.getAttribute('y')||0)+(+r.getAttribute('height')||66)/2);entries.forEach(e=>{const c=e.querySelector('foreignObject:not(.layer-kind-toggle-host)');if(c)levelCenters.push((+c.getAttribute('y')||0)+actualCardHeight(c)/2);});}worldHeight=Math.max(height,y+96);if(typeof applyCamera==='function')applyCamera(false);
+    stage.selectAll('text.canvas-caption').filter(function(){return(d3.select(this).text()||'').includes('· children');}).remove();if(Array.isArray(levelCenters)){levelCenters.length=0;const r=stage.select('.root-context-entry foreignObject').node();if(r)levelCenters.push((+r.getAttribute('y')||0)+actualCardHeight(r)/2);entries.forEach(e=>{const c=e.querySelector('foreignObject:not(.layer-kind-toggle-host)');if(c)levelCenters.push((+c.getAttribute('y')||0)+actualCardHeight(c)/2);});}worldHeight=Math.max(height,y+96);if(typeof applyCamera==='function')applyCamera(false);
   }
   window.atlasChildrenVisibleFor=id=>visible.get(id)===true;const baseRender=render;render=function(...args){const r=baseRender(...args);layout(false);return r;};requestAnimationFrame(()=>layout(false));
 })();
