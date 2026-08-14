@@ -79,7 +79,12 @@
     });
   }
 
-  function sync(){upgradeConnectionToggles();decorateRelationshipNodeLabels();renderRelationshipCards();}
+  function sync(){
+    upgradeConnectionToggles();
+    decorateRelationshipNodeLabels();
+    renderRelationshipCards();
+    if(typeof window.atlasLayoutCardStack==='function')window.atlasLayoutCardStack(false);
+  }
   const baseRender=render;render=function(...args){const result=baseRender(...args);sync();return result;};
   const style=document.createElement('style');style.textContent=`
     .relationship-toggle-scroll{width:100%;height:24px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-ms-overflow-style:none;overscroll-behavior-x:contain;touch-action:pan-x;border-radius:999px}
