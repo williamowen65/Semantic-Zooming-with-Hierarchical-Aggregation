@@ -38,6 +38,7 @@ jobs:
             theme-toolbar-fix.css
             layer-context.css
             leaf-end-state.css
+            node-text-cleanup.css
             app.js
             node-labels-no-icons.js
             personal-scope-data.js
@@ -74,6 +75,12 @@ jobs:
             sed -E -i "s#layer-kind-toggle\.js\?v=[^\"]+#layer-kind-toggle.js?v=${GITHUB_SHA}#g" "$page"
             sed -E -i "s#leaf-end-state\.css\?v=[^\"]+#leaf-end-state.css?v=${GITHUB_SHA}#g" "$page"
             sed -E -i "s#leaf-end-state\.js\?v=[^\"]+#leaf-end-state.js?v=${GITHUB_SHA}#g" "$page"
+
+            if ! grep -q 'node-text-cleanup.css' "$page"; then
+              sed -i "s#</head>#  <link rel=\"stylesheet\" href=\"node-text-cleanup.css?v=${GITHUB_SHA}\" />\n</head>#" "$page"
+            else
+              sed -E -i "s#node-text-cleanup\.css\?v=[^\"]+#node-text-cleanup.css?v=${GITHUB_SHA}#g" "$page"
+            fi
 
             if ! grep -q 'card-stack-layer-kind-bridge.js' "$page"; then
               sed -i "s#</body>#  <script src=\"card-stack-layer-kind-bridge.js?v=${GITHUB_SHA}\"></script>\n</body>#" "$page"
