@@ -81,17 +81,10 @@
     const card = entry?.querySelector('.layer-context-card');
     if (!card) return;
 
-    const currentScroll = window.scrollY || document.documentElement.scrollTop || 0;
     const rect = card.getBoundingClientRect();
-    const desiredScroll = currentScroll + rect.bottom - viewportHeight();
-    const maxScroll = Math.max(0, document.documentElement.scrollHeight - viewportHeight());
-    const targetScroll = Math.max(0, Math.min(maxScroll, desiredScroll));
-
-    // Set the result directly: the related card's bottom sits at the bottom of
-    // the viewport whenever document bounds allow it. If there is not enough
-    // content above or below to reach that exact alignment, use the nearest
-    // legal document position instead.
-    window.scrollTo({ top: targetScroll, left: 0, behavior: 'auto' });
+    const delta = viewportHeight() - rect.bottom;
+    cameraY = clampCamera(cameraY + delta);
+    applyCamera(false);
   }
 
   function selectRelationshipInNewContext(id, message) {
