@@ -12,7 +12,7 @@
     body.card-stack-mode.has-card-stack circle.link-dot{display:none!important}
     body.card-stack-mode.has-card-stack .context-cluster.card-stack-layer-visible{display:inline!important}
     body.card-stack-mode.has-card-stack .child-cluster.card-stack-layer-hidden{display:none!important}
-    body.card-stack-mode .layer-context-entry foreignObject:not(.layer-kind-toggle-host),body.card-stack-mode .root-context-entry foreignObject{pointer-events:auto}
+    body.card-stack-mode .layer-context-entry foreignObject:not(.layer-kind-toggle-host),body.card-stack-mode .root-context-entry foreignObject{pointer-events:auto;overflow:visible}
     body.card-stack-mode .layer-context-card{pointer-events:auto;cursor:pointer;transition:box-shadow .18s ease,background-color .18s ease}
     body.card-stack-mode .layer-context-card.children-visible{box-shadow:0 5px 14px rgba(20,30,40,.08)}
     body.card-stack-mode .layer-context-card.children-locked{cursor:default}
@@ -27,7 +27,7 @@
   function layerFor(i,last){return (i===last?stage.select('.child-cluster'):stage.select(`.context-cluster.depth-${i+1}`)).node();}
   function box(){const w=width<720?Math.max(120,width-20):Math.min(width-32,width*.76);return{x:width<720?10:Math.max(16,width*.12),w};}
   function rootCard(y){
-    stage.selectAll('.root-context-entry').remove();const b=box(),ch=66,votes=(forestData||[]).reduce((s,n)=>s+(+n.votes||0),0),voteText=votes>=1000?`${(votes/1000).toFixed(1)}k`:String(votes);
+    stage.selectAll('.root-context-entry').remove();const b=box(),ch=width<720?94:78,votes=(forestData||[]).reduce((s,n)=>s+(+n.votes||0),0),voteText=votes>=1000?`${(votes/1000).toFixed(1)}k`:String(votes);
     const html=`<div xmlns="http://www.w3.org/1999/xhtml" class="layer-context-card is-issue ${rootOpen?'children-visible':''}" role="button" tabindex="0" aria-pressed="${rootOpen}"><div class="layer-context-copy"><div class="layer-context-primary"><span class="layer-context-kind">Issue collection</span><span class="layer-context-name">Root challenges</span></div><div class="layer-context-description">The value of an idea doesn’t correspond to its scale. A tiny, reproducible practice that thousands of people can copy might ultimately matter more than an enormous proposal nobody knows how to implement.</div></div><div class="layer-context-stats"><span class="layer-context-stat"><strong>${voteText}</strong> votes</span><span class="layer-context-stat"><strong>${(forestData||[]).length}</strong> roots</span></div></div>`;
     const fo=stage.append('g').attr('class','root-context-entry').append('foreignObject').attr('x',b.x).attr('y',y).attr('width',b.w).attr('height',ch).html(html).node(),card=fo?.querySelector('.layer-context-card');
     const toggle=()=>{rootOpen=!rootOpen;layout(true);};if(card){card.setAttribute('aria-label',`${rootOpen?'Hide':'Show'} root challenges`);card.onclick=e=>{e.preventDefault();e.stopPropagation();toggle();};card.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle();}};}return ch;
