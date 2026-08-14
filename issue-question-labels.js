@@ -1,114 +1,192 @@
-// Present structural issues as short, inviting questions without changing their
-// underlying type. Semantic challenges remain challenges and keep their wording.
+// Give the demo forest a realistic mix of public-post phrasing without changing
+// hierarchy or semantic types. Issues may be topics, questions, or positions;
+// solutions may be proposals or questions; challenges and implementations get
+// similar variation. The choice is deterministic by node id so demos stay stable.
 (() => {
   if (!Array.isArray(forestData)) return;
 
-  const rootQuestions = {
-    'root-health': 'How can we improve health and wellbeing?',
-    'root-economy': 'How can we improve economic security and opportunity?',
-    'root-housing': 'How can we make housing work better for everyone?',
-    'root-education': 'How can we improve education and access to knowledge?',
-    'root-environment': 'How can we protect the environment and natural world?',
-    'root-government': 'How can government serve people better?',
-    'root-safety': 'How can we make people and communities safer?',
-    'root-food': 'How can we build a better food system?',
-    'root-family': 'How can we strengthen families and communities?',
-    'root-technology': 'How can technology work better for people?',
-    'root-infrastructure': 'How can we improve essential infrastructure?',
-    'root-law': 'How can we make laws and justice more fair and effective?',
-    'root-energy': 'How can we improve how energy and resources are managed?',
-    'root-culture': 'How can we strengthen culture and shared public life?',
-    'root-products': 'How can goods and services work better for people?',
-    'root-migration': 'How can migration and settlement work better for people?'
-  };
+  const originalNames = new Map();
+  const walk = (node, fn) => { fn(node); (node.children || []).forEach(child => walk(child, fn)); };
+  forestData.forEach(root => walk(root, node => originalNames.set(node.id, node.name)));
 
-  const overrides = {
-    'housing-homelessness': 'How can we reduce unsheltered homelessness?',
-    'housing-affordability': 'How can we make housing more affordable?',
-    'housing-supply': 'How can we increase the supply of housing?',
-    'health-mental-access': 'How can we improve access to mental health care?',
-    'health-primary-care': 'How can we improve access to primary care?',
-    'education-literacy': 'How can we close early literacy gaps?',
-    'environment-biodiversity': 'How can we slow biodiversity loss?',
-    'environment-orca': 'How can we reverse the decline of Southern Resident orcas?',
-    'economy-wage-pressure': 'How can wages keep up with the cost of living?',
-    'root-housing': 'How can we make housing work better for everyone?'
+  const explicit = {
+    'root-health': 'What would a healthier society look like?',
+    'root-economy': 'Economic security and opportunity',
+    'root-housing': 'Housing should work better for everyone',
+    'root-education': 'How should education change for the next generation?',
+    'root-environment': 'Protecting the natural world',
+    'root-government': 'Government should work better for people',
+    'root-safety': 'What would make our communities safer?',
+    'root-food': 'Building a food system that works for everyone',
+    'root-family': 'Families and communities need stronger support',
+    'root-technology': 'How should technology serve people?',
+    'root-infrastructure': 'The infrastructure we depend on',
+    'root-law': 'Can our justice system be fairer and more effective?',
+    'root-energy': 'Rethinking energy and resource use',
+    'root-culture': 'Culture, recreation, and shared public life',
+    'root-products': 'Goods and services should work better for people',
+    'root-migration': 'How can migration systems work better for people?',
+
+    'housing-homelessness': 'No one should have to live without shelter',
+    'housing-affordability': 'Why is housing so hard to afford?',
+    'housing-supply': 'We need more homes where people want to live',
+    'health-mental-access': 'Mental health care should be easier to reach',
+    'health-primary-care': 'Why is finding a primary care provider so difficult?',
+    'education-teacher-shortages': 'Teacher shortages are hurting schools',
+    'education-literacy': 'How do we close early literacy gaps?',
+    'environment-biodiversity': 'Biodiversity loss needs much more attention',
+    'environment-orca': 'Can Southern Resident orcas recover?',
+    'economy-wage-pressure': 'Paychecks are not keeping up with living costs',
+    'economy-job-instability': 'Workers deserve more predictable schedules',
+    'housing-rent-burden': 'Rent is taking too much of people’s income'
   };
 
   const lowerFirst = value => value ? value.charAt(0).toLowerCase() + value.slice(1) : value;
-  const stripQuestion = value => String(value || '').replace(/[?.!]+$/g, '').trim();
+  const clean = value => String(value || '').replace(/[?.!]+$/g, '').trim();
+  const hash = value => {
+    let h = 2166136261;
+    for (const ch of String(value || '')) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+    return h;
+  };
+  const choice = (node, count) => hash(node.id) % count;
 
-  function questionFor(node) {
-    if (rootQuestions[node.id]) return rootQuestions[node.id];
-    if (overrides[node.id]) return overrides[node.id];
+  function issueSubject(name) {
+    const text = clean(name);
+    let m;
+    if ((m = text.match(/^(.+?)\s+access$/i))) return { type: 'access', subject: lowerFirst(m[1]) };
+    if ((m = text.match(/^(.+?)\s+availability$/i))) return { type: 'availability', subject: lowerFirst(m[1]) };
+    if ((m = text.match(/^(.+?)\s+shortages?$/i))) return { type: 'shortage', subject: lowerFirst(m[1]) };
+    if ((m = text.match(/^shortage of\s+(.+)$/i))) return { type: 'shortage', subject: lowerFirst(m[1]) };
+    if ((m = text.match(/^(.+?)\s+gaps?$/i))) return { type: 'gap', subject: lowerFirst(m[1]) };
+    if ((m = text.match(/^(.+?)\s+barriers?$/i))) return { type: 'barrier', subject: lowerFirst(m[1]) };
+    if ((m = text.match(/^(.+?)\s+backlogs?$/i))) return { type: 'backlog', subject: lowerFirst(m[1]) };
+    if ((m = text.match(/^(.+?)\s+delays?$/i))) return { type: 'delay', subject: lowerFirst(m[1]) };
+    if ((m = text.match(/^(.+?)\s+burden$/i))) return { type: 'burden', subject: lowerFirst(m[1]) };
+    if ((m = text.match(/^(.+?)\s+decline$/i))) return { type: 'decline', subject: lowerFirst(m[1]) };
+    if ((m = text.match(/^(.+?)\s+loss$/i))) return { type: 'loss', subject: lowerFirst(m[1]) };
+    return { type: 'topic', subject: lowerFirst(text) };
+  }
 
-    const original = stripQuestion(node.name);
-    if (!original) return node.name;
-    if (/^(how|what|why|where|when|who|which|should|could|can|is|are|do|does)\b/i.test(original)) return `${original}?`;
+  function issueQuestion(info) {
+    const s = info.subject;
+    if (info.type === 'access') return `Why is ${s} still so hard to access?`;
+    if (info.type === 'availability') return `What would make ${s} more available?`;
+    if (info.type === 'shortage') return `What would it take to fix the shortage of ${s}?`;
+    if (info.type === 'gap') return `Where are the biggest gaps in ${s}?`;
+    if (info.type === 'barrier') return `What barriers are getting in the way of ${s}?`;
+    if (info.type === 'backlog') return `Why are backlogs in ${s} so persistent?`;
+    if (info.type === 'delay') return `What would meaningfully reduce delays in ${s}?`;
+    if (info.type === 'burden') return `How much of a burden is ${s}, and what should change?`;
+    if (info.type === 'decline') return `Can we reverse the decline of ${s}?`;
+    if (info.type === 'loss') return `What would actually slow the loss of ${s}?`;
+    return `What should we do about ${s}?`;
+  }
 
-    let match;
-    if ((match = original.match(/^(.+?)\s+access$/i)))
-      return `How can we improve access to ${lowerFirst(match[1])}?`;
-    if ((match = original.match(/^(.+?)\s+availability$/i)))
-      return `How can we improve the availability of ${lowerFirst(match[1])}?`;
-    if ((match = original.match(/^(.+?)\s+shortages?$/i)))
-      return `How can we reduce shortages of ${lowerFirst(match[1])}?`;
-    if ((match = original.match(/^shortage of\s+(.+)$/i)))
-      return `How can we reduce the shortage of ${lowerFirst(match[1])}?`;
-    if ((match = original.match(/^few\s+(.+)$/i)))
-      return `How can we increase the number of ${lowerFirst(match[1])}?`;
-    if ((match = original.match(/^limited\s+(.+)$/i)))
-      return `How can we expand ${lowerFirst(match[1])}?`;
-    if ((match = original.match(/^insufficient\s+(.+)$/i)))
-      return `How can we provide more ${lowerFirst(match[1])}?`;
-    if ((match = original.match(/^high\s+(.+)$/i)))
-      return `How can we reduce ${lowerFirst(match[1])}?`;
-    if ((match = original.match(/^large\s+(.+)$/i)))
-      return `How can we reduce ${lowerFirst(match[1])}?`;
-    if ((match = original.match(/^long\s+(.+)$/i)))
-      return `How can we reduce ${lowerFirst(match[1])}?`;
-    if ((match = original.match(/^(.+?)\s+gaps?$/i)))
-      return `How can we close gaps in ${lowerFirst(match[1])}?`;
-    if ((match = original.match(/^(.+?)\s+barriers?$/i)))
-      return `How can we remove barriers to ${lowerFirst(match[1])}?`;
-    if ((match = original.match(/^(.+?)\s+backlogs?$/i)))
-      return `How can we reduce backlogs in ${lowerFirst(match[1])}?`;
-    if ((match = original.match(/^(.+?)\s+delays?$/i)))
-      return `How can we reduce delays in ${lowerFirst(match[1])}?`;
-    if ((match = original.match(/^(.+?)\s+burden$/i)))
-      return `How can we reduce the burden of ${lowerFirst(match[1])}?`;
-    if ((match = original.match(/^(.+?)\s+cost pressure$/i)))
-      return `How can we reduce cost pressure on ${lowerFirst(match[1])}?`;
-    if ((match = original.match(/^(.+?)\s+decline$/i)))
-      return `How can we reverse the decline of ${lowerFirst(match[1])}?`;
-    if ((match = original.match(/^(.+?)\s+loss$/i)))
-      return `How can we reduce the loss of ${lowerFirst(match[1])}?`;
-    if ((match = original.match(/^(.+?)\s+fragmentation$/i)))
-      return `How can we reduce fragmentation of ${lowerFirst(match[1])}?`;
-    if (/^unsafe\s+or\s+poorly\s+maintained\s+rentals$/i.test(original))
-      return 'How can we improve rental safety and maintenance?';
-    if (/^teacher burnout$/i.test(original))
-      return 'How can we reduce teacher burnout?';
-    if (/^unpredictable work schedules$/i.test(original))
-      return 'How can we make work schedules more predictable?';
-    if (/^wages lagging living costs$/i.test(original))
-      return 'How can wages keep up with living costs?';
-    if (/^rent rising faster than pay$/i.test(original))
-      return 'How can we keep rent from outpacing pay?';
-    if (/^food costs outpacing raises$/i.test(original))
-      return 'How can we keep food costs from outpacing wages?';
+  function issuePosition(info) {
+    const s = info.subject;
+    if (info.type === 'access') return `People need better access to ${s}`;
+    if (info.type === 'availability') return `${clean(s)} needs to be more available`;
+    if (info.type === 'shortage') return `The shortage of ${s} needs attention`;
+    if (info.type === 'gap') return `The gaps in ${s} are too large`;
+    if (info.type === 'barrier') return `We should remove barriers to ${s}`;
+    if (info.type === 'backlog') return `Backlogs in ${s} are leaving people waiting too long`;
+    if (info.type === 'delay') return `Delays in ${s} have become a real problem`;
+    if (info.type === 'burden') return `${clean(s)} is putting too much pressure on people`;
+    if (info.type === 'decline') return `The decline of ${s} should not be accepted as inevitable`;
+    if (info.type === 'loss') return `We are losing too much ${s}`;
+    return `${clean(info.subject)} deserves more attention`;
+  }
 
-    return `How can we address ${lowerFirst(original)}?`;
+  function phraseIssue(node, original) {
+    if (explicit[node.id]) return explicit[node.id];
+    if (/\?$/.test(original)) return original;
+    const mode = choice(node, 5);
+    if (mode === 0) return original; // plain topic labels remain part of the mix
+    const info = issueSubject(original);
+    if (mode === 1 || mode === 4) return issueQuestion(info);
+    if (mode === 2) return issuePosition(info);
+    return `What would better progress on ${info.subject} look like?`;
+  }
+
+  function phraseSolution(node, original) {
+    const text = clean(original);
+    const mode = choice(node, 5);
+    if (mode === 0) return original;
+    if (mode === 1) return `Let’s try ${lowerFirst(text)}`;
+    if (mode === 2) return `Could ${lowerFirst(text)} make a real difference?`;
+    if (mode === 3) return `${text} is worth expanding`;
+    return `What would it take to make ${lowerFirst(text)} work at scale?`;
+  }
+
+  function phraseChallenge(node, original) {
+    const text = clean(original);
+    const mode = choice(node, 5);
+    if (mode === 0) return original;
+    if (/funding and delivery capacity/i.test(text)) {
+      return [
+        original,
+        'Can we fund and staff this sustainably?',
+        'Capacity may be the real bottleneck',
+        'Who actually has the capacity to deliver this?',
+        'Funding the idea is only part of the challenge'
+      ][mode];
+    }
+    if (/adoption and coordination barriers/i.test(text)) {
+      return [
+        original,
+        'Will people and institutions actually adopt it?',
+        'Coordination could be harder than the idea itself',
+        'Who needs to cooperate for this to work?',
+        'Adoption may be the biggest obstacle'
+      ][mode];
+    }
+    if (mode === 1) return `What could prevent ${lowerFirst(text)}?`;
+    if (mode === 2) return `${text} could become a serious obstacle`;
+    if (mode === 3) return `How do we get past ${lowerFirst(text)}?`;
+    return `This may fail if we cannot address ${lowerFirst(text)}`;
+  }
+
+  function phraseImplementation(node, original) {
+    const text = clean(original);
+    const mode = choice(node, 5);
+    if (/^pilot\s+/i.test(text)) {
+      const subject = text.replace(/^pilot\s+/i, '');
+      return [
+        original,
+        `Start with a small pilot of ${subject}`,
+        `Test ${subject} locally before scaling`,
+        `Would a limited pilot of ${subject} prove the idea?`,
+        `Try ${subject} in one area first`
+      ][mode];
+    }
+    if (/^scale\s+.+\s+with measured outcomes$/i.test(text)) {
+      const subject = text.replace(/^scale\s+/i, '').replace(/\s+with measured outcomes$/i, '');
+      return [
+        original,
+        `Expand ${subject} and track what changes`,
+        `Scale ${subject}, but measure the results`,
+        `What outcomes should we track as ${subject} expands?`,
+        `Grow ${subject} in stages and learn as we go`
+      ][mode];
+    }
+    if (mode === 0) return original;
+    if (mode === 1) return `Start by testing ${lowerFirst(text)}`;
+    if (mode === 2) return `${text}, with clear outcome tracking`;
+    if (mode === 3) return `Could we pilot ${lowerFirst(text)} first?`;
+    return `Roll out ${lowerFirst(text)} in stages`;
   }
 
   function rewrite(node) {
+    const original = originalNames.get(node.id) || node.name;
     const semanticKind = node.semanticKind || node.kind;
-    if (node.kind === 'issue' && semanticKind !== 'challenge') node.name = questionFor(node);
-    (node.children || []).forEach(rewrite);
+    if (semanticKind === 'issue') node.name = phraseIssue(node, original);
+    else if (semanticKind === 'solution') node.name = phraseSolution(node, original);
+    else if (semanticKind === 'challenge') node.name = phraseChallenge(node, original);
+    else if (semanticKind === 'implementation') node.name = phraseImplementation(node, original);
   }
 
-  forestData.forEach(rewrite);
+  forestData.forEach(root => walk(root, rewrite));
 
-  // Names are used by breadcrumbs and cards, so redraw after rewriting them.
+  // Names feed labels, cards, breadcrumbs, and generated context views.
   if (typeof render === 'function') render();
 })();
