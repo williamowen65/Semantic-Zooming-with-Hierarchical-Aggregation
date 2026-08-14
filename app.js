@@ -62,7 +62,15 @@ function renderCluster({items,x,y,w,h,selectedId=null,faded=false,interactive=tr
 function currentNode(){return focusPath.length?nodeById.get(focusPath[focusPath.length-1]):null;}
 function siblingSet(node){if(!node)return forestData;const parent=parentById.get(node.id);return parent?parent.children||[]:forestData;}
 function pathForNode(id){const path=[];let node=nodeById.get(id);while(node){path.unshift(node.id);node=parentById.get(node.id);}return path;}
-function cameraBounds(){const toolbarAllowance=width<720?118:78,bottomAllowance=54;return{min:Math.min(0,height-worldHeight-bottomAllowance),max:Math.max(0,toolbarAllowance-20)};}
+function cameraBounds(){
+  const contentTop=width<720?132:98,bottomAllowance=54;
+  // The breadcrumb row can grow or shift on mobile as longer paths are selected.
+  // Use its real viewport bottom instead of a fixed toolbar guess so dragging all
+  // the way back to the top always restores the same clear space seen on load.
+  const breadcrumbBottom=Math.ceil(breadcrumbHost?.getBoundingClientRect?.().bottom||0);
+  const topClearance=Math.max(contentTop,breadcrumbBottom+8);
+  return{min:Math.min(0,height-worldHeight-bottomAllowance),max:Math.max(0,topClearance-contentTop)};
+}
 function clampCamera(value){const{min,max}=cameraBounds();return Math.max(min,Math.min(max,value));}
 function applyCamera(animate=false){cameraY=clampCamera(cameraY);stage.interrupt();if(animate&&!window.matchMedia("(prefers-reduced-motion: reduce)").matches){stage.transition().duration(520).ease(d3.easeCubicOut).attr("transform",`translate(0,${cameraY})`);}else stage.attr("transform",`translate(0,${cameraY})`);}
 function scrollToDepth(index,animate=true){if(!levelCenters.length)return;const safeIndex=Math.max(0,Math.min(levelCenters.length-1,index)),viewportTarget=height*(width<720?.48:.5);cameraY=viewportTarget-levelCenters[safeIndex];applyCamera(animate);}
