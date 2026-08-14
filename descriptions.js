@@ -6,6 +6,7 @@
   if (!Array.isArray(forestData)) return;
 
   const rootDescriptions = {
+    'root-homelessness': 'Explore why people become or remain homeless, where current responses fall short, and what combinations of housing, services, prevention, treatment, public policy, community support, and other approaches could improve outcomes.',
     'root-health': 'Conditions and systems that shape physical and mental wellbeing.',
     'root-economy': 'How people earn, afford necessities, and participate in the economy.',
     'root-housing': 'Housing access, affordability, quality, and the places people live.',
