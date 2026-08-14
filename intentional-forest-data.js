@@ -16,6 +16,7 @@
     {
       id: "root-homelessness",
       name: "Solving the Homelessness Crisis",
+      description: "Explore why people become or remain homeless, where current responses fall short, and what combinations of housing, services, prevention, treatment, public policy, community support, and other approaches could improve outcomes.",
       votes: 0,
       rating: 0,
       kind: "issue",
