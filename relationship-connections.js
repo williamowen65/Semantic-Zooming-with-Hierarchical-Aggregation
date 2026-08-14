@@ -71,6 +71,17 @@
     return (parent?.children || []).find(child => child.kind === 'relationship' && (child.relationshipId === relationshipId || child.id === relationshipId || child.id?.startsWith(`${relationshipId}--`))) || null;
   }
 
+  function selectWithoutRescrolling(id, message) {
+    if (!nodeById.has(id)) return;
+    const preservedCameraY = cameraY;
+    focusPath = pathForNode(id);
+    render();
+    cameraY = preservedCameraY;
+    applyCamera(false);
+    if (typeof window.atlasSyncUrlState === 'function') window.atlasSyncUrlState();
+    if (message) statusHost.textContent = message;
+  }
+
   function switchRelationshipContext(node) {
     const destination = otherEndpointFor(node);
     if (!destination?.id) return;
@@ -79,11 +90,9 @@
     const relationshipId = node.relationshipId || node.id.split('--from-')[0];
     const relatedAppearance = relationshipAppearanceUnder(target, relationshipId);
     if (relatedAppearance) {
-      focusNode(relatedAppearance.id);
-      statusHost.textContent = `${node.name} selected in the ${target.name} branch.`;
+      selectWithoutRescrolling(relatedAppearance.id, `${node.name} selected in the ${target.name} branch.`);
     } else {
-      focusNode(target.id);
-      statusHost.textContent = `Switched context to ${target.name}.`;
+      selectWithoutRescrolling(target.id, `Switched context to ${target.name}.`);
     }
   }
 
