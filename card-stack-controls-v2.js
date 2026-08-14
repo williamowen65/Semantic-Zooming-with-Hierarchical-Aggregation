@@ -60,5 +60,7 @@
     });
     stage.selectAll('text.canvas-caption').filter(function(){return(d3.select(this).text()||'').includes('· children');}).remove();if(Array.isArray(levelCenters)){levelCenters.length=0;const r=stage.select('.root-context-entry foreignObject').node();if(r)levelCenters.push((+r.getAttribute('y')||0)+actualCardHeight(r)/2);entries.forEach(e=>{const c=e.querySelector('foreignObject:not(.layer-kind-toggle-host)');if(c)levelCenters.push((+c.getAttribute('y')||0)+actualCardHeight(c)/2);});}worldHeight=Math.max(height,y+96);if(typeof applyCamera==='function')applyCamera(false);
   }
-  window.atlasChildrenVisibleFor=id=>visible.get(id)===true;const baseRender=render;render=function(...args){const r=baseRender(...args);layout(false);return r;};requestAnimationFrame(()=>layout(false));
+  window.atlasChildrenVisibleFor=id=>visible.get(id)===true;
+  window.atlasLayoutCardStack=(animate=false)=>layout(animate);
+  const baseRender=render;render=function(...args){const r=baseRender(...args);layout(false);return r;};requestAnimationFrame(()=>layout(false));
 })();
