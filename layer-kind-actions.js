@@ -6,10 +6,10 @@
     const parent = nodeById.get(parentId);
     if (!parent) return;
     const counts = state.kindCounts(parent);
-    const desired = kind === 'solution' ? 'solution' : 'issue';
-    if ((desired === 'issue' && !counts.issues) || (desired === 'solution' && !counts.solutions)) return;
+    const modes = state.modesFor(parent);
+    if (!modes.includes(kind) || !state.countForMode(counts, kind)) return;
 
-    state.layerKindByParent.set(parentId, desired);
+    state.layerKindByParent.set(parentId, kind);
     if (window.stopHierarchyMomentum) window.stopHierarchyMomentum();
     if (typeof pathForNode === 'function') focusPath = pathForNode(parentId);
     render();
