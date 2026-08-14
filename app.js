@@ -6,7 +6,10 @@ let width=host.clientWidth,height=host.clientHeight,focusPath=[],cameraY=0,world
 const svg=d3.select(host).append("svg").attr("role","img").attr("aria-label","Weighted clustered hierarchy").attr("viewBox",[0,0,width,height]),stage=svg.append("g").attr("class","stage"),nodeById=new Map(),parentById=new Map(),rootById=new Map();
 function annotate(node,parent=null,root=node){nodeById.set(node.id,node);parentById.set(node.id,parent);rootById.set(node.id,root);(node.children||[]).forEach(child=>annotate(child,node,root));} forestData.forEach(root=>annotate(root));
 function directScore(node){const votes=Math.max(1,node.votes||1),rating=Math.max(.5,Math.min(5,node.rating||3));return votes*(.35+.65*rating/5);} 
-function aggregateScore(node){return directScore(node)+(node.children||[]).reduce((sum,child)=>sum+aggregateScore(child),0);} 
+// Node area reflects only that node's own votes and average rating. Descendant
+// count/depth must not make a parent visually larger than an otherwise equally
+// supported sibling.
+function aggregateScore(node){return directScore(node);} 
 function rootColor(node){return rootById.get(node.id)?.color||"#71879a";} 
 function lighten(hex,amount=.2){const c=d3.color(hex);return c?d3.interpolateRgb(c,d3.rgb(255,255,255))(amount):hex;} 
 function compact(value){if(value>=1000)return `${(value/1000).toFixed(value>=10000?0:1)}k`;return `${Math.round(value)}`;} 
