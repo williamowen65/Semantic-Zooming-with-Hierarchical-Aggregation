@@ -39,6 +39,7 @@ jobs:
             layer-context.css
             leaf-end-state.css
             node-text-cleanup.css
+            card-content-sizing.css
             app.js
             node-labels-no-icons.js
             personal-scope-data.js
@@ -72,6 +73,7 @@ jobs:
 
           for page in "_site/index.html" "_site/${GITHUB_SHA}/index.html"; do
             sed -E -i "s#hierarchy-overview\.js\?v=[^\"]+#hierarchy-overview.js?v=${GITHUB_SHA}#g" "$page"
+            sed -E -i "s#layer-context\.js\?v=[^\"]+#layer-context.js?v=${GITHUB_SHA}#g" "$page"
             sed -E -i "s#layer-kind-toggle\.js\?v=[^\"]+#layer-kind-toggle.js?v=${GITHUB_SHA}#g" "$page"
             sed -E -i "s#leaf-end-state\.css\?v=[^\"]+#leaf-end-state.css?v=${GITHUB_SHA}#g" "$page"
             sed -E -i "s#leaf-end-state\.js\?v=[^\"]+#leaf-end-state.js?v=${GITHUB_SHA}#g" "$page"
@@ -80,6 +82,12 @@ jobs:
               sed -i "s#</head>#  <link rel=\"stylesheet\" href=\"node-text-cleanup.css?v=${GITHUB_SHA}\" />\n</head>#" "$page"
             else
               sed -E -i "s#node-text-cleanup\.css\?v=[^\"]+#node-text-cleanup.css?v=${GITHUB_SHA}#g" "$page"
+            fi
+
+            if ! grep -q 'card-content-sizing.css' "$page"; then
+              sed -i "s#</head>#  <link rel=\"stylesheet\" href=\"card-content-sizing.css?v=${GITHUB_SHA}\" />\n</head>#" "$page"
+            else
+              sed -E -i "s#card-content-sizing\.css\?v=[^\"]+#card-content-sizing.css?v=${GITHUB_SHA}#g" "$page"
             fi
 
             if ! grep -q 'card-stack-layer-kind-bridge.js' "$page"; then
