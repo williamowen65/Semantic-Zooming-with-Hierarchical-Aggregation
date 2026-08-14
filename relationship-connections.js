@@ -8,6 +8,12 @@
   const esc = value => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
   const plural = (count, singular, pluralForm = `${singular}s`) => `${count} ${count === 1 ? singular : pluralForm}`;
 
+  function endpointTitle(node, side) {
+    const id = side === 'source' ? node?.sourceId : node?.targetId;
+    const fallback = side === 'source' ? node?.sourceLabel : node?.targetLabel;
+    return nodeById.get(id)?.name || fallback || 'Related topic';
+  }
+
   function optionsFor(node, counts) {
     const kind = state.semanticKind(node);
     if (kind === 'solution') {
@@ -80,6 +86,8 @@
       const w = Math.max(40, bounds.w - padX * 2);
       const h = Math.max(40, bounds.h - padY * 2);
       const meta = typeof metadataLines === 'function' ? metadataLines(item) : [];
+      const sourceTitle = endpointTitle(item, 'source');
+      const targetTitle = endpointTitle(item, 'target');
 
       cell.append('foreignObject')
         .attr('class','relationship-node-label-host')
@@ -87,7 +95,7 @@
         .attr('y',bounds.y + padY)
         .attr('width',w)
         .attr('height',h)
-        .html(`<div xmlns="http://www.w3.org/1999/xhtml" class="relationship-node-label"><div class="relationship-node-endpoint relationship-node-source">${esc(item.sourceLabel || '')}</div><div class="relationship-node-keyword">${esc(item.relationshipLabel || '')}</div><div class="relationship-node-endpoint relationship-node-target">${esc(item.targetLabel || '')}</div><div class="relationship-node-meta">${meta.map(line=>`<span>${esc(line)}</span>`).join('')}</div></div>`);
+        .html(`<div xmlns="http://www.w3.org/1999/xhtml" class="relationship-node-label"><div class="relationship-node-endpoint relationship-node-source">${esc(sourceTitle)}</div><div class="relationship-node-keyword">${esc(item.relationshipLabel || '')}</div><div class="relationship-node-endpoint relationship-node-target">${esc(targetTitle)}</div><div class="relationship-node-meta">${meta.map(line=>`<span>${esc(line)}</span>`).join('')}</div></div>`);
     });
   }
 
@@ -95,13 +103,13 @@
     if (!node) return null;
     const parent = parentById.get(node.id);
     const parentId = parent?.id;
-    if (parentId === node.sourceId) return { id: node.targetId, label: node.targetLabel || 'related topic' };
-    if (parentId === node.targetId) return { id: node.sourceId, label: node.sourceLabel || 'related topic' };
+    if (parentId === node.sourceId) return { id: node.targetId, label: endpointTitle(node, 'target') };
+    if (parentId === node.targetId) return { id: node.sourceId, label: endpointTitle(node, 'source') };
     const source = nodeById.get(node.sourceId);
     const target = nodeById.get(node.targetId);
-    if (source && !target) return { id: node.sourceId, label: node.sourceLabel || source.name };
-    if (target && !source) return { id: node.targetId, label: node.targetLabel || target.name };
-    return target ? { id: node.targetId, label: node.targetLabel || target.name } : (source ? { id: node.sourceId, label: node.sourceLabel || source.name } : null);
+    if (source && !target) return { id: node.sourceId, label: endpointTitle(node, 'source') };
+    if (target && !source) return { id: node.targetId, label: endpointTitle(node, 'target') };
+    return target ? { id: node.targetId, label: endpointTitle(node, 'target') } : (source ? { id: node.sourceId, label: endpointTitle(node, 'source') } : null);
   }
 
   function relationshipAppearanceUnder(parent, relationshipId) {
@@ -150,7 +158,7 @@
     const relatedAppearance = relationshipAppearanceUnder(target, relationshipId);
     const screenAnchorTop = sourceCard?.getBoundingClientRect().top;
     if (relatedAppearance) {
-      selectRelationshipInNewContext(relatedAppearance.id, `${node.name} selected in the ${target.name} branch.`, screenAnchorTop);
+      selectRelationshipInNewContext(relatedAppearance.id, `${endpointTitle(node, 'source')} ${node.relationshipLabel} ${endpointTitle(node, 'target')} selected in the ${target.name} branch.`, screenAnchorTop);
     } else {
       focusPath = pathForNode(target.id);
       render();
@@ -174,8 +182,10 @@
         card.classList.add('is-relationship');
       }
       if (nameEl) {
+        const sourceTitle = endpointTitle(node, 'source');
+        const targetTitle = endpointTitle(node, 'target');
         nameEl.classList.add('relationship-title');
-        nameEl.innerHTML = `<span class="relationship-endpoint">${esc(node.sourceLabel)}</span> <span class="relationship-vocabulary">${esc(node.relationshipLabel)}</span> <span class="relationship-endpoint">${esc(node.targetLabel)}</span>`;
+        nameEl.innerHTML = `<span class="relationship-endpoint">${esc(sourceTitle)}</span> <span class="relationship-vocabulary">${esc(node.relationshipLabel)}</span> <span class="relationship-endpoint">${esc(targetTitle)}</span>`;
       }
 
       const destination = otherEndpointFor(node);
