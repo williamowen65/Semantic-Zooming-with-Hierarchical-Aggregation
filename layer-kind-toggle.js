@@ -13,7 +13,7 @@
   function load(index) {
     if (index >= modules.length) return;
     const script = document.createElement('script');
-    script.src = `${modules[index]}?v=20260814-four-way-click-fix`;
+    script.src = `${modules[index]}?v=20260814-semantic-four-way-fix`;
     script.onload = () => load(index + 1);
     document.head.appendChild(script);
   }
