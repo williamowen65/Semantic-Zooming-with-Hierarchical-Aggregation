@@ -7,7 +7,8 @@
     if (!parent) return 'issue';
     const depth = focusPath.indexOf(parentId);
     const selected = depth >= 0 && focusPath[depth + 1] ? nodeById.get(focusPath[depth + 1]) : null;
-    return state.availableMode(parent, selected?.kind);
+    const selectedKind = selected ? state.semanticKind(selected) : null;
+    return state.availableMode(parent, selectedKind);
   };
 
   window.atlasGetLayerKindState = () => Object.fromEntries(state.layerKindByParent.entries());
