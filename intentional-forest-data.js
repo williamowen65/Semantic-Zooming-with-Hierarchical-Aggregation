@@ -1,5 +1,4 @@
-// Minimal Atlas root dataset for testing the top-level experience.
-// These inquiries intentionally have no sub-issues, solutions, or other child content yet.
+// Minimal intentional Atlas dataset for testing the top-level experience.
 (() => {
   if (typeof forestData === "undefined" || typeof annotate !== "function") return;
 
@@ -32,7 +31,18 @@
       rating: 0,
       kind: "issue",
       color: "#71879a",
-      children: []
+      children: [
+        {
+          id: "solution-ranked-choice-voting",
+          name: "Use Ranked-Choice Voting in More Elections",
+          description: "Allow voters to rank candidates in order of preference instead of choosing only one. If no candidate initially has enough support to win, lower-ranked candidates can be eliminated and those voters’ next choices counted until a winner is determined. The approach can reduce spoiler effects and give voters more freedom to support their preferred candidates without relying as heavily on strategic voting.",
+          votes: 0,
+          rating: 0,
+          kind: "solution",
+          color: "#71879a",
+          children: []
+        }
+      ]
     }
   ];
 
