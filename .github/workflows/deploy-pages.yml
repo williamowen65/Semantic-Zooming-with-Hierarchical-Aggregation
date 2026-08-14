@@ -45,6 +45,7 @@ jobs:
             personal-scope-data.js
             environment-expansion.js
             descriptions.js
+            issue-question-labels.js
             enhancements.js
             camera-spacing-fix.js
             semantic-icons.js
@@ -88,6 +89,12 @@ jobs:
               sed -i "s#</head>#  <link rel=\"stylesheet\" href=\"card-content-sizing.css?v=${GITHUB_SHA}\" />\n</head>#" "$page"
             else
               sed -E -i "s#card-content-sizing\.css\?v=[^\"]+#card-content-sizing.css?v=${GITHUB_SHA}#g" "$page"
+            fi
+
+            if ! grep -q 'issue-question-labels.js' "$page"; then
+              sed -i "s#<script src=\"enhancements.js#<script src=\"issue-question-labels.js?v=${GITHUB_SHA}\"></script>\n  <script src=\"enhancements.js#" "$page"
+            else
+              sed -E -i "s#issue-question-labels\.js\?v=[^\"]+#issue-question-labels.js?v=${GITHUB_SHA}#g" "$page"
             fi
 
             if ! grep -q 'card-stack-layer-kind-bridge.js' "$page"; then
