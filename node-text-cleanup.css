@@ -1,0 +1,6 @@
+/* Keep unselected node titles clean: no SVG halo/outline around the glyphs. */
+.cell:not(.is-selected) .cell-label {
+  stroke: none !important;
+  stroke-width: 0 !important;
+  paint-order: normal !important;
+}
