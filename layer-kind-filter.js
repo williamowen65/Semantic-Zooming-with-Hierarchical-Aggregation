@@ -26,6 +26,7 @@
     const parentKind = semanticKind(parent);
     const items = options.items.filter(item => {
       const kind = semanticKind(item);
+      if (mode === 'connection') return kind === 'relationship';
       if (parentKind === 'solution') return kind === mode;
       return (kind === 'solution' ? 'solution' : 'issue') === mode;
     });
