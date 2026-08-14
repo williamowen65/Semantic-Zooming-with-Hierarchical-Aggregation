@@ -26,19 +26,10 @@
     {
       id: "root-help-world",
       name: "What ideas could help make the world better?",
+      description: "An intentionally broad, open-ended inquiry where anyone can contribute an idea they believe could make the world better. Ideas can be large or small, practical or ambitious, local or global—the point is to create a place for possibilities that people think are worth exploring and building on together.",
       votes: 0,
       rating: 0,
       kind: "issue",
-      color: "#71879a",
-      children: []
-    },
-    {
-      id: "root-unimplemented-great-ideas",
-      name: "What are some great ideas that have never been implemented?",
-      votes: 0,
-      rating: 0,
-      kind: "issue",
-      semanticKind: "challenge",
       color: "#71879a",
       children: []
     }
