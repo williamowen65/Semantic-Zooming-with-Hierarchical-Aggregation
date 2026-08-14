@@ -7,6 +7,7 @@
   const state = window.__atlasLayerKinds;
   const esc = value => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
   const plural = (count, singular, pluralForm = `${singular}s`) => `${count} ${count === 1 ? singular : pluralForm}`;
+  const isRelationshipContent = node => !!(node && node.relationshipId && node.sourceId && node.targetId && node.relationshipLabel);
 
   function endpointTitle(node, side) {
     const id = side === 'source' ? node?.sourceId : node?.targetId;
@@ -43,7 +44,7 @@
 
   function decorateRelationshipNodeLabels(){
     d3.selectAll('#viz g.cell').each(function(d){
-      const item=d?.data?.item;if(!item||state.semanticKind(item)!=='relationship')return;
+      const item=d?.data?.item;if(!isRelationshipContent(item))return;
       const cell=d3.select(this);cell.select('text.cell-label').style('display','none');cell.selectAll('foreignObject.relationship-node-label-host').remove();
       const bounds=relationshipBounds(d.polygon);if(!bounds||bounds.w<70||bounds.h<70)return;
       const padX=Math.max(10,Math.min(28,bounds.w*.07)),padY=Math.max(10,Math.min(28,bounds.h*.07));
@@ -56,18 +57,20 @@
   }
 
   function otherEndpointFor(node){if(!node)return null;const parent=parentById.get(node.id),parentId=parent?.id;if(parentId===node.sourceId)return{id:node.targetId,label:endpointTitle(node,'target')};if(parentId===node.targetId)return{id:node.sourceId,label:endpointTitle(node,'source')};const source=nodeById.get(node.sourceId),target=nodeById.get(node.targetId);if(source&&!target)return{id:node.sourceId,label:endpointTitle(node,'source')};if(target&&!source)return{id:node.targetId,label:endpointTitle(node,'target')};return target?{id:node.targetId,label:endpointTitle(node,'target')}:(source?{id:node.sourceId,label:endpointTitle(node,'source')}:null);}
-  function relationshipAppearanceUnder(parent,relationshipId){return(parent?.children||[]).find(child=>child.kind==='relationship'&&(child.relationshipId===relationshipId||child.id===relationshipId||child.id?.startsWith(`${relationshipId}--`)))||null;}
+  function relationshipAppearanceUnder(parent,relationshipId){return(parent?.children||[]).find(child=>(child.relationshipId===relationshipId||child.id===relationshipId||child.id?.startsWith(`${relationshipId}--`)))||null;}
   function selectedRelationshipCard(){const entries=[...document.querySelectorAll('#viz .layer-context-entry')];const entry=entries[focusPath.length-1]||entries[entries.length-1];return entry?.querySelector('.layer-context-card.is-relationship')||entry?.querySelector('.layer-context-card')||null;}
   function selectRelationshipInNewContext(id,message,screenAnchorTop){if(!nodeById.has(id))return;if(window.stopHierarchyMomentum)window.stopHierarchyMomentum();const stageNode=stage?.node?.(),previousVisibility=stageNode?.style?.visibility||'';if(stageNode)stageNode.style.visibility='hidden';try{focusPath=pathForNode(id);render();const card=selectedRelationshipCard();if(card&&Number.isFinite(screenAnchorTop)){const newTop=card.getBoundingClientRect().top,delta=screenAnchorTop-newTop;cameraY=clampCamera(cameraY+delta);applyCamera(false);}}finally{if(stageNode)stageNode.style.visibility=previousVisibility;}if(typeof window.atlasSyncUrlState==='function')window.atlasSyncUrlState();if(message)statusHost.textContent=message;}
   function switchRelationshipContext(node,sourceCard){const destination=otherEndpointFor(node);if(!destination?.id)return;const target=nodeById.get(destination.id);if(!target)return;const relationshipId=node.relationshipId||node.id.split('--from-')[0],relatedAppearance=relationshipAppearanceUnder(target,relationshipId),screenAnchorTop=sourceCard?.getBoundingClientRect().top;if(relatedAppearance)selectRelationshipInNewContext(relatedAppearance.id,`${endpointTitle(node,'source')} ${node.relationshipLabel} ${endpointTitle(node,'target')} selected in the ${target.name} branch.`,screenAnchorTop);else{focusPath=pathForNode(target.id);render();if(typeof window.atlasSyncUrlState==='function')window.atlasSyncUrlState();statusHost.textContent=`Switched context to ${target.name}.`;}}
 
   function renderRelationshipCards(){
     [...document.querySelectorAll('#viz .layer-context-entry')].forEach((entry,index)=>{
-      const node=focusPath?.[index]?nodeById.get(focusPath[index]):null;if(!node||state.semanticKind(node)!=='relationship')return;
+      const node=focusPath?.[index]?nodeById.get(focusPath[index]):null;if(!isRelationshipContent(node))return;
       const card=entry.querySelector('.layer-context-card'),kindEl=entry.querySelector('.layer-context-kind'),nameEl=entry.querySelector('.layer-context-name');
-      if(kindEl)kindEl.textContent='Related Topic';if(card){card.classList.remove('is-issue','is-solution','is-challenge','is-implementation');card.classList.add('is-relationship');}
+      const semanticKind=state.semanticKind(node);
+      if(kindEl)kindEl.textContent=semanticKind==='implementation'?'Implementation':'Related Topic';
+      if(card){card.classList.remove('is-issue','is-solution','is-challenge');if(semanticKind!=='implementation')card.classList.remove('is-implementation');card.classList.add('is-relationship');}
       if(nameEl){const sourceTitle=endpointTitle(node,'source'),targetTitle=endpointTitle(node,'target');nameEl.classList.add('relationship-title');nameEl.innerHTML=`<span class="relationship-endpoint">${esc(sourceTitle)}</span> <span class="relationship-vocabulary">${esc(node.relationshipLabel)}</span> <span class="relationship-endpoint">${esc(targetTitle)}</span>`;}
-      const destination=otherEndpointFor(node);if(card&&destination?.id&&nodeById.has(destination.id)&&!card.querySelector('.relationship-context-switch')){const button=document.createElement('button');button.type='button';button.className='relationship-context-switch';button.innerHTML='<span>View related branch</span><span aria-hidden="true">↗</span>';button.setAttribute('aria-label',`Switch context to ${destination.label} and keep this related topic selected`);button.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();switchRelationshipContext(node,card);});card.appendChild(button);}
+      const destination=otherEndpointFor(node);if(card&&destination?.id&&nodeById.has(destination.id)&&!card.querySelector('.relationship-context-switch')){const button=document.createElement('button');button.type='button';button.className='relationship-context-switch';button.innerHTML='<span>View related branch</span><span aria-hidden="true">↗</span>';button.setAttribute('aria-label',`Switch context to ${destination.label} and keep this related item selected`);button.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();switchRelationshipContext(node,card);});card.appendChild(button);}
     });
   }
 
