@@ -66,7 +66,7 @@
   }
 
   const countsFor = item => {
-    const counts = { issue: 0, solution: 0, challenge: 0, implementation: 0 };
+    const counts = { issue: 0, solution: 0, challenge: 0, implementation: 0, yay: 0, nay: 0 };
     (item?.children || []).forEach(child => {
       const kind = semanticKind(child);
       if (Object.prototype.hasOwnProperty.call(counts, kind)) counts[kind] += 1;
@@ -80,7 +80,9 @@
       issues: counts.issue,
       solutions: counts.solution,
       challenges: counts.challenge,
-      implementations: counts.implementation
+      implementations: counts.implementation,
+      yays: counts.yay,
+      nays: counts.nay
     };
   };
 
@@ -91,7 +93,7 @@
     if (kind === 'solution') {
       return [score, `${counts.challenge} ${counts.challenge === 1 ? 'challenge' : 'challenges'} · ${counts.implementation} ${counts.implementation === 1 ? 'implementation' : 'implementations'}`];
     }
-    if (kind === 'challenge' || kind === 'implementation') return [score, ''];
+    if (kind === 'challenge' || kind === 'implementation' || kind === 'yay' || kind === 'nay') return [score, ''];
     return [score, `${counts.issue} ${counts.issue === 1 ? 'sub-issue' : 'sub-issues'} · ${counts.solution} ${counts.solution === 1 ? 'sub-solution' : 'sub-solutions'}`];
   };
 
@@ -101,7 +103,23 @@
   function typedCountLabel(kind, count) {
     if (kind === 'challenge') return `${count} ${count === 1 ? 'challenge' : 'challenges'}`;
     if (kind === 'implementation') return `${count} ${count === 1 ? 'implementation' : 'implementations'}`;
+    if (kind === 'yay') return `${count} ${count === 1 ? 'yay' : 'yays'}`;
+    if (kind === 'nay') return `${count} ${count === 1 ? 'nay' : 'nays'}`;
     return `${count}`;
+  }
+
+  function appendSolutionArgumentStat(statsHost, kind, count) {
+    if (!statsHost) return;
+    const existing = statsHost.querySelector(`.solution-${kind}-stat`);
+    const label = kind === 'yay' ? (count === 1 ? 'yay' : 'yays') : (count === 1 ? 'nay' : 'nays');
+    if (existing) {
+      existing.innerHTML = `<strong>${count}</strong> ${label}`;
+      return;
+    }
+    const span = document.createElement('span');
+    span.className = `layer-context-stat solution-${kind}-stat`;
+    span.innerHTML = `<strong>${count}</strong> ${label}`;
+    statsHost.appendChild(span);
   }
 
   function syncTypedContextLabels() {
@@ -112,27 +130,31 @@
       if (!node) return;
       const kind = semanticKind(node);
       const kindEl = entry.querySelector('.layer-context-kind');
-      if (kindEl) kindEl.textContent = ({ issue: 'Issue', solution: 'Solution', challenge: 'Challenge', implementation: 'Implementation' })[kind] || 'Topic';
+      if (kindEl) kindEl.textContent = ({ issue: 'Issue', solution: 'Solution', challenge: 'Challenge', implementation: 'Implementation', yay: 'Yay', nay: 'Nay' })[kind] || 'Topic';
 
       const card = entry.querySelector('.layer-context-card');
       if (card) {
-        card.classList.remove('is-issue', 'is-solution', 'is-challenge', 'is-implementation');
+        card.classList.remove('is-issue', 'is-solution', 'is-challenge', 'is-implementation', 'is-yay', 'is-nay');
         card.classList.add(`is-${kind}`);
       }
 
       if (kind === 'solution') {
         const counts = countsFor(node);
-        const stats = Array.from(entry.querySelectorAll('.layer-context-stat'));
+        const stats = Array.from(entry.querySelectorAll('.layer-context-stat:not(.solution-yay-stat):not(.solution-nay-stat)'));
         if (stats.length >= 4) {
           const first = stats[stats.length - 2], second = stats[stats.length - 1];
           first.textContent = typedCountLabel('challenge', counts.challenge);
           second.textContent = typedCountLabel('implementation', counts.implementation);
         }
+        const statsHost = entry.querySelector('.layer-context-stats');
+        appendSolutionArgumentStat(statsHost, 'yay', counts.yay);
+        appendSolutionArgumentStat(statsHost, 'nay', counts.nay);
+
         const buttons = Array.from(entry.querySelectorAll('.layer-kind-toggle button'));
         if (buttons[0]) buttons[0].textContent = typedCountLabel('challenge', counts.challenge);
         if (buttons[1]) buttons[1].textContent = typedCountLabel('implementation', counts.implementation);
         const group = entry.querySelector('.layer-kind-toggle');
-        if (group) group.setAttribute('aria-label', 'Show solution challenges or implementations');
+        if (group) group.setAttribute('aria-label', 'Show solution challenges, implementations, yays, or nays');
       }
     });
   }
