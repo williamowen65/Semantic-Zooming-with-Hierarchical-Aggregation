@@ -24,6 +24,106 @@ If yes, it may be a good root even if a broader conceptual parent could theoreti
 
 ---
 
+## Root inquiries, ownership, and scarce public real estate
+
+A root inquiry should not automatically receive permanent space in Atlas's primary visualization or discovery surface.
+
+A useful distinction is:
+
+> **Creating an inquiry gives someone a place to think. Featuring an inquiry gives it Atlas's attention.**
+
+These should be separate permissions and separate states.
+
+### Anyone can start an inquiry
+
+A user should eventually be able to create a new root inquiry without needing permission first. Creating it gives the inquiry its own persistent forest and identity.
+
+The creator can:
+
+- develop Issues and Solutions beneath it;
+- invite other people to participate;
+- share a direct link to the inquiry;
+- continue using it even if Atlas never features it;
+- save and revisit it from their profile.
+
+The user-facing action may be better described as **“Start an inquiry”** rather than **“Create a root.”** “Root” is useful implementation language, but users should not have to think in data-structure terminology.
+
+### User profiles as personal inquiry libraries
+
+A user's profile can become the durable home for inquiries that matter to that person without requiring those inquiries to occupy Atlas's global discovery space.
+
+A profile could eventually show:
+
+- inquiries the user created;
+- inquiries they have saved;
+- inquiries they are actively contributing to;
+- inquiries they follow;
+- perhaps inquiries they have submitted or nominated for broader discovery.
+
+This lowers the stakes of starting something new. Creating an inquiry no longer means proposing a permanent new category for the whole platform. It means: **“I want a place to explore this question.”**
+
+### Atlas controls the primary discovery real estate
+
+The main visualization has limited visual and cognitive real estate, especially on phones and smaller screens. Atlas therefore needs editorial or governance control over which root inquiries are shown there.
+
+Initially, this can simply be controlled by the owner of Atlas. Later it could involve moderators, a board, community governance, or some combination of those systems.
+
+A user-created inquiry does **not** need to appear in the main root display merely because it exists.
+
+Instead, an inquiry can be usable and shareable while remaining outside the featured set. If it develops into a particularly valuable conversation, it could be submitted, nominated, or selected for greater visibility.
+
+### Possible inquiry visibility lifecycle
+
+A working lifecycle might eventually look something like:
+
+1. **Draft / personal** — The creator is still forming the inquiry.
+2. **Unlisted / shared** — The inquiry works normally and can be reached through its URL, profile, or direct sharing, but Atlas is not broadly promoting it.
+3. **Public / discoverable** — It can appear in search, directories, recommendations, or related-inquiry surfaces.
+4. **Featured** — Atlas deliberately gives it scarce primary-screen real estate.
+5. **Previously featured** — It leaves the featured set but remains completely intact, accessible, searchable, shareable, and active.
+
+These names are provisional. The important idea is that **existence, public accessibility, and prominence are different properties.**
+
+An inquiry should not have to be deleted or “archived away” merely because Atlas wants to feature something else.
+
+### Root status does not have to mean permanence on the homepage
+
+A mature inquiry may continue to exist indefinitely. Its votes, branches, Solutions, Challenges, Implementations, contributors, and links should not disappear when it stops being featured.
+
+This lets Atlas rotate its featured questions over time without cutting people off from conversations they helped build.
+
+For example, Atlas might feature a question such as **“What are we wrong about?”** for a period of time. If another inquiry later takes its place in the primary display, the original forest can still live on through profiles, saved inquiries, search, direct links, and other discovery mechanisms.
+
+### Promotion should not simply equal popularity
+
+Participation can help Atlas discover promising inquiries, but automatic promotion based only on votes or traffic would create incentives similar to a conventional social-media front page.
+
+Possible signals for human review might eventually include:
+
+- sustained participation;
+- quality and depth of branching;
+- diversity of contributors or perspectives;
+- evidence that the inquiry is producing useful Solutions;
+- community nominations;
+- relevance or timeliness;
+- whether the inquiry adds something meaningfully different to the current featured set.
+
+Those signals could help identify candidates, while the actual decision about scarce featured space remains deliberate.
+
+### Open product questions about inquiry ownership
+
+- Should new inquiries default to private, unlisted, or public?
+- Does an inquiry have one owner, multiple stewards, or eventually community governance?
+- What happens if the creator stops participating after many other people contribute?
+- Can ownership or stewardship be transferred?
+- Who can edit the root title or description once a large community forms around it?
+- What criteria should qualify an inquiry for the public directory versus the featured visualization?
+- Should users be able to nominate someone else's inquiry for featuring?
+- How many featured inquiries can the main interface comfortably support on mobile?
+- Should featured inquiries rotate on a schedule, by editorial decision, or organically?
+
+---
+
 ## Initial root ideas
 
 These are intentionally not meant to cover every major topic. They are starting places worth thinking about and using to test Atlas.
