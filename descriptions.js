@@ -87,14 +87,9 @@
   };
 
   metadataLines = function(item) {
-    const counts = countsFor(item);
-    const kind = semanticKind(item);
     const score = `${compact(item.votes || 0)} votes · avg ${averageVote(item)}`;
-    if (kind === 'solution') {
-      return [score, `${counts.challenge} ${counts.challenge === 1 ? 'challenge' : 'challenges'} · ${counts.implementation} ${counts.implementation === 1 ? 'implementation' : 'implementations'}`];
-    }
-    if (kind === 'challenge' || kind === 'implementation' || kind === 'yay' || kind === 'nay') return [score, ''];
-    return [score, `${counts.issue} ${counts.issue === 1 ? 'sub-issue' : 'sub-issues'} · ${counts.solution} ${counts.solution === 1 ? 'sub-solution' : 'sub-solutions'}`];
+    const responses = Array.isArray(item?.children) ? item.children.length : 0;
+    return [score, `${responses} ${responses === 1 ? 'response' : 'responses'}`];
   };
 
   metadataText = item => metadataLines(item).filter(Boolean).join(' · ');
