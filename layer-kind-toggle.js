@@ -8,12 +8,13 @@
     'root-layer-label.js',
     'card-stack-layer-kind-bridge.js',
     'layer-kind-clicks.js',
-    'solution-four-way-toggle.js'
+    'solution-four-way-toggle.js',
+    'relationship-connections.js'
   ];
   function load(index) {
     if (index >= modules.length) return;
     const script = document.createElement('script');
-    script.src = `${modules[index]}?v=20260814-semantic-four-way-fix`;
+    script.src = `${modules[index]}?v=20260814-relationship-prototype`;
     script.onload = () => load(index + 1);
     document.head.appendChild(script);
   }
