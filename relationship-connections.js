@@ -71,8 +71,9 @@
       const node=focusPath?.[index]?nodeById.get(focusPath[index]):null;if(!isRelationshipContent(node))return;
       const card=entry.querySelector('.layer-context-card'),kindEl=entry.querySelector('.layer-context-kind'),nameEl=entry.querySelector('.layer-context-name');
       const semanticKind=state.semanticKind(node),parts=contextualRelationshipParts(node);
-      if(kindEl)kindEl.textContent=semanticKind==='implementation'?'Implementation':'Related Topic';
-      if(card){card.classList.remove('is-issue','is-solution','is-challenge');if(semanticKind!=='implementation')card.classList.remove('is-implementation');card.classList.add('is-relationship');}
+      const kindLabels={implementation:'Implementation',solution:'Solution',yay:'Yay',nay:'Nay',challenge:'Challenge',relationship:'Related Topic'};
+      if(kindEl)kindEl.textContent=kindLabels[semanticKind]||'Related Topic';
+      if(card){card.classList.remove('is-issue','is-solution','is-challenge','is-implementation','is-yay','is-nay');if(semanticKind==='solution')card.classList.add('is-solution');else if(semanticKind==='implementation')card.classList.add('is-implementation');else if(semanticKind==='challenge')card.classList.add('is-challenge');else if(semanticKind==='yay')card.classList.add('is-yay');else if(semanticKind==='nay')card.classList.add('is-nay');card.classList.add('is-relationship');}
       if(nameEl){nameEl.classList.add('relationship-title');nameEl.innerHTML=`<span class="relationship-vocabulary">${esc(parts.label)}</span> <span class="relationship-endpoint">${esc(parts.other)}</span>`;}
       const destination=otherEndpointFor(node);if(card&&destination?.id&&nodeById.has(destination.id)&&!card.querySelector('.relationship-context-switch')){const button=document.createElement('button');button.type='button';button.className='relationship-context-switch';button.innerHTML='<span>View related branch</span><span aria-hidden="true">↗</span>';button.setAttribute('aria-label',`Switch context to ${destination.label} and keep this related item selected`);button.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();switchRelationshipContext(node,card);});card.appendChild(button);}
     });
