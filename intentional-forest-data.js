@@ -6,7 +6,8 @@
   const roots = [
     {
       id: "root-atlas-public-think-tank",
-      name: "How can we make Atlas effective as a public think tank?",
+      name: "Building Atlas as a Public Think Tank",
+      description: "Explore how Atlas can become a useful public space for collective problem-solving: helping people contribute ideas, organize complex issues, compare possible solutions, work through disagreement, and turn many individual perspectives into shared understanding and practical action.",
       votes: 0,
       rating: 0,
       kind: "issue",
