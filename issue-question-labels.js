@@ -1,7 +1,7 @@
 // Give the demo forest a realistic mix of public-post phrasing without changing
 // hierarchy or semantic types. Issues may be topics, questions, or positions;
-// solutions may be proposals or questions; challenges and implementations get
-// similar variation. The choice is deterministic by node id so demos stay stable.
+// solutions may be proposals or questions; challenges vary in voice. Every
+// implementation is deliberately phrased as a concrete implementation action.
 (() => {
   if (!Array.isArray(forestData)) return;
 
@@ -26,7 +26,6 @@
     'root-culture': 'Culture, recreation, and shared public life',
     'root-products': 'Goods and services should work better for people',
     'root-migration': 'How can migration systems work better for people?',
-
     'housing-homelessness': 'No one should have to live without shelter',
     'housing-affordability': 'Why is housing so hard to afford?',
     'housing-supply': 'We need more homes where people want to live',
@@ -43,16 +42,11 @@
 
   const lowerFirst = value => value ? value.charAt(0).toLowerCase() + value.slice(1) : value;
   const clean = value => String(value || '').replace(/[?.!]+$/g, '').trim();
-  const hash = value => {
-    let h = 2166136261;
-    for (const ch of String(value || '')) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
-    return h;
-  };
+  const hash = value => { let h = 2166136261; for (const ch of String(value || '')) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0; return h; };
   const choice = (node, count) => hash(node.id) % count;
 
   function issueSubject(name) {
-    const text = clean(name);
-    let m;
+    const text = clean(name); let m;
     if ((m = text.match(/^(.+?)\s+access$/i))) return { type: 'access', subject: lowerFirst(m[1]) };
     if ((m = text.match(/^(.+?)\s+availability$/i))) return { type: 'availability', subject: lowerFirst(m[1]) };
     if ((m = text.match(/^(.+?)\s+shortages?$/i))) return { type: 'shortage', subject: lowerFirst(m[1]) };
@@ -101,7 +95,7 @@
     if (explicit[node.id]) return explicit[node.id];
     if (/\?$/.test(original)) return original;
     const mode = choice(node, 5);
-    if (mode === 0) return original; // plain topic labels remain part of the mix
+    if (mode === 0) return original;
     const info = issueSubject(original);
     if (mode === 1 || mode === 4) return issueQuestion(info);
     if (mode === 2) return issuePosition(info);
@@ -109,8 +103,7 @@
   }
 
   function phraseSolution(node, original) {
-    const text = clean(original);
-    const mode = choice(node, 5);
+    const text = clean(original); const mode = choice(node, 5);
     if (mode === 0) return original;
     if (mode === 1) return `Let’s try ${lowerFirst(text)}`;
     if (mode === 2) return `Could ${lowerFirst(text)} make a real difference?`;
@@ -119,61 +112,47 @@
   }
 
   function phraseChallenge(node, original) {
-    const text = clean(original);
-    const mode = choice(node, 5);
+    const text = clean(original); const mode = choice(node, 5);
     if (mode === 0) return original;
-    if (/funding and delivery capacity/i.test(text)) {
-      return [
-        original,
-        'Can we fund and staff this sustainably?',
-        'Capacity may be the real bottleneck',
-        'Who actually has the capacity to deliver this?',
-        'Funding the idea is only part of the challenge'
-      ][mode];
-    }
-    if (/adoption and coordination barriers/i.test(text)) {
-      return [
-        original,
-        'Will people and institutions actually adopt it?',
-        'Coordination could be harder than the idea itself',
-        'Who needs to cooperate for this to work?',
-        'Adoption may be the biggest obstacle'
-      ][mode];
-    }
+    if (/funding and delivery capacity/i.test(text)) return [original,'Can we fund and staff this sustainably?','Capacity may be the real bottleneck','Who actually has the capacity to deliver this?','Funding the idea is only part of the challenge'][mode];
+    if (/adoption and coordination barriers/i.test(text)) return [original,'Will people and institutions actually adopt it?','Coordination could be harder than the idea itself','Who needs to cooperate for this to work?','Adoption may be the biggest obstacle'][mode];
     if (mode === 1) return `What could prevent ${lowerFirst(text)}?`;
     if (mode === 2) return `${text} could become a serious obstacle`;
     if (mode === 3) return `How do we get past ${lowerFirst(text)}?`;
     return `This may fail if we cannot address ${lowerFirst(text)}`;
   }
 
+  // Implementations are intentionally different from solutions: every title says
+  // what to DO. No implementation is phrased as an open question or abstract idea.
   function phraseImplementation(node, original) {
-    const text = clean(original);
-    const mode = choice(node, 5);
+    const text = clean(original); const mode = choice(node, 5);
     if (/^pilot\s+/i.test(text)) {
       const subject = text.replace(/^pilot\s+/i, '');
       return [
-        original,
-        `Start with a small pilot of ${subject}`,
+        `Pilot ${subject} in one area`,
+        `Start a small pilot of ${subject}`,
         `Test ${subject} locally before scaling`,
-        `Would a limited pilot of ${subject} prove the idea?`,
-        `Try ${subject} in one area first`
+        `Run a limited-area trial of ${subject}`,
+        `Launch ${subject} as a small pilot first`
       ][mode];
     }
     if (/^scale\s+.+\s+with measured outcomes$/i.test(text)) {
       const subject = text.replace(/^scale\s+/i, '').replace(/\s+with measured outcomes$/i, '');
       return [
-        original,
+        `Scale ${subject} with measured outcomes`,
         `Expand ${subject} and track what changes`,
-        `Scale ${subject}, but measure the results`,
-        `What outcomes should we track as ${subject} expands?`,
-        `Grow ${subject} in stages and learn as we go`
+        `Scale ${subject} while measuring the results`,
+        `Grow ${subject} in stages with outcome tracking`,
+        `Roll out ${subject} more broadly and evaluate each stage`
       ][mode];
     }
-    if (mode === 0) return original;
-    if (mode === 1) return `Start by testing ${lowerFirst(text)}`;
-    if (mode === 2) return `${text}, with clear outcome tracking`;
-    if (mode === 3) return `Could we pilot ${lowerFirst(text)} first?`;
-    return `Roll out ${lowerFirst(text)} in stages`;
+    return [
+      `Implement ${lowerFirst(text)} in a limited setting`,
+      `Start by putting ${lowerFirst(text)} into practice`,
+      `Pilot ${lowerFirst(text)} with clear outcome tracking`,
+      `Roll out ${lowerFirst(text)} in stages`,
+      `Launch ${lowerFirst(text)} locally, measure results, then expand`
+    ][mode];
   }
 
   function rewrite(node) {
@@ -186,7 +165,5 @@
   }
 
   forestData.forEach(root => walk(root, rewrite));
-
-  // Names feed labels, cards, breadcrumbs, and generated context views.
   if (typeof render === 'function') render();
 })();
