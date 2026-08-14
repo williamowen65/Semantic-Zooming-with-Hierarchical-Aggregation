@@ -73,11 +73,24 @@
 
   function selectWithoutRescrolling(id, message) {
     if (!nodeById.has(id)) return;
-    const preservedCameraY = cameraY;
+    if (window.stopHierarchyMomentum) window.stopHierarchyMomentum();
+
+    // The footer is real document-flow content below #viz. If the user has
+    // scrolled the page into that footer cushion, normalize the browser scroll
+    // back to the top and offset the hierarchy camera by the same amount. This
+    // keeps the related-topic card visually stationary while allowing the
+    // changed parent layers above it to remain visible, instead of making the
+    // footer look fixed after a context switch.
+    const documentScrollY = Math.max(0, window.scrollY || document.documentElement.scrollTop || 0);
+    const preservedScreenCameraY = cameraY - documentScrollY;
+
     focusPath = pathForNode(id);
     render();
-    cameraY = preservedCameraY;
+
+    if (documentScrollY) window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    cameraY = clampCamera(preservedScreenCameraY);
     applyCamera(false);
+
     if (typeof window.atlasSyncUrlState === 'function') window.atlasSyncUrlState();
     if (message) statusHost.textContent = message;
   }
