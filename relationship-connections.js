@@ -67,13 +67,24 @@
     return target ? { id: node.targetId, label: node.targetLabel || target.name } : (source ? { id: node.sourceId, label: node.sourceLabel || source.name } : null);
   }
 
+  function relationshipAppearanceUnder(parent, relationshipId) {
+    return (parent?.children || []).find(child => child.kind === 'relationship' && (child.relationshipId === relationshipId || child.id === relationshipId || child.id?.startsWith(`${relationshipId}--`))) || null;
+  }
+
   function switchRelationshipContext(node) {
     const destination = otherEndpointFor(node);
     if (!destination?.id) return;
     const target = nodeById.get(destination.id);
     if (!target) return;
-    focusNode(target.id);
-    statusHost.textContent = `Switched context to ${target.name}.`;
+    const relationshipId = node.relationshipId || node.id.split('--from-')[0];
+    const relatedAppearance = relationshipAppearanceUnder(target, relationshipId);
+    if (relatedAppearance) {
+      focusNode(relatedAppearance.id);
+      statusHost.textContent = `${node.name} selected in the ${target.name} branch.`;
+    } else {
+      focusNode(target.id);
+      statusHost.textContent = `Switched context to ${target.name}.`;
+    }
   }
 
   function renderRelationshipCards() {
@@ -101,7 +112,7 @@
         button.type = 'button';
         button.className = 'relationship-context-switch';
         button.innerHTML = `<span>View related branch</span><span aria-hidden="true">↗</span>`;
-        button.setAttribute('aria-label', `Switch context to ${destination.label}`);
+        button.setAttribute('aria-label', `Switch context to ${destination.label} and keep this related topic selected`);
         button.addEventListener('click', event => {
           event.preventDefault();
           event.stopPropagation();
