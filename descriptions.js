@@ -125,7 +125,7 @@
       if (!node) return;
       const kind = semanticKind(node);
       const kindEl = entry.querySelector('.layer-context-kind');
-      if (kindEl) kindEl.textContent = ({ issue: 'Issue', solution: 'Solution', challenge: 'Challenge', implementation: 'Implementation', yay: 'Yay', nay: 'Nay' })[kind] || 'Topic';
+      if (kindEl) kindEl.textContent = kind === 'relationship' ? 'Related Topic' : (({ issue: 'Issue', solution: 'Solution', challenge: 'Challenge', implementation: 'Implementation', yay: 'Yay', nay: 'Nay' })[kind] || 'Topic');
 
       const card = entry.querySelector('.layer-context-card');
       if (card) {
