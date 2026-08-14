@@ -73,6 +73,7 @@ jobs:
           cp "${assets[@]}" "_site/${GITHUB_SHA}/"
 
           for page in "_site/index.html" "_site/${GITHUB_SHA}/index.html"; do
+            sed -E -i "s#styles\.css\?v=[^\"]+#styles.css?v=${GITHUB_SHA}#g" "$page"
             sed -E -i "s#app\.js\?v=[^\"]+#app.js?v=${GITHUB_SHA}#g" "$page"
             sed -E -i "s#intentional-forest-data\.js\?v=[^\"]+#intentional-forest-data.js?v=${GITHUB_SHA}#g" "$page"
             sed -E -i "s#descriptions\.js\?v=[^\"]+#descriptions.js?v=${GITHUB_SHA}#g" "$page"
