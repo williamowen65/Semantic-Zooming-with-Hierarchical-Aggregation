@@ -24,21 +24,21 @@
         ['nay', plural(counts.nays, 'nay')]
       ];
 
-      const width = Math.min(window.innerWidth < 720 ? Math.max(300, window.innerWidth - 28) : 430, Number(host.getAttribute('width')) * 2 || 430);
       const cardFo = entry.querySelector('foreignObject:not(.layer-kind-toggle-host)');
       const cardX = Number(cardFo?.getAttribute('x')) || 0;
-      const cardW = Number(cardFo?.getAttribute('width')) || width;
-      host.setAttribute('width', width);
-      host.setAttribute('x', cardX + (cardW - width) / 2);
+      const cardW = Number(cardFo?.getAttribute('width')) || Math.max(300, window.innerWidth - 28);
+      const visibleWidth = Math.min(cardW, window.innerWidth < 720 ? Math.max(240, window.innerWidth - 32) : 430);
+      host.setAttribute('width', visibleWidth);
+      host.setAttribute('x', cardX + (cardW - visibleWidth) / 2);
+      host.style.overflow = 'hidden';
 
-      host.innerHTML = `<div xmlns="http://www.w3.org/1999/xhtml" class="layer-kind-toggle solution-four-way-toggle" role="group" aria-label="Show solution challenges, implementations, yays, or nays">${options.map(([kind,label]) => `<button type="button" class="${mode === kind ? 'is-active' : ''}" ${window.__atlasLayerKinds.countForMode(counts, kind) ? '' : 'disabled'} data-kind="${kind}">${esc(label)}</button>`).join('')}</div>`;
-      host.querySelectorAll('button[data-kind]').forEach(button => {
-        button.addEventListener('click', event => {
-          event.preventDefault();
-          event.stopPropagation();
-          window.atlasSetLayerKind?.(node.id, button.dataset.kind);
-        });
-      });
+      host.innerHTML = `<div xmlns="http://www.w3.org/1999/xhtml" class="solution-toggle-scroll"><div class="layer-kind-toggle solution-four-way-toggle" role="group" aria-label="Show solution challenges, implementations, yays, or nays">${options.map(([kind,label]) => `<button type="button" class="${mode === kind ? 'is-active' : ''}" ${window.__atlasLayerKinds.countForMode(counts, kind) ? '' : 'disabled'} data-parent-id="${esc(node.id)}" data-kind="${kind}">${esc(label)}</button>`).join('')}</div></div>`;
+
+      const scroller = host.querySelector('.solution-toggle-scroll');
+      const active = host.querySelector('button.is-active');
+      if (scroller && active) {
+        requestAnimationFrame(() => active.scrollIntoView({ block:'nearest', inline:'center', behavior:'auto' }));
+      }
     });
   }
 
@@ -50,7 +50,27 @@
   };
 
   const style = document.createElement('style');
-  style.textContent = `.solution-four-way-toggle{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));width:100%!important}.solution-four-way-toggle button{min-width:0!important;padding-left:5px!important;padding-right:5px!important;font-size:11px!important}`;
+  style.textContent = `
+    .solution-toggle-scroll{
+      width:100%;height:24px;overflow-x:auto;overflow-y:hidden;
+      scrollbar-width:none;-ms-overflow-style:none;
+      overscroll-behavior-x:contain;touch-action:pan-x;
+      border-radius:999px;
+    }
+    .solution-toggle-scroll::-webkit-scrollbar{display:none}
+    .solution-four-way-toggle{
+      display:flex!important;width:max-content!important;min-width:100%!important;
+      grid-template-columns:none!important;padding:2px!important;
+    }
+    .solution-four-way-toggle button{
+      flex:0 0 auto!important;min-width:max-content!important;
+      padding-left:14px!important;padding-right:14px!important;
+      font-size:10px!important;white-space:nowrap!important;
+    }
+    @media(max-width:720px){
+      .solution-four-way-toggle button{padding-left:13px!important;padding-right:13px!important;font-size:9.5px!important}
+    }
+  `;
   document.head.appendChild(style);
   render();
 })();
