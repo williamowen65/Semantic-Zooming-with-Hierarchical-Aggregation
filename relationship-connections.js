@@ -81,21 +81,29 @@
     if (!nodeById.has(id)) return;
     if (window.stopHierarchyMomentum) window.stopHierarchyMomentum();
 
-    focusPath = pathForNode(id);
-    render();
+    // Do the branch replacement and anchor correction in one browser task.
+    // Previously the correction waited for two animation frames, which allowed
+    // the freshly rendered branch to paint briefly at its uncorrected position
+    // and produced the visible flash. Keeping the stage hidden during this
+    // synchronous swap also prevents any intermediate layout from being painted.
+    const stageNode = stage?.node?.();
+    const previousVisibility = stageNode?.style?.visibility || '';
+    if (stageNode) stageNode.style.visibility = 'hidden';
 
-    // A related-branch switch is a context replacement, not a navigation scroll.
-    // Anchor the relationship card to the exact same screen Y coordinate it had
-    // before the branch changed. Parent layers may become longer or shorter, but
-    // they move around this stationary card. The user can then scroll normally.
-    requestAnimationFrame(() => requestAnimationFrame(() => {
+    try {
+      focusPath = pathForNode(id);
+      render();
+
       const card = selectedRelationshipCard();
-      if (!card || !Number.isFinite(screenAnchorTop)) return;
-      const newTop = card.getBoundingClientRect().top;
-      const delta = screenAnchorTop - newTop;
-      cameraY = clampCamera(cameraY + delta);
-      applyCamera(false);
-    }));
+      if (card && Number.isFinite(screenAnchorTop)) {
+        const newTop = card.getBoundingClientRect().top;
+        const delta = screenAnchorTop - newTop;
+        cameraY = clampCamera(cameraY + delta);
+        applyCamera(false);
+      }
+    } finally {
+      if (stageNode) stageNode.style.visibility = previousVisibility;
+    }
 
     if (typeof window.atlasSyncUrlState === 'function') window.atlasSyncUrlState();
     if (message) statusHost.textContent = message;
