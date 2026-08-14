@@ -1,22 +1,20 @@
-// Expands Solution child navigation to Challenges, Implementations, Yay, and Nay.
+// Expands solution-like child navigation to Challenges, Implementations, Yay, and Nay.
 (() => {
   if (typeof render !== 'function' || !window.__atlasLayerKinds) return;
 
+  const state = window.__atlasLayerKinds;
   const esc = value => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
   const plural = (count, singular, pluralForm = `${singular}s`) => `${count} ${count === 1 ? singular : pluralForm}`;
 
   function upgradeSolutionToggles() {
-    document.querySelectorAll('.layer-context-entry').forEach(entry => {
-      const card = entry.querySelector('.layer-context-card.is-solution');
+    const entries = [...document.querySelectorAll('.layer-context-entry')];
+    entries.forEach((entry, index) => {
       const host = entry.querySelector('foreignObject.layer-kind-toggle-host');
-      if (!card || !host) return;
+      const node = focusPath?.[index] ? nodeById.get(focusPath[index]) : null;
+      if (!host || !node || state.hierarchyKind(node) !== 'solution') return;
 
-      const name = card.querySelector('.layer-context-name')?.textContent;
-      const node = [...nodeById.values()].find(candidate => candidate.kind === 'solution' && candidate.name === name);
-      if (!node) return;
-
-      const counts = window.__atlasLayerKinds.kindCounts(node);
-      const mode = window.atlasLayerKindModeFor?.(node.id) || window.__atlasLayerKinds.availableMode(node);
+      const counts = state.kindCounts(node);
+      const mode = window.atlasLayerKindModeFor?.(node.id) || state.availableMode(node);
       const options = [
         ['challenge', plural(counts.challenges, 'challenge')],
         ['implementation', plural(counts.implementations, 'implementation')],
@@ -32,7 +30,7 @@
       host.setAttribute('x', cardX + (cardW - visibleWidth) / 2);
       host.style.overflow = 'hidden';
 
-      host.innerHTML = `<div xmlns="http://www.w3.org/1999/xhtml" class="solution-toggle-scroll"><div class="layer-kind-toggle solution-four-way-toggle" role="group" aria-label="Show solution challenges, implementations, yays, or nays">${options.map(([kind,label]) => `<button type="button" class="${mode === kind ? 'is-active' : ''}" ${window.__atlasLayerKinds.countForMode(counts, kind) ? '' : 'disabled'} data-parent-id="${esc(node.id)}" data-kind="${kind}">${esc(label)}</button>`).join('')}</div></div>`;
+      host.innerHTML = `<div xmlns="http://www.w3.org/1999/xhtml" class="solution-toggle-scroll"><div class="layer-kind-toggle solution-four-way-toggle" role="group" aria-label="Show solution challenges, implementations, yays, or nays">${options.map(([kind,label]) => `<button type="button" class="${mode === kind ? 'is-active' : ''}" ${state.countForMode(counts, kind) ? '' : 'disabled'} data-parent-id="${esc(node.id)}" data-kind="${kind}">${esc(label)}</button>`).join('')}</div></div>`;
 
       const scroller = host.querySelector('.solution-toggle-scroll');
       const active = host.querySelector('button.is-active');
