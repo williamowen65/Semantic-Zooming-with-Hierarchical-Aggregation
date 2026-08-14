@@ -1,1 +1,25 @@
-(()=>{const h=document.querySelector('#viz');if(!h)return;h.addEventListener('click',e=>{const b=e.target?.closest?.('.layer-kind-toggle button');if(!b||b.disabled||typeof atlasSetLayerKind!=='function')return;const x=b.closest('.layer-context-entry'),a=[...document.querySelectorAll('#viz .layer-context-entry')],d=a.indexOf(x),id=d>=0?focusPath?.[d]:null;if(!id)return;const bs=[...b.parentElement.querySelectorAll('button')];e.preventDefault();e.stopImmediatePropagation();atlasSetLayerKind(id,bs.indexOf(b)===1?'solution':'issue');},true);})();
+(() => {
+  const host = document.querySelector('#viz');
+  if (!host) return;
+
+  host.addEventListener('click', event => {
+    const button = event.target?.closest?.('.layer-kind-toggle button');
+    if (!button || button.disabled || typeof atlasSetLayerKind !== 'function') return;
+
+    const entry = button.closest('.layer-context-entry');
+    const entries = [...document.querySelectorAll('#viz .layer-context-entry')];
+    const depth = entries.indexOf(entry);
+    const parentId = button.dataset.parentId || (depth >= 0 ? focusPath?.[depth] : null);
+    if (!parentId) return;
+
+    let kind = button.dataset.kind;
+    if (!kind) {
+      const buttons = [...button.parentElement.querySelectorAll('button')];
+      kind = buttons.indexOf(button) === 1 ? 'solution' : 'issue';
+    }
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    atlasSetLayerKind(parentId, kind);
+  }, true);
+})();
