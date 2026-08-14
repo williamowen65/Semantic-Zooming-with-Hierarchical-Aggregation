@@ -74,41 +74,26 @@ jobs:
           cp "${assets[@]}" "_site/${GITHUB_SHA}/"
 
           for page in "_site/index.html" "_site/${GITHUB_SHA}/index.html"; do
-            sed -E -i "s#styles\.css\?v=[^\"]+#styles.css?v=${GITHUB_SHA}#g" "$page"
-            sed -E -i "s#app\.js\?v=[^\"]+#app.js?v=${GITHUB_SHA}#g" "$page"
-            sed -E -i "s#intentional-forest-data\.js\?v=[^\"]+#intentional-forest-data.js?v=${GITHUB_SHA}#g" "$page"
-            sed -E -i "s#descriptions\.js\?v=[^\"]+#descriptions.js?v=${GITHUB_SHA}#g" "$page"
-            sed -E -i "s#enhancements\.js\?v=[^\"]+#enhancements.js?v=${GITHUB_SHA}#g" "$page"
-            sed -E -i "s#hierarchy-overview\.js\?v=[^\"]+#hierarchy-overview.js?v=${GITHUB_SHA}#g" "$page"
-            sed -E -i "s#layer-context\.js\?v=[^\"]+#layer-context.js?v=${GITHUB_SHA}#g" "$page"
-            sed -E -i "s#layer-kind-toggle\.js\?v=[^\"]+#layer-kind-toggle.js?v=${GITHUB_SHA}#g" "$page"
-            sed -E -i "s#leaf-end-state\.css\?v=[^\"]+#leaf-end-state.css?v=${GITHUB_SHA}#g" "$page"
-            sed -E -i "s#leaf-end-state\.js\?v=[^\"]+#leaf-end-state.js?v=${GITHUB_SHA}#g" "$page"
-            sed -E -i "s#document-flow-scroll\.js\?v=[^\"]+#document-flow-scroll.js?v=${GITHUB_SHA}#g" "$page"
-
             if ! grep -q 'node-text-cleanup.css' "$page"; then
-              sed -i "s#</head>#  <link rel=\"stylesheet\" href=\"node-text-cleanup.css?v=${GITHUB_SHA}\" />\n</head>#" "$page"
-            else
-              sed -E -i "s#node-text-cleanup\.css\?v=[^\"]+#node-text-cleanup.css?v=${GITHUB_SHA}#g" "$page"
+              sed -i "s#</head>#  <link rel=\"stylesheet\" href=\"node-text-cleanup.css\" />\n</head>#" "$page"
             fi
 
             if ! grep -q 'card-content-sizing.css' "$page"; then
-              sed -i "s#</head>#  <link rel=\"stylesheet\" href=\"card-content-sizing.css?v=${GITHUB_SHA}\" />\n</head>#" "$page"
-            else
-              sed -E -i "s#card-content-sizing\.css\?v=[^\"]+#card-content-sizing.css?v=${GITHUB_SHA}#g" "$page"
+              sed -i "s#</head>#  <link rel=\"stylesheet\" href=\"card-content-sizing.css\" />\n</head>#" "$page"
             fi
 
             if ! grep -q 'card-stack-layer-kind-bridge.js' "$page"; then
-              sed -i "s#</body>#  <script src=\"card-stack-layer-kind-bridge.js?v=${GITHUB_SHA}\"></script>\n</body>#" "$page"
-            else
-              sed -E -i "s#card-stack-layer-kind-bridge\.js\?v=[^\"]+#card-stack-layer-kind-bridge.js?v=${GITHUB_SHA}#g" "$page"
+              sed -i "s#</body>#  <script src=\"card-stack-layer-kind-bridge.js\"></script>\n</body>#" "$page"
             fi
+
             sed -i '/card-stack-controls\.js/d' "$page"
             if ! grep -q 'card-stack-controls-v2.js' "$page"; then
-              sed -i "s#</body>#  <script src=\"card-stack-controls-v2.js?v=${GITHUB_SHA}\"></script>\n</body>#" "$page"
-            else
-              sed -E -i "s#card-stack-controls-v2\.js\?v=[^\"]+#card-stack-controls-v2.js?v=${GITHUB_SHA}#g" "$page"
+              sed -i "s#</body>#  <script src=\"card-stack-controls-v2.js\"></script>\n</body>#" "$page"
             fi
+
+            # Cache-bust every local JavaScript and stylesheet reference with the
+            # exact deployed commit SHA. External CDN URLs are left untouched.
+            sed -E -i "s#(href|src)=\"([^\":?]+\.(css|js))(\?v=[^\"]*)?\"#\1=\"\2?v=${GITHUB_SHA}\"#g" "$page"
           done
 
       - name: Upload site artifact
