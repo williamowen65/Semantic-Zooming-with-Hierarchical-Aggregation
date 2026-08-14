@@ -25,6 +25,56 @@
   const verbosityToggleLabel = document.querySelector("#verbosity-toggle-label");
   if (!control || !toolsTrigger || !toolsPanel || !themeTrigger) return;
 
+  const gradientSets = {
+    "clean-modern": [
+      ["#79a8c8", "#b6d5e8"], ["#648fb4", "#9fc4dd"], ["#8db9cf", "#c9e0ec"], ["#527fa8", "#8eb4ce"]
+    ],
+    "bold-contrast": [
+      ["#102f3a", "#24566a"], ["#29323f", "#5a4a47"], ["#5f352d", "#c1703f"], ["#173845", "#8b6137"]
+    ],
+    "calm-earthy": [
+      ["#6f8f7a", "#a7b89f"], ["#83956f", "#c0b88f"], ["#8b8069", "#c6ad7d"], ["#658a7a", "#9eb5a9"], ["#728f91", "#a9bbba"], ["#7e8875", "#b7b49a"]
+    ],
+    "vibrant-distinct": [
+      ["#1486aa", "#54c5d8"], ["#3866b1", "#68a8e2"], ["#5d54b5", "#9a7ee0"], ["#814d96", "#d279ba"],
+      ["#c94f48", "#ef8664"], ["#618b3e", "#9cc561"], ["#cc791c", "#f2b84d"], ["#a93643", "#e26455"]
+    ],
+    "soft-refined": [
+      ["#668f95", "#a7c0bd"], ["#748e9e", "#b7c7cf"], ["#718c84", "#aabfb1"], ["#5e8288", "#9fb8b8"]
+    ]
+  };
+
+  function ensureThemeGradients() {
+    const svg = document.querySelector('#viz svg');
+    if (!svg) return;
+    let defs = svg.querySelector('defs.atlas-theme-gradients');
+    if (!defs) {
+      defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+      defs.setAttribute('class', 'atlas-theme-gradients');
+      svg.insertBefore(defs, svg.firstChild);
+    }
+    Object.entries(gradientSets).forEach(([themeId, gradients]) => {
+      gradients.forEach((stops, index) => {
+        const id = `atlas-${themeId}-gradient-${index + 1}`;
+        if (defs.querySelector(`#${id}`)) return;
+        const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+        gradient.setAttribute('id', id);
+        gradient.setAttribute('x1', index % 2 ? '0%' : '8%');
+        gradient.setAttribute('y1', '0%');
+        gradient.setAttribute('x2', index % 2 ? '100%' : '92%');
+        gradient.setAttribute('y2', '100%');
+        const start = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+        start.setAttribute('offset', '0%');
+        start.setAttribute('stop-color', stops[0]);
+        const end = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+        end.setAttribute('offset', '100%');
+        end.setAttribute('stop-color', stops[1]);
+        gradient.append(start, end);
+        defs.appendChild(gradient);
+      });
+    });
+  }
+
   function applyFontScale(theme) {
     document.querySelectorAll("#viz text.cell-label").forEach(text => {
       let base = Number(text.dataset.themeBaseFont);
@@ -51,6 +101,7 @@
   function applyTheme(index, persist = true) {
     currentIndex = ((index % themes.length) + themes.length) % themes.length;
     current = themes[currentIndex];
+    ensureThemeGradients();
     document.body.dataset.theme = current.id;
     themes.forEach(theme => document.body.classList.toggle(`theme-${theme.id}`, theme.id === current.id));
     updateThemeLabels();
@@ -118,8 +169,6 @@
     if (open) requestAnimationFrame(() => themeTrigger.focus({ preventScroll: true }));
   }
 
-  // The tools pill defaults to the lower-right edge, but can be dragged vertically
-  // or carried across the midpoint to dock on the left. Persist the user's choice.
   let toolsSide = "right";
   let toolsTop = null;
   let dragState = null;
@@ -167,13 +216,7 @@
 
   toolsTrigger.addEventListener("pointerdown", event => {
     if (event.button != null && event.button !== 0) return;
-    dragState = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      startTop: toolsTop ?? defaultTop(),
-      moved: false
-    };
+    dragState = { pointerId:event.pointerId, startX:event.clientX, startY:event.clientY, startTop:toolsTop ?? defaultTop(), moved:false };
     toolsTrigger.setPointerCapture?.(event.pointerId);
   });
 
@@ -260,7 +303,7 @@
     new MutationObserver(() => {
       if (queued) return;
       queued = true;
-      requestAnimationFrame(() => { queued = false; applyFontScale(current); });
+      requestAnimationFrame(() => { queued = false; ensureThemeGradients(); applyFontScale(current); });
     }).observe(viz, { childList: true, subtree: true });
   }
 
