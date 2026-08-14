@@ -40,7 +40,18 @@
           rating: 0,
           kind: "solution",
           color: "#71879a",
-          children: []
+          children: [
+            {
+              id: "solution-rcv-more-candidates",
+              name: "Ranked-choice voting could encourage more people to run for office",
+              description: "If ranked-choice voting became more common, candidates outside the usual two-party or establishment pathways might have more reason to enter races because voters could support them without the same spoiler concerns. A larger candidate pool could give voters more choices and potentially improve the odds that capable people enter public service. Evidence so far is mixed: some research finds an initial increase in candidate entry after RCV is adopted, but it has not established that RCV consistently produces more viable or higher-quality candidates over time.",
+              votes: 0,
+              rating: 0,
+              kind: "solution",
+              color: "#71879a",
+              children: []
+            }
+          ]
         }
       ]
     }
