@@ -54,6 +54,43 @@
     });
   }
 
+  function relationshipBounds(poly) {
+    if (!Array.isArray(poly) || !poly.length) return null;
+    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+    poly.forEach(point => {
+      minX=Math.min(minX,point[0]); minY=Math.min(minY,point[1]);
+      maxX=Math.max(maxX,point[0]); maxY=Math.max(maxY,point[1]);
+    });
+    return { x:minX, y:minY, w:maxX-minX, h:maxY-minY };
+  }
+
+  function decorateRelationshipNodeLabels() {
+    d3.selectAll('#viz g.cell').each(function(d) {
+      const item = d?.data?.item;
+      if (!item || state.semanticKind(item) !== 'relationship') return;
+
+      const cell = d3.select(this);
+      cell.select('text.cell-label').style('display','none');
+      cell.selectAll('foreignObject.relationship-node-label-host').remove();
+
+      const bounds = relationshipBounds(d.polygon);
+      if (!bounds || bounds.w < 70 || bounds.h < 70) return;
+      const padX = Math.max(10, Math.min(28, bounds.w * .07));
+      const padY = Math.max(10, Math.min(28, bounds.h * .07));
+      const w = Math.max(40, bounds.w - padX * 2);
+      const h = Math.max(40, bounds.h - padY * 2);
+      const meta = typeof metadataLines === 'function' ? metadataLines(item) : [];
+
+      cell.append('foreignObject')
+        .attr('class','relationship-node-label-host')
+        .attr('x',bounds.x + padX)
+        .attr('y',bounds.y + padY)
+        .attr('width',w)
+        .attr('height',h)
+        .html(`<div xmlns="http://www.w3.org/1999/xhtml" class="relationship-node-label"><div class="relationship-node-endpoint relationship-node-source">${esc(item.sourceLabel || '')}</div><div class="relationship-node-keyword">${esc(item.relationshipLabel || '')}</div><div class="relationship-node-endpoint relationship-node-target">${esc(item.targetLabel || '')}</div><div class="relationship-node-meta">${meta.map(line=>`<span>${esc(line)}</span>`).join('')}</div></div>`);
+    });
+  }
+
   function otherEndpointFor(node) {
     if (!node) return null;
     const parent = parentById.get(node.id);
@@ -81,11 +118,6 @@
     if (!nodeById.has(id)) return;
     if (window.stopHierarchyMomentum) window.stopHierarchyMomentum();
 
-    // Do the branch replacement and anchor correction in one browser task.
-    // Previously the correction waited for two animation frames, which allowed
-    // the freshly rendered branch to paint briefly at its uncorrected position
-    // and produced the visible flash. Keeping the stage hidden during this
-    // synchronous swap also prevents any intermediate layout from being painted.
     const stageNode = stage?.node?.();
     const previousVisibility = stageNode?.style?.visibility || '';
     if (stageNode) stageNode.style.visibility = 'hidden';
@@ -165,6 +197,7 @@
 
   function sync() {
     upgradeConnectionToggles();
+    decorateRelationshipNodeLabels();
     renderRelationshipCards();
   }
 
@@ -181,6 +214,15 @@
     .relationship-toggle-scroll::-webkit-scrollbar{display:none}
     .relationship-aware-toggle{display:flex!important;width:100%!important;min-width:max-content!important;grid-template-columns:none!important;padding:2px!important;box-sizing:border-box!important}
     .relationship-aware-toggle button{flex:1 0 max-content!important;min-width:max-content!important;padding-left:11px!important;padding-right:11px!important;font-size:9.5px!important;white-space:nowrap!important}
+    .relationship-node-label-host{overflow:visible;pointer-events:none}
+    .relationship-node-label{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.08;padding:4px}
+    .relationship-node-endpoint{max-width:100%;font-size:clamp(13px,3.5vw,28px);font-weight:760;overflow-wrap:anywhere}
+    .relationship-node-keyword{display:inline-flex;align-items:center;justify-content:center;margin:8px 0;padding:4px 11px;border:2px solid currentColor;border-radius:999px;background:rgba(255,255,255,.34);font-size:clamp(10px,2.2vw,18px);font-weight:800;line-height:1;white-space:nowrap}
+    .relationship-node-meta{display:flex;flex-direction:column;gap:2px;margin-top:9px;font-size:clamp(9px,1.65vw,14px);font-weight:650;opacity:.72;line-height:1.15}
+    body.theme-bold-contrast .relationship-node-label,body.theme-vibrant-distinct .relationship-node-label,body.theme-soft-refined .relationship-node-label{color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.22)}
+    body.theme-bold-contrast .relationship-node-keyword,body.theme-vibrant-distinct .relationship-node-keyword,body.theme-soft-refined .relationship-node-keyword{background:rgba(20,30,40,.22)}
+    .cell.is-faded .relationship-node-label{opacity:.68}
+    .cell.is-selected .relationship-node-label{opacity:1}
     .layer-context-card.is-relationship{position:relative;padding-right:150px!important;pointer-events:auto}
     .layer-context-card.is-relationship .layer-context-kind{letter-spacing:.08em}
     .relationship-title{display:inline!important;line-height:1.45!important}
