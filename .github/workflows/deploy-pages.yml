@@ -65,6 +65,7 @@ jobs:
             layer-kind-clicks.js
             card-stack-layer-kind-bridge.js
             card-stack-controls-v2.js
+            solution-four-way-toggle.js
           )
 
           cp "${assets[@]}" _site/
