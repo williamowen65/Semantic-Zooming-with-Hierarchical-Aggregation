@@ -8,8 +8,12 @@
   renderCluster = function(options) {
     const name = String(options?.className || '');
     if (!Array.isArray(options?.items)) return baseRenderCluster(options);
+
+    // Roots are intentionally different from ordinary child layers. Issues,
+    // questions, and solutions all share the same top-level canvas instead of
+    // being split into mutually exclusive layer-kind views.
     if (name === 'root-overview' || name.includes('depth-0')) {
-      return baseRenderCluster({ ...options, items: options.items.filter(item => semanticKind(item) !== 'solution') });
+      return baseRenderCluster(options);
     }
 
     let parent = null;
