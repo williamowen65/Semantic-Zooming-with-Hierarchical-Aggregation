@@ -1,7 +1,4 @@
-// Concise public-facing summaries for Atlas topics. This pass also gives every
-// solution a small experimental implementation layer: challenges describe what
-// could make the solution difficult, while implementations describe concrete
-// ways to put it into practice.
+// Concise public-facing summaries for Atlas topics.
 (() => {
   if (!Array.isArray(forestData)) return;
 
@@ -26,61 +23,7 @@
   };
 
   const lower = value => value ? value.charAt(0).toLowerCase() + value.slice(1) : value;
-  const clampRating = value => Math.max(1, Math.min(5, Number(value) || 3));
-  const derivedVotes = (node, share) => Math.max(1, Math.round(Math.max(1, Number(node.votes) || 1) * share));
   const semanticKind = node => node?.semanticKind || node?.kind;
-
-  function generatedSolutionChildren(node) {
-    const baseRating = clampRating(node.rating);
-    return [
-      {
-        id: `${node.id}-challenge-capacity`,
-        name: 'Funding and delivery capacity',
-        votes: derivedVotes(node, .12),
-        rating: clampRating(baseRating - .1),
-        kind: 'challenge',
-        description: `A potential capacity constraint on putting ${lower(node.name)} into practice.`
-      },
-      {
-        id: `${node.id}-challenge-adoption`,
-        name: 'Adoption and coordination barriers',
-        votes: derivedVotes(node, .09),
-        rating: clampRating(baseRating - .2),
-        kind: 'challenge',
-        description: `A potential coordination or adoption challenge for ${lower(node.name)}.`
-      },
-      {
-        id: `${node.id}-implementation-pilot`,
-        name: `Pilot ${node.name} in a limited area`,
-        votes: derivedVotes(node, .11),
-        rating: clampRating(baseRating),
-        kind: 'implementation',
-        description: `A limited pilot that tests how ${lower(node.name)} works in practice before broader rollout.`
-      },
-      {
-        id: `${node.id}-implementation-scale`,
-        name: `Scale ${node.name} with measured outcomes`,
-        votes: derivedVotes(node, .08),
-        rating: clampRating(baseRating + .1),
-        kind: 'implementation',
-        description: `A broader rollout of ${lower(node.name)} paired with measurement and iteration.`
-      }
-    ];
-  }
-
-  function seedSolutionChildren(node, parent = null) {
-    if (parent?.kind === 'solution' && node.kind === 'solution') node.kind = 'implementation';
-    (node.children || []).slice().forEach(child => seedSolutionChildren(child, node));
-    if (node.kind !== 'solution') return;
-
-    const children = Array.isArray(node.children) ? node.children : (node.children = []);
-    const kinds = new Set(children.map(child => child.kind));
-    const generated = generatedSolutionChildren(node);
-    if (!kinds.has('challenge')) children.push(...generated.filter(child => child.kind === 'challenge'));
-    if (!kinds.has('implementation')) children.push(...generated.filter(child => child.kind === 'implementation'));
-  }
-
-  forestData.forEach(root => seedSolutionChildren(root));
 
   function makeDescription(node) {
     if (rootDescriptions[node.id]) return rootDescriptions[node.id];
