@@ -1,15 +1,17 @@
 (() => {
   const layerKindByParent = new Map();
   const solutionKinds = ['challenge', 'implementation', 'yay', 'nay'];
+  const semanticKind = node => node?.semanticKind || node?.kind;
 
   function kindCounts(parent) {
     const counts = { issues: 0, solutions: 0, challenges: 0, implementations: 0, yays: 0, nays: 0 };
     (parent?.children || []).forEach(child => {
-      if (child.kind === 'solution') counts.solutions += 1;
-      else if (child.kind === 'challenge') counts.challenges += 1;
-      else if (child.kind === 'implementation') counts.implementations += 1;
-      else if (child.kind === 'yay') counts.yays += 1;
-      else if (child.kind === 'nay') counts.nays += 1;
+      const kind = semanticKind(child);
+      if (kind === 'solution') counts.solutions += 1;
+      else if (kind === 'challenge') counts.challenges += 1;
+      else if (kind === 'implementation') counts.implementations += 1;
+      else if (kind === 'yay') counts.yays += 1;
+      else if (kind === 'nay') counts.nays += 1;
       else counts.issues += 1;
     });
     return counts;
@@ -20,7 +22,7 @@
   }
 
   function modesFor(parent) {
-    return parent?.kind === 'solution' ? solutionKinds : ['issue', 'solution'];
+    return semanticKind(parent) === 'solution' ? solutionKinds : ['issue', 'solution'];
   }
 
   function availableMode(parent, preferred = null) {
@@ -31,5 +33,5 @@
     return modes.find(mode => countForMode(counts, mode)) || modes[0];
   }
 
-  window.__atlasLayerKinds = { layerKindByParent, kindCounts, countForMode, modesFor, availableMode };
+  window.__atlasLayerKinds = { layerKindByParent, kindCounts, countForMode, modesFor, availableMode, semanticKind };
 })();
