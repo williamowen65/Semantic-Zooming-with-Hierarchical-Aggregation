@@ -22,6 +22,7 @@
   const same=p=>p.length===previous.length&&p.every((id,i)=>id===previous[i]);
   const setY=(n,y,a)=>{if(!n)return;const t=tr(n),v=`translate(${t.x},${y})`,s=d3.select(n).interrupt();a&&!matchMedia('(prefers-reduced-motion: reduce)').matches?s.transition().duration(220).ease(d3.easeCubicOut).attr('transform',v):n.setAttribute('transform',v);};
   const setCardY=(n,y,a)=>{if(!n)return;const s=d3.select(n).interrupt();a&&!matchMedia('(prefers-reduced-motion: reduce)').matches?s.transition().duration(200).ease(d3.easeCubicOut).attr('y',y):s.attr('y',y);};
+  const actualCardHeight=fo=>{const card=fo?.querySelector('.layer-context-card');const styled=parseFloat(card?.style?.height||'');if(Number.isFinite(styled)&&styled>0)return styled;return +fo?.getAttribute('height')||66;};
   function sync(){const p=Array.isArray(focusPath)?focusPath:[];if(same(p))return;rootOpen=p.length===0;visible.clear();p.forEach((id,i)=>visible.set(id,i===p.length-1));previous=[...p];}
   function rootLayer(){return (focusPath?.length?stage.select('.context-cluster.depth-0'):stage.select('.root-overview')).node();}
   function layerFor(i,last){return (i===last?stage.select('.child-cluster'):stage.select(`.context-cluster.depth-${i+1}`)).node();}
@@ -45,24 +46,15 @@
     entries.forEach((entry,i)=>{
       const id=path[i],current=i===entries.length-1,fo=wire(entry,id,current);if(!id||!fo)return;
       entry.removeAttribute('transform');fo.removeAttribute('transform');setCardY(fo,y,animate);
-      const ch=+fo.getAttribute('height')||66,node=nodeById.get(id),hasChildren=(node?.children||[]).length>0;
+      const ch=actualCardHeight(fo),node=nodeById.get(id),hasChildren=(node?.children||[]).length>0;
       const open=(current&&hasChildren)||(visible.get(id)===true&&hasChildren),layer=layerFor(i,entries.length-1),toggle=entry.querySelector('foreignObject.layer-kind-toggle-host');
       const showToggle=!!toggle && (open || (current && !hasChildren));
       const th=showToggle?(+toggle.getAttribute('height')||24):0;
-      if(toggle){
-        toggle.removeAttribute('transform');
-        toggle.style.display=showToggle?'':'none';
-        if(showToggle)d3.select(toggle).attr('y',y+ch+4);
-      }
-      if(open&&layer){
-        i<entries.length-1?layer.classList.add('card-stack-layer-visible'):layer.classList.remove('card-stack-layer-hidden');
-        const top=y+ch+4+th/2;setY(layer,top,animate);y=top+h(layer)+12;
-      }else{
-        if(i===entries.length-1&&layer)layer.classList.add('card-stack-layer-hidden');
-        y+=ch+(showToggle?th+8:10);
-      }
+      if(toggle){toggle.removeAttribute('transform');toggle.style.display=showToggle?'':'none';if(showToggle)d3.select(toggle).attr('y',y+ch+4);}
+      if(open&&layer){i<entries.length-1?layer.classList.add('card-stack-layer-visible'):layer.classList.remove('card-stack-layer-hidden');const top=y+ch+4+th/2;setY(layer,top,animate);y=top+h(layer)+12;}
+      else{if(i===entries.length-1&&layer)layer.classList.add('card-stack-layer-hidden');y+=ch+(showToggle?th+8:10);}
     });
-    stage.selectAll('text.canvas-caption').filter(function(){return(d3.select(this).text()||'').includes('· children');}).remove();if(Array.isArray(levelCenters)){levelCenters.length=0;const r=stage.select('.root-context-entry foreignObject').node();if(r)levelCenters.push((+r.getAttribute('y')||0)+(+r.getAttribute('height')||66)/2);entries.forEach(e=>{const c=e.querySelector('foreignObject:not(.layer-kind-toggle-host)');if(c)levelCenters.push((+c.getAttribute('y')||0)+(+c.getAttribute('height')||66)/2);});}worldHeight=Math.max(height,y+96);if(typeof applyCamera==='function')applyCamera(false);
+    stage.selectAll('text.canvas-caption').filter(function(){return(d3.select(this).text()||'').includes('· children');}).remove();if(Array.isArray(levelCenters)){levelCenters.length=0;const r=stage.select('.root-context-entry foreignObject').node();if(r)levelCenters.push((+r.getAttribute('y')||0)+(+r.getAttribute('height')||66)/2);entries.forEach(e=>{const c=e.querySelector('foreignObject:not(.layer-kind-toggle-host)');if(c)levelCenters.push((+c.getAttribute('y')||0)+actualCardHeight(c)/2);});}worldHeight=Math.max(height,y+96);if(typeof applyCamera==='function')applyCamera(false);
   }
   window.atlasChildrenVisibleFor=id=>visible.get(id)===true;const baseRender=render;render=function(...args){const r=baseRender(...args);layout(false);return r;};requestAnimationFrame(()=>layout(false));
 })();
