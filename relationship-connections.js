@@ -11,8 +11,8 @@
 
   function endpointTitle(node, side) {
     const id = side === 'source' ? node?.sourceId : node?.targetId;
-    const fallback = side === 'source' ? node?.sourceLabel : node?.targetLabel;
-    return nodeById.get(id)?.name || fallback || 'Related topic';
+    const label = side === 'source' ? node?.sourceLabel : node?.targetLabel;
+    return label || nodeById.get(id)?.name || 'Related topic';
   }
 
   function optionsFor(node, counts) {
