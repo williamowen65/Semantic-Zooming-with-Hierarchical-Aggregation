@@ -8,6 +8,7 @@
   const esc = value => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
   const plural = (count, singular, pluralForm = `${singular}s`) => `${count} ${count === 1 ? singular : pluralForm}`;
   const isRelationshipContent = node => !!(node && node.relationshipId && node.sourceId && node.targetId && node.relationshipLabel);
+  const sentenceCase = value => { const text=String(value||''); return text ? text.charAt(0).toUpperCase()+text.slice(1) : text; };
 
   function endpointTitle(node, side) {
     const id = side === 'source' ? node?.sourceId : node?.targetId;
@@ -15,8 +16,8 @@
     return label || nodeById.get(id)?.name || 'Related topic';
   }
   function relationshipContext(node){const parent=parentById.get(node?.id),id=parent?.id;if(id===node?.sourceId)return'source';if(id===node?.targetId)return'target';return null;}
-  function inverseRelationshipLabel(node){const label=(node?.relationshipLabel||'').toLowerCase();if(label==='helps address')return'can be addressed by';if(label==='implemented by')return'implements';if(label==='supports')return'supported by';if(label==='depends on')return'supports';if(label==='conflicts with')return'conflicts with';return'related to';}
-  function contextualRelationshipParts(node){const context=relationshipContext(node);if(context==='source')return{label:node.relationshipLabel||'related to',other:endpointTitle(node,'target')};if(context==='target')return{label:inverseRelationshipLabel(node),other:endpointTitle(node,'source')};return{label:node.relationshipLabel||'related to',other:endpointTitle(node,'target')};}
+  function inverseRelationshipLabel(node){const label=(node?.relationshipLabel||'').toLowerCase();if(label==='helps address')return'Can be addressed by';if(label==='implemented by')return'Implements';if(label==='supports')return'Supported by';if(label==='depends on')return'Supports';if(label==='conflicts with')return'Conflicts with';return'Related to';}
+  function contextualRelationshipParts(node){const context=relationshipContext(node);if(context==='source')return{label:sentenceCase(node.relationshipLabel||'related to'),other:endpointTitle(node,'target')};if(context==='target')return{label:inverseRelationshipLabel(node),other:endpointTitle(node,'source')};return{label:sentenceCase(node.relationshipLabel||'related to'),other:endpointTitle(node,'target')};}
 
   function optionsFor(node, counts) {
     const kind = state.semanticKind(node);
