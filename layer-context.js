@@ -68,21 +68,14 @@
       const gapBottom = next ? layerTop(next) : currentBottom + (width < 720 ? 96 : 112);
       const available = Math.max(58, gapBottom - gapTop);
       const preferredCardHeight = 66;
-      const cardHeight = preserveViewportSize
+      let cardHeight = preserveViewportSize
         ? preferredCardHeight
         : Math.min(preferredCardHeight, Math.max(58, available - 12));
-      // Standard view keeps the existing centered treatment. At overview zoom,
-      // anchor the card to the upper layer with the same 6px *screen* inset as
-      // Standard instead of centering it inside the enlarged logical gap.
       const centeredOffset = Math.max(6, (available - cardHeight) / 2);
       const y = preserveViewportSize
         ? gapTop + (6 / hierarchyScale)
         : gapTop + Math.max(6, centeredOffset - 7);
 
-      // The hierarchy canvas itself is scaled at overview presets. Keep these UI
-      // controls screen-sized, like the header, by counter-scaling only the
-      // context entry around its visual center/top anchor. Their widths are based
-      // on the real device viewport rather than the emulated wide canvas.
       const visualCenterX = width / 2;
       const desiredCardWidth = Math.max(120, physicalViewportWidth - 20);
       const cardWidth = preserveViewportSize
@@ -100,7 +93,15 @@
       if (preserveViewportSize) {
         entry.attr('transform', `translate(${visualCenterX},${y}) scale(${inverseHierarchyScale}) translate(${-visualCenterX},${-y})`);
       }
-      entry.append('foreignObject').attr('x', x).attr('y', y).attr('width', cardWidth).attr('height', cardHeight).html(html);
+      const cardFo = entry.append('foreignObject').attr('x', x).attr('y', y).attr('width', cardWidth).attr('height', cardHeight).html(html);
+      const cardElement = cardFo.node()?.querySelector('.layer-context-card');
+      if (cardElement) {
+        cardElement.style.height = 'auto';
+        cardElement.style.minHeight = `${preferredCardHeight}px`;
+        const measuredHeight = Math.ceil(cardElement.scrollHeight || cardElement.getBoundingClientRect().height || cardHeight);
+        cardHeight = Math.max(preferredCardHeight, measuredHeight);
+        cardFo.attr('height', cardHeight);
+      }
 
       if ((node.children || []).length) {
         const mode = typeof window.atlasLayerKindModeFor === 'function' ? window.atlasLayerKindModeFor(node.id) : 'issue';
