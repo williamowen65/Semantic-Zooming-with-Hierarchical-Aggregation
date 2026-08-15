@@ -7,7 +7,8 @@
 - [Children and Visible Types](#children-and-visible-types)
 - [Open-Ended Child Types](#open-ended-child-types)
 - [Emergent Ontology](#emergent-ontology)
-- [Multi-Parent and Converging Nodes](#multi-parent-and-converging-nodes)
+- [Node Relationships and Multiple Parents](#node-relationships-and-multiple-parents)
+- [Cycles and Traversal](#cycles-and-traversal)
 - [Multiple Roots](#multiple-roots)
 - [Open Questions](#open-questions)
 
@@ -35,6 +36,8 @@ Node
 ```
 
 Everything is a Node. Issue, solution, question, challenge, implementation, evidence, objection, support, cause, example, and future vocabulary are semantic `type` values rather than separate application classes.
+
+The conceptual `children` collection describes graph traversal from a Node. The persistence model may represent those connections through relationship records rather than storing literal nested Node arrays.
 
 ## Requested Child Types
 
@@ -81,60 +84,89 @@ Atlas should not impose one complete ontology in advance. Users can reuse existi
 
 AI may later help identify similar vocabulary, aliases, overlapping concepts, or possible consolidation, but should not need to control the ontology.
 
-## Multi-Parent and Converging Nodes
+## Node Relationships and Multiple Parents
 
-Atlas should not assume that every non-root Node has exactly one parent.
+Atlas should use an explicit relationship/edge object to describe how Nodes are connected.
 
-Two Nodes from completely different routes through the graph may converge into a single child Node. In that case, the converging Node has **two real parents** rather than merely displaying a reference to another branch.
+A shared or converging Node is still an ordinary Node. It does **not** become a special subclass merely because it has more than one parent. The semantic meaning of each connection belongs on the relationship between the Nodes.
 
 Conceptually:
 
 ```text
-Parent A --------\
-                  >---- Shared Child ----> further children
-Parent B --------/
-```
++----------------------------------+
+|               Node               |
++----------------------------------+
+| id                               |
+| type                             |
+| title                            |
+| description                      |
+| requestedChildTypes              |
++----------------------------------+
 
-The shared child is still an ordinary Node and can continue recursively with its own children and requested child types.
+               0..*        0..*
+Node ------------------------------- Node
+          via NodeRelationship
 
-This turns the hierarchy into a directed graph rather than a strict tree. A Node may therefore have:
-
-```text
-parents: 0..* Node
-children: 0..* Node
-```
-
-The relationship between a parent and child may also carry semantic vocabulary such as `relates to`, `helps address`, `implemented by`, or whatever terms emerge from users. The exact storage model for that relationship is still open.
-
-One possible UML direction is to introduce an explicit relationship object:
-
-```text
 +----------------------------------+
 |        NodeRelationship          |
 +----------------------------------+
+| id                               |
 | parentNodeId                     |
 | childNodeId                      |
 | type                             |
 | label                            |
 +----------------------------------+
-
-Node 1 ---- 0..* NodeRelationship 0..* ---- 1 Node
 ```
 
-Another possibility is a specialized Node subclass for a convergence/relationship Node that inherits the ordinary Node fields and adds relationship information. That approach should be compared with the explicit-edge model before implementation.
+A Node can therefore have **zero, one, two, or many parents** if the graph calls for it.
 
-The current conceptual preference is to preserve the principle that the shared/converging contribution itself is still a normal Node, while allowing the **connection between Nodes** to express whatever relationship vocabulary is needed. This avoids requiring a special Node subclass merely because a Node has multiple parents, but the subclass option remains worth evaluating if the relationship itself needs first-class content and behavior.
+For example:
 
-### Cycles and infinite traversal
+```text
+Parent A --[relates to]------\
+                              > Shared Child
+Parent B --[helps address]---/
+Parent C --[supports]--------/
+```
 
-Allowing multiple parents raises an important graph question: users could potentially create a relationship that points back into an ancestor path and produces a cycle.
+The Shared Child remains one underlying Node. Each parent relationship can have different semantic vocabulary.
 
-The data model should therefore explicitly decide whether:
+This is especially useful for Atlas because two contributions from completely different routes through the graph may converge on the same idea. The shared child can then continue normally with its own requested child types and descendants.
 
-- Atlas requires the parent/child graph to remain a directed acyclic graph (DAG); or
-- cycles are permitted in storage but traversal/rendering must detect already-visited Nodes and stop recursive expansion.
+The relationship vocabulary can itself participate in the emergent ontology. Examples might include:
 
-This decision should be made before persistence and traversal logic are finalized.
+```text
+relates to
+helps address
+implemented by
+supports
+depends on
+contradicts
+```
+
+but Atlas should not require those exact terms in advance.
+
+### Why the relationship is not a Node subclass
+
+The default rule is:
+
+> **Node = content. NodeRelationship = meaning of the connection.**
+
+A Node should not inherit from a special `RelatedNode`, `MultiParentNode`, or similar class merely because of its graph position. Multiple parents are a property of the graph, not a different kind of content object.
+
+If a relationship someday needs substantial first-class content of its own—such as a description, votes, discussion, requested child types, or its own descendants—that may justify representing that relationship as a first-class Node. That should be treated as a separate modeling decision rather than making all shared relationships subclasses by default.
+
+## Cycles and Traversal
+
+Allowing many parents turns Atlas into a directed graph rather than a strict tree.
+
+The current architectural preference is to keep the **primary parent/child hierarchy acyclic** where possible. In other words, structural parent/child relationships should ideally form a directed acyclic graph (DAG).
+
+This keeps recursive traversal, breadcrumbs, diagram rendering, ancestry checks, and database queries much easier to reason about while still allowing a Node to have many parents.
+
+Richer cross-links can still express relationships between otherwise distant parts of the graph. If Atlas later decides to permit cycles in stored relationships, traversal and rendering must explicitly track visited Nodes and prevent infinite recursive expansion.
+
+The exact distinction between structural hierarchy edges and non-hierarchical cross-links should be finalized during persistence design.
 
 ## Multiple Roots
 A root is not a special Node class. User profiles can expose multiple root Nodes, and the public Atlas can expose multiple root Nodes. Root status is contextual: it identifies an entry point into a graph/hierarchy.
@@ -142,6 +174,7 @@ A root is not a special Node class. User profiles can expose multiple root Nodes
 ## Open Questions
 - [ ] Is `RequestedChildType.order` needed?
 - [x] Which child types, if any, are globally available regardless of solicitation? **Current decision: none need to be hard-coded as globally privileged. Contributors can use requested types, existing ontology vocabulary, or define a new type in context.**
-- [ ] Should parent/child semantics live on an explicit `NodeRelationship` edge, on a specialized Node subclass, or use both for different cases?
-- [ ] Must the parent/child graph remain acyclic, or can Atlas store cycles while traversal detects and contains them?
+- [x] How are cross-branch/shared-node relationships represented? **Current decision: use explicit `NodeRelationship` edges. A Node can have 0..* parents; multi-parent Nodes remain ordinary Nodes.**
+- [ ] Where exactly should Atlas draw the line between structural hierarchy edges and non-hierarchical cross-links?
+- [ ] Must every stored relationship be acyclic, or only the primary parent/child hierarchy?
 - [ ] Which additional domain objects are truly required: votes, moderation records, permissions, etc.?
