@@ -8,6 +8,7 @@
 - [Caching with a Repository Decorator](#caching-with-a-repository-decorator)
 - [Node Version History](#node-version-history)
 - [Graph Storage](#graph-storage)
+- [Deletion and Withdrawal](#deletion-and-withdrawal)
 - [Indexes and Queries](#indexes-and-queries)
 - [Open Questions](#open-questions)
 
@@ -132,26 +133,94 @@ The exact representation can be either full historical snapshots or another vers
 Whether requested child types and relationship changes belong in the Node revision history or require their own histories is still open.
 
 ## Graph Storage
-- [ ] Decide how Nodes are stored.
-- [ ] Decide how parent/child edges are stored.
-- [ ] Decide how cross-branch relationships are represented.
-- [ ] Decide how requested child types are persisted.
-- [ ] Decide whether vocabulary needs separate normalization/storage.
-- [ ] Design profile-root and public-root associations.
-- [ ] Define deletion and soft-deletion behavior.
+
+Most of the graph persistence shape is now conceptually straightforward.
+
+- [x] **Nodes are stored as ordinary relational rows whose fields closely mirror the Node data model.** Database-generated identity fields such as `id` are persistence concerns rather than separate domain concepts.
+- [x] **Parent/child edges are stored as explicit `NodeRelationship` records.** The edge stores the relationship between an existing parent Node and an existing child Node rather than embedding parent state inside the child.
+- [x] **Cross-branch/shared-node relationships use the same `NodeRelationship` representation.** There is not a second special storage model for cross-branch relationships.
+- [x] **A Node may have many parents.** Multiple `NodeRelationship` rows can point to the same child Node, allowing two, three, or potentially many graph routes to converge on one underlying Node identity.
+- [x] **Requested child types are persisted as part of the Node's configuration/state.** They describe the types that Node is actively soliciting rather than defining a globally fixed ontology.
+- [x] **A Node's own semantic `type` is user-defined vocabulary.** Contributors can use an existing requested or known type, or define a new type in context.
+- [x] **Semantic type values should be indexed for lookup/search.** The vocabulary does not currently need a separate normalized ontology table merely in order to be searchable.
+- [ ] Define the exact storage representation for profile-root and public-root associations. These are contextual entry points and should not require a separate `RootNode` class.
+- [x] Define the default deletion model at a conceptual level: preserve graph integrity and contribution history through soft deletion/withdrawal once other content depends on a Node.
+
+The important distinction is that a multi-parent Node is still an ordinary Node. Multi-parent behavior emerges from the number of incoming `NodeRelationship` records rather than from a special subclass or extra parent array stored directly on the Node row.
+
+Conceptually:
+
+```text
+Node A -----\
+Node B ------\
+Node C -------> Shared Node
+Node D ------/
+```
+
+The database represents that shape as several relationship records with the same child Node identifier.
+
+## Deletion and Withdrawal
+
+Deletion should distinguish between two different user intentions:
+
+1. **The author no longer wants this visible as their post.**
+2. **The underlying Node should cease to exist in the graph.**
+
+Those are not always the same operation in a collaborative system.
+
+### Current preferred behavior
+
+If a Node has no dependent contributions or important relationships, a true hard delete may be acceptable.
+
+Once other people have contributed children, relationships, votes, or other dependent content, deleting the underlying Node outright can destroy context for work that belongs to other participants. In that case Atlas should prefer a **soft delete / withdrawal** model.
+
+A withdrawn Node should remain in persistent storage so that:
+
+- graph relationships do not break;
+- descendant and related contributions retain their context;
+- version history remains inspectable;
+- audit/moderation history can remain intact;
+- references to the Node do not silently point at nothing.
+
+The user-facing presentation can hide the original contribution or replace it with a marker such as:
+
+```text
+This node was withdrawn by its author.
+```
+
+The exact wording and which metadata remains visible are product/moderation decisions.
+
+### Hard delete versus soft delete
+
+A reasonable default rule to investigate is:
+
+```text
+No dependent community content
+        -> hard delete may be allowed
+
+Dependent children / relationships / votes / history
+        -> soft delete / withdraw
+```
+
+Moderation may require stronger deletion or content-redaction powers for legal, privacy, abuse, or safety reasons. Those cases should be designed in the moderation domain rather than making ordinary author deletion responsible for every removal scenario.
+
+Withdrawal itself should be recorded as part of the durable history so the Node does not simply disappear from the historical record.
 
 ## Indexes and Queries
 - [ ] Identify common hierarchy traversal queries.
 - [ ] Identify graph lookup queries.
 - [ ] Identify indexes needed for parent, child, type, owner, and visibility lookups.
+- [x] Index semantic Node `type` values so the emergent vocabulary remains searchable.
 - [ ] Consider how analysis results from Python are stored or cached.
 - [ ] Identify which repository reads are safe and valuable to cache.
 - [ ] Define cache invalidation requirements around Node edits, relationship changes, and version creation.
 
 ## Open Questions
-- [ ] Relational adjacency list, relationship table, or another graph representation?
-- [ ] PostgreSQL or another database?
-- [ ] Should semantic type strings be normalized or remain direct user-generated values?
+- [ ] PostgreSQL or another relational database?
+- [ ] Exact schema for `NodeRelationship` and whether relationship vocabulary needs any separate indexing/normalization.
+- [ ] Exact persistence model for profile-root and public-root associations.
 - [ ] Snapshot-based Node versions or another revision representation?
 - [ ] Which Node-related changes are versioned together versus separately?
+- [ ] Exact hard-delete eligibility rules before Atlas requires withdrawal instead.
+- [ ] What data remains visible after an author withdraws a Node?
 - [ ] What cache technology and invalidation strategy should back `CachedNodeRepository`?
