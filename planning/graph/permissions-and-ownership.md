@@ -8,6 +8,8 @@
 - [How the Graph Knows Who Is Acting](#how-the-graph-knows-who-is-acting)
 - [Graph-Owned Authorization Rules](#graph-owned-authorization-rules)
 - [Cross-Context Authorization](#cross-context-authorization)
+- [Graph-Specific Security Surface](#graph-specific-security-surface)
+- [Security Request Flow](#security-request-flow)
 - [Known Requirements](#known-requirements)
 - [Current Decisions](#current-decisions)
 - [Questions to Resolve](#questions-to-resolve)
@@ -237,6 +239,144 @@ GraphActor
 
 The important constraint is to avoid turning `GraphActor` into a duplicate User/Profile object. It should carry only information needed to perform the current Graph authorization decision.
 
+## Graph-Specific Security Surface
+
+Authentication itself is outside Graph, but Graph still has a meaningful security surface because it owns user-generated graph data and the operations that can mutate it.
+
+### Authorization and ownership
+
+Every Graph command should authorize the requested operation against the target Graph object. Knowing a `nodeId` or `relationshipId` must never imply permission to edit, withdraw, connect, disconnect, or even necessarily view that object.
+
+This specifically protects against object-ID / insecure-direct-object-reference style mistakes where a caller changes an identifier and unintentionally gains access to another user's content.
+
+### Untrusted Node content
+
+Node titles, descriptions, semantic types, requested child types, and relationship labels are all potentially user-supplied content.
+
+Graph persistence should use parameterized ORM/database operations rather than constructing SQL from user input. That substantially reduces SQL-injection risk, but it does not eliminate the need for:
+
+- input validation and reasonable length/shape limits;
+- safe output encoding/rendering;
+- protection against stored HTML/script injection where rich text is supported;
+- explicit decisions about whether markup is allowed at all and, if so, how it is sanitized.
+
+Validation rules should be part of the Graph/application boundary rather than left to UI-only validation.
+
+### Relationship authorization
+
+Creating a relationship is itself a protected Graph write operation. Atlas should not assume that a user may connect any two Nodes merely because both IDs exist.
+
+The final rules still need to be decided, but Graph should explicitly authorize:
+
+```text
+create relationship
+remove relationship
+change relationship type/metadata
+```
+
+and consider whether authorization depends on authorship, Context, moderation authority, or the ownership of the involved Nodes.
+
+### Graph resource abuse
+
+Atlas has Graph-specific denial-of-service and resource-abuse risks that ordinary CRUD models may not have to the same degree.
+
+Potential abuse or accidental pathological structures include:
+
+- extreme fan-out from one Node;
+- very deep traversal requests;
+- extremely large numbers of parent relationships on a shared Node;
+- repeated expensive graph queries;
+- cycles where an algorithm assumes acyclic traversal;
+- requests designed to force large in-memory graph materialization.
+
+Planning should therefore consider pagination, bounded traversal depth, query/result limits, rate limiting where appropriate, cancellation/timeouts, and algorithms that explicitly handle cycles rather than recursively assuming a tree.
+
+The domain model can remain flexible without permitting unbounded computational work in a single request.
+
+### Version-history integrity
+
+Node version history is intended to be visible and durable. Ordinary editing should append a new revision rather than rewrite previous revisions.
+
+Graph should prevent ordinary users from silently changing or deleting historical revisions. Exceptional redaction/removal for legal, privacy, abuse, or safety reasons belongs to the Moderation/Security design rather than normal Node editing.
+
+### Concurrent edits
+
+Shared Nodes make concurrent edits plausible. Atlas should consider optimistic concurrency for Node updates—for example, a revision/version token checked when saving—to prevent one user's edit from silently overwriting another user's newer edit.
+
+The exact conflict-resolution UX remains open, but lost updates should not be the default behavior.
+
+### Soft deletion and information exposure
+
+The current withdrawal model preserves the underlying Node and history when community content depends on it. Security/privacy planning must still define what remains visible after withdrawal.
+
+Important questions include:
+
+- Is the original title/description still visible in history?
+- Is the author's identity still visible?
+- Are moderators able to redact specific versions while preserving structural history?
+- When does privacy/legal removal override the normal transparency goal?
+
+### Domain-event integrity
+
+Graph events such as `NodeCreated`, `NodeEdited`, and `NodeWithdrawn` should represent successful, authorized Graph operations.
+
+Other bounded contexts should not be able to fabricate a Graph event and thereby make Notifications, analysis, or other subscribers behave as though Graph state changed when it did not.
+
+The eventual event-dispatch mechanism should preserve the principle that Graph owns the production of Graph domain facts.
+
+### Cache and visibility safety
+
+Caching must not accidentally bypass Graph authorization or visibility rules.
+
+If cached data varies by viewer permissions or Context visibility, the cache key/policy must account for those differences, or the repository/application layer must re-check authorization before returning cached content.
+
+A cached Node representation that was valid for one viewer must not automatically become visible to another viewer with weaker permissions.
+
+## Security Request Flow
+
+The intended security layering is:
+
+```text
+Incoming HTTP request
+        |
+        v
+Authentication
+        |
+        | trusted actor identity
+        v
+Graph command/query
+        |
+        v
+Graph authorization + input validation
+        |
+        v
+Graph domain operation
+        |
+        v
+Persistence / version creation
+        |
+        v
+Graph domain event
+```
+
+This keeps responsibilities separated:
+
+```text
+Identity / application security
+- prove who the actor is
+- establish trusted request identity
+
+Graph security
+- determine whether that actor may perform this Graph operation
+- validate Graph-owned input and invariants
+- protect Graph integrity and computational resources
+
+Moderation
+- handle exceptional authority, abuse, redaction, and removal cases
+```
+
+Graph should not own passwords, login flows, sessions, token issuance, or account security merely because Graph operations require an authenticated actor.
+
 ## Known Requirements
 
 - Graph contains user-generated content and user-defined semantic vocabulary.
@@ -246,6 +386,11 @@ The important constraint is to avoid turning `GraphActor` into a duplicate User/
 - Authenticated actor identity must originate from trusted server-side authentication state, not from an actor ID supplied by the client.
 - Graph should own Graph-specific authorization rules.
 - Authority owned elsewhere—such as community moderation roles—should cross the bounded-context boundary through an explicit contract or trusted application-layer authorization result.
+- All Graph mutations must authorize against the specific target object rather than treating knowledge of its identifier as permission.
+- User-generated Graph content must be treated as untrusted input and safely persisted/rendered.
+- Graph traversal and relationship APIs must be designed with computational abuse and pathological graph shapes in mind.
+- Node version history should be protected from ordinary destructive rewriting.
+- Caching must preserve authorization and visibility boundaries.
 
 ## Current Decisions
 
@@ -256,8 +401,14 @@ The important constraint is to avoid turning `GraphActor` into a duplicate User/
 - [x] Graph must never trust an arbitrary `actorId` supplied by the browser as proof of identity.
 - [x] Graph owns authorization rules that can be answered from Graph state, such as matching an actor ID to a Node's author ID.
 - [x] Graph uses contracts/application coordination when an authorization decision requires facts owned by another bounded context.
+- [x] SQL/database access should use parameterized ORM operations rather than dynamic SQL composed from user content.
+- [x] Graph authorization and validation must be enforced server-side even if the UI also performs validation.
+- [x] Graph domain events represent authorized Graph operations and should be produced by the Graph boundary.
+- [x] Version history is append-oriented from the perspective of ordinary editing; exceptional redaction is a separate moderation/security concern.
 
 ## Questions to Resolve
+
+### Ownership and authorization
 
 - [ ] Who can edit a Node after other users have contributed beneath it?
 - [ ] Who can change requested child types?
@@ -269,3 +420,31 @@ The important constraint is to avoid turning `GraphActor` into a duplicate User/
 - [ ] Which elevated authorization facts should Graph ask other contexts for rather than receive pre-resolved from the application layer?
 - [ ] When Communities and Organizations are designed in detail, which context owns membership and role checks?
 - [ ] Which Graph authorization decisions should also create auditable domain events or version-history entries?
+
+### Content security
+
+- [ ] What input-length and structural limits apply to titles, descriptions, semantic types, requested child types, and relationship labels?
+- [ ] Does Node content support plain text only, Markdown, sanitized HTML, or another formatting model?
+- [ ] If rich text/Markdown is supported, what sanitizer/rendering policy prevents stored script/markup injection?
+
+### Relationship and graph-abuse protection
+
+- [ ] What authorization rule permits a user to connect two existing Nodes?
+- [ ] Are there practical limits on parent count, child count, or relationship creation rate?
+- [ ] What traversal depth/result-size limits should public APIs enforce?
+- [ ] How should traversal APIs behave when cycles exist?
+- [ ] Should the primary hierarchy reject cycles even if richer cross-links are allowed elsewhere?
+
+### Concurrency and history
+
+- [ ] What optimistic-concurrency/version mechanism should Node edits use?
+- [ ] What should the client experience be when a Node changed after the editor loaded it?
+- [ ] Which historical fields remain visible after withdrawal?
+- [ ] Which exceptional conditions allow moderation/security to redact historical content?
+
+### Events and caching
+
+- [ ] How will the event dispatcher ensure Graph events correspond to successfully persisted operations?
+- [ ] Which Graph events contain user/context identifiers, and what information should intentionally not be copied into event payloads?
+- [ ] Which cached Graph reads vary by viewer or Context permissions?
+- [ ] Where should authorization be re-evaluated when serving cached results?
