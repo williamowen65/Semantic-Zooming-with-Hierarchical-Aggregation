@@ -16,7 +16,16 @@
   </header>
 
   <nav id="breadcrumbs" class="breadcrumbs" aria-label="Hierarchy breadcrumb"></nav>
+  <div id="depth-indicator" class="depth-indicator" aria-live="polite">Depth 0</div>
   <main id="app" class="app-shell" aria-live="polite"></main>
+
+  <aside id="theme-control" class="theme-control" aria-label="Visualization tools">
+    <button id="tools-trigger" class="tools-trigger" type="button" aria-expanded="false" aria-controls="tools-panel" aria-label="Open visualization tools"><span aria-hidden="true">⚙</span></button>
+    <div id="tools-panel" class="tools-panel" hidden>
+      <div class="tools-panel-heading"><strong>Theme</strong><button id="tools-close" type="button" aria-label="Close visualization tools">×</button></div>
+      <div id="theme-options" class="theme-options" role="group" aria-label="Visualization theme"></div>
+    </div>
+  </aside>
 
   <script src="https://d3js.org/d3.v6.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/d3-weighted-voronoi@1.1.3/build/d3-weighted-voronoi.min.js"></script>
