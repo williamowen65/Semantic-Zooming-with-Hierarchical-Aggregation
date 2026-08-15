@@ -7,23 +7,9 @@
     return match ? Number(match[1]) : 0;
   };
   const compact = value => value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(Math.round(value || 0));
-  const affectedLocationCount = node => {
-    if (!node || node.kind !== 'issue') return null;
-    if (Array.isArray(node.affectedLocations)) return node.affectedLocations.length;
-    if (Number.isFinite(node.affectedLocationCount)) return node.affectedLocationCount;
-    return Math.max(1, Math.min(12, Math.round((node.votes || 1000) / 1450)));
-  };
-  const childKindCounts = node => {
-    let issues = 0, solutions = 0;
-    (node?.children || []).forEach(child => {
-      const kind = child.semanticKind || child.kind;
-      if (kind === 'solution') solutions += 1;
-      else if (kind === 'issue') issues += 1;
-    });
-    return { issues, solutions };
-  };
   const esc = value => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
   const descriptionHtml = value => esc(value).replace(/\n/g, '<br/>');
+  const responseState = () => window.__atlasLayerKinds;
 
   function hierarchyViewportScale() {
     const host = document.querySelector('#viz');
@@ -33,7 +19,6 @@
     const scale = physicalWidth / logicalWidth;
     return Number.isFinite(scale) && scale > 0 ? scale : 1;
   }
-
   function layerTop(cluster) { return parseTranslateY(cluster); }
   function layerHeight(cluster) {
     const declared = Number(cluster?.dataset?.layerHeight);
@@ -43,10 +28,18 @@
     return 0;
   }
   function layerBottom(cluster) { return layerTop(cluster) + layerHeight(cluster); }
+  function displayType(node) {
+    return node?.displayType || node?.rootRole || (node?.kind === 'solution' ? 'solution' : node?.kind === 'issue' ? 'issue' : 'node');
+  }
+  function responseLabel(def, count) {
+    const word = count === 1 ? (def.singular || def.label || def.id) : (def.plural || def.label || def.id);
+    return `${count} ${word}`;
+  }
 
   function renderLayerContextEntries() {
     stage.selectAll('.layer-context-entry').remove();
     if (!focusPath?.length) return;
+    const state = responseState();
     const clusters = focusPath.map((_, index) => stage.select(`.context-cluster.depth-${index}`).node());
     const childCluster = stage.select('.child-cluster').node();
     const hierarchyScale = hierarchyViewportScale();
@@ -70,10 +63,12 @@
       const desiredCardWidth = Math.max(120, physicalViewportWidth - 20);
       const cardWidth = preserveViewportSize ? desiredCardWidth : (width < 720 ? Math.max(120, width - 20) : Math.min(width - 32, width * .76));
       const x = preserveViewportSize ? visualCenterX - cardWidth / 2 : (width < 720 ? 10 : Math.max(16, width * .12));
-      const locations = affectedLocationCount(node);
-      const counts = childKindCounts(node);
-      const locationHtml = locations == null ? '' : `<span class="layer-context-stat affected-location-stat"><strong>${locations}</strong> affected location${locations === 1 ? '' : 's'}</span>`;
-      const html = `<div xmlns="http://www.w3.org/1999/xhtml" class="layer-context-card ${node.kind === 'solution' ? 'is-solution' : 'is-issue'}"><div class="layer-context-copy"><div class="layer-context-primary"><span class="layer-context-kind">${node.kind === 'solution' ? 'Solution' : 'Issue'}</span><span class="layer-context-name">${esc(node.name)}</span></div><div class="layer-context-description">${descriptionHtml(node.description || '')}</div></div><div class="layer-context-stats">${locationHtml}<span class="layer-context-stat"><strong>${compact(node.votes)}</strong> votes</span><span class="layer-context-stat"><strong>${Number(node.rating || 0).toFixed(1)}</strong> avg</span><span class="layer-context-stat"><strong>${counts.issues}</strong> ${counts.issues === 1 ? 'issue' : 'issues'}</span><span class="layer-context-stat"><strong>${counts.solutions}</strong> ${counts.solutions === 1 ? 'solution' : 'solutions'}</span></div></div>`;
+      const type = displayType(node);
+      const defs = state?.responseDefinitionsFor?.(node) || [];
+      const counts = state?.responseCounts?.(node) || {};
+      const totalResponses = Object.values(counts).reduce((sum, n) => sum + Number(n || 0), 0);
+      const typeLabel = type === 'solution' ? 'Solution' : type === 'question' ? 'Question' : type === 'issue' ? 'Issue' : 'Post';
+      const html = `<div xmlns="http://www.w3.org/1999/xhtml" class="layer-context-card ${type === 'solution' ? 'is-solution' : 'is-issue'}"><div class="layer-context-copy"><div class="layer-context-primary"><span class="layer-context-kind">${esc(typeLabel)}</span><span class="layer-context-name">${esc(node.name)}</span></div><div class="layer-context-description">${descriptionHtml(node.description || '')}</div></div><div class="layer-context-stats"><span class="layer-context-stat"><strong>${compact(node.votes)}</strong> votes</span><span class="layer-context-stat"><strong>${Number(node.rating || 0).toFixed(1)}</strong> avg</span><span class="layer-context-stat"><strong>${totalResponses}</strong> responses</span></div></div>`;
       const entry = stage.append('g').attr('class', 'layer-context-entry');
       if (preserveViewportSize) entry.attr('transform', `translate(${visualCenterX},${y}) scale(${inverseHierarchyScale}) translate(${-visualCenterX},${-y})`);
       const cardFo = entry.append('foreignObject').attr('x', x).attr('y', y).attr('width', cardWidth).attr('height', cardHeight).html(html);
@@ -86,19 +81,22 @@
         cardFo.attr('height', cardHeight);
       }
 
-      const mode = typeof window.atlasLayerKindModeFor === 'function' ? window.atlasLayerKindModeFor(node.id) : 'issue';
-      const toggleWidth = Math.min(physicalViewportWidth < 720 ? 210 : 230, cardWidth * .72);
+      if (!defs.length) return;
+      const mode = window.atlasLayerKindModeFor?.(node.id) || state.availableMode(node);
+      const toggleWidth = Math.min(cardWidth * .88, physicalViewportWidth < 720 ? Math.max(240, physicalViewportWidth - 32) : Math.max(280, Math.min(520, defs.length * 118)));
       const toggleHeight = 24;
       const toggleX = x + (cardWidth - toggleWidth) / 2;
       const toggleY = y + cardHeight + 4;
-      const issueLabel = `${counts.issues} ${counts.issues === 1 ? 'sub-issue' : 'sub-issues'}`;
-      const solutionLabel = `${counts.solutions} ${counts.solutions === 1 ? 'solution' : 'solutions'}`;
-      const toggleHtml = `<div xmlns="http://www.w3.org/1999/xhtml" class="layer-kind-toggle" role="group" aria-label="Show child issues or solutions"><button type="button" class="${mode === 'issue' ? 'is-active' : ''}" ${counts.issues ? '' : 'disabled'} onclick="window.atlasSetLayerKind && window.atlasSetLayerKind('${esc(node.id)}','issue')">${issueLabel}</button><button type="button" class="${mode === 'solution' ? 'is-active' : ''}" ${counts.solutions ? '' : 'disabled'} onclick="window.atlasSetLayerKind && window.atlasSetLayerKind('${esc(node.id)}','solution')">${solutionLabel}</button></div>`;
+      const buttons = defs.map(def => {
+        const count = Number(counts[def.id] || 0);
+        return `<button type="button" class="${mode === def.id ? 'is-active' : ''}" ${count ? '' : 'disabled'} data-parent-id="${esc(node.id)}" data-kind="${esc(def.id)}">${esc(responseLabel(def,count))}</button>`;
+      }).join('');
+      const toggleHtml = `<div xmlns="http://www.w3.org/1999/xhtml" class="solution-toggle-scroll"><div class="layer-kind-toggle solution-four-way-toggle" role="group" aria-label="Choose which responses to show">${buttons}</div></div>`;
       entry.append('foreignObject').attr('class', 'layer-kind-toggle-host').attr('x', toggleX).attr('y', toggleY).attr('width', toggleWidth).attr('height', toggleHeight).html(toggleHtml);
     });
   }
 
   const baseRender = render;
-  render = function() { baseRender(); renderLayerContextEntries(); };
+  render = function() { const result=baseRender(); renderLayerContextEntries(); return result; };
   renderLayerContextEntries();
 })();
