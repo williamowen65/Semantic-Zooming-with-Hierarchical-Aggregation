@@ -335,31 +335,43 @@ The exact aggregate boundaries still need to be designed separately.
 
 ## Initial Atlas Contexts
 
-The current planning structure suggests at least these bounded contexts or closely related modules:
+The current planning structure suggests at least these bounded contexts or closely related modules. Each context below links to its corresponding planning documentation so this architecture map can also act as a navigation page.
 
-### Graph / Content
+### [Graph / Content](../graph/README.md)
 
 Owns the core Atlas graph concepts, including Nodes, Node relationships, requested child types, emergent semantic vocabulary, root associations, Context-based root placement, traversal behavior, and Node persistence/versioning.
 
-### Voting
+Related planning: [Graph and Content Model](../graph/README.md)
+
+### [Voting](../voting/README.md)
 
 Owns votes and voting-specific rules. Ranking/scoring algorithms may use Strategy implementations and may consume Graph identifiers/contracts without owning Graph internals.
 
-### Profiles / Identity
+Related planning: [Voting](../voting/README.md)
+
+### [Profiles / Identity](../profiles-and-identity/README.md)
 
 Owns user/profile behavior, identity-facing rules, profile metadata, and relationships between users and their profile Contexts.
 
-### Notifications
+Related planning: [Profiles and Identity](../profiles-and-identity/README.md)
+
+### [Notifications](../notifications/README.md)
 
 Owns notification records, delivery preferences, notification lifecycle, and notification-provider adapters. It primarily reacts to events emitted by other contexts.
 
-### Moderation
+Related planning: [Notifications](../notifications/README.md)
+
+### [Moderation](../moderation/README.md)
 
 Owns reporting, moderation workflow, governance actions, and moderation-specific state rather than embedding those rules into the Node model.
 
-### Analysis Service Boundary
+Related planning: [Moderation](../moderation/README.md)
+
+### [Analysis Service Boundary](application-architecture.md)
 
 The Python analysis service is a separate runtime/service boundary rather than simply another C# folder. It can perform graph analysis, embeddings, semantic similarity, clustering, recommendation, and AI workloads through explicit service contracts and/or queued events/jobs.
+
+Related planning: [Application Architecture](application-architecture.md) and [Technology Stack](technology-stack.md)
 
 ## Open Decisions
 
