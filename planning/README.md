@@ -16,6 +16,7 @@ This folder is the planning workspace for the Atlas rewrite. Planning is organiz
 - [Product Experience](product-experience/README.md)
 - [Rewrite Execution](rewrite/README.md)
 - [Minimum Design Package for a Domain Area](#minimum-design-package-for-a-domain-area)
+- [Client-Code Use-Case Sketches](#client-code-use-case-sketches)
 
 ## Planning Coverage Dashboard
 
@@ -63,7 +64,31 @@ A substantive domain area should eventually contain, at minimum:
 4. **Permissions / ownership** — who is allowed to create, change, remove, or otherwise affect the domain objects.
 5. **Key flows** — a few end-to-end operations that show how the domain behaves in practice.
 6. **Open decisions** — unresolved questions and a record of decisions as they are settled.
+7. **Client-code / use-case sketches** — small pseudocode examples, where useful, showing how a caller should interact with the domain's public/application surface without knowing its internal implementation.
 
 A domain can have placeholder files before its design is complete. The point is to make missing decisions visible rather than pretending they have already been made.
 
-Cross-cutting areas such as architecture, security, product experience, and rewrite execution do not have to use these exact six documents; they should use analogous planning artifacts appropriate to their responsibilities.
+Cross-cutting areas such as architecture, security, product experience, and rewrite execution do not have to use these exact seven documents; they should use analogous planning artifacts appropriate to their responsibilities.
+
+## Client-Code Use-Case Sketches
+
+As part of planning, Atlas should model important operations from the **client/caller's point of view** before detailed implementation. These sketches are intentionally short pseudocode rather than production code.
+
+The question they answer is:
+
+> If this bounded context were pleasant and obvious to use, what would the calling code look like?
+
+This helps keep encapsulation visible during design. A caller should be able to express domain operations without understanding repository implementations, ORM details, caching, internal relationship machinery, or unrelated security plumbing.
+
+For example, a Graph sketch might read conceptually:
+
+```text
+node = graph.createNode(actor, ...)
+graph.connect(actor, parentNodeId, node.id, relationshipType)
+children = graph.getChildren(node.id)
+graph.editNode(actor, node.id, changes)
+```
+
+The sketches do not lock Atlas into exact method names or signatures. Instead, they serve as a readability and boundary test before implementation complexity is introduced.
+
+Detailed guidance and examples are maintained in [Architecture — Client-Code Use-Case Sketches](architecture/client-code-use-case-sketches.md).
