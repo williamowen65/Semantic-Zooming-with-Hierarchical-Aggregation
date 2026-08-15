@@ -61,6 +61,45 @@ These examples are vocabulary, not a fixed inheritance hierarchy. Atlas should n
 
 The type gives the node semantic meaning in the conversation while allowing the underlying data structure and behavior to remain generic.
 
+## The ontology should emerge naturally
+
+Atlas should not begin with the assumption that there is one correct, centrally maintained ontology that must be designed in advance.
+
+Instead, the ontology can **emerge from how people actually structure conversations**.
+
+Users may choose existing type vocabulary when it fits, but they may also define a new type in the moment when the existing language does not express what they are trying to contribute or solicit.
+
+For example, one conversation may naturally use:
+
+```text
+Issue
+Solution
+Challenge
+Evidence
+```
+
+while another may evolve toward:
+
+```text
+Question
+Hypothesis
+Example
+Counterexample
+Experiment
+```
+
+and another may invent categories that Atlas's designers never anticipated.
+
+This does not require new application classes. These are simply values used by the same generic Node structure.
+
+The ontology can therefore be **fluid rather than fixed**. Human users can interact with the vocabulary that exists, reuse it, introduce new vocabulary, and potentially change which kinds of responses a node is soliciting as the conversation develops.
+
+The resulting ontology is better understood as an emergent property of the graph and its participants than as a schema imposed on every conversation by Atlas itself.
+
+This also means ontology design can happen **on the fly**. A contributor does not necessarily need to select from a complete pre-existing taxonomy before participating. They can define the semantic category they need at the point where they need it, subject to whatever naming, moderation, normalization, or permission rules Atlas eventually adopts.
+
+Questions such as whether equivalent terms should later be suggested, merged, aliased, or normalized are separate product and governance questions. They should not require changing the underlying Node model.
+
 ## Requested child types
 
 A node can declare the kinds of responses it is particularly interested in receiving.
@@ -84,6 +123,8 @@ Counterarguments
 These requested types are what the diagram's child-category toggles primarily represent. Importantly, a requested category should remain visible even when its current count is zero. The empty category communicates to people viewing the diagram that this is a kind of contribution being requested.
 
 `requestedChildTypes` is therefore **solicitation metadata**, not a strict validation rule.
+
+Requested child types can use established vocabulary or vocabulary created specifically for the current conversation. They can also potentially change over time as participants realize that different kinds of responses would be useful.
 
 ## RequestedChildType
 
@@ -139,7 +180,7 @@ visibleChildTypes =
     typesPresentIn(children)
 ```
 
-There may also be globally permitted conversational types, such as `question`, that users can add regardless of whether the parent explicitly requested them. The exact set and creation experience can be designed later.
+There may also be broadly available conversational types, such as `question`, that users can add regardless of whether the parent explicitly requested them. The exact creation and governance rules can be designed later.
 
 ## Solicitation versus restriction
 
@@ -187,6 +228,8 @@ SQL injection protection should primarily come from **parameterized queries, pre
 
 Because Issues, Solutions, Questions, Challenges, and other semantic categories are all represented by the same underlying Node model, this common security and validation behavior does not need to be duplicated across a collection of semantic subclasses.
 
+Flexible user-created type vocabulary still needs validation as user-generated data, but adding a new semantic type should not require adding executable application code.
+
 ## Multiple roots
 
 Atlas is not restricted to one root node.
@@ -213,12 +256,16 @@ The exact persistence model for associating roots with profiles or public collec
 
 ## Scope of these notes
 
-These notes describe the **structure of the data**, assuming users will eventually be able to create and configure nodes.
+These notes describe the **structure of the data**, assuming users will eventually be able to create and configure nodes and their semantic vocabulary.
 
-They are intentionally not attempting to design the complete node-creation user experience yet. Questions such as how users choose a type, invent new vocabulary, select requested response types, reorder toggles, or discover commonly used categories can be explored later without changing the fundamental Node model.
+They are intentionally not attempting to fully design the node-creation user experience yet. However, the model should assume that users may create types and requested child categories dynamically, in context, rather than being limited to a taxonomy Atlas's developers predefine.
+
+Questions such as vocabulary discovery, aliases, normalization, permissions, moderation, duplicate terminology, and whether communities develop shared conventions can be explored later without changing the fundamental Node model.
 
 ## Guiding principle
 
 Atlas should provide structure without requiring a rigid ontology.
 
 A single recursive Node model gives each contribution enough freedom of expression to represent different kinds of thought while still giving the application a predictable structure to store, secure, render, and navigate.
+
+The ontology itself can emerge from human use and remain fluid as conversations evolve.
