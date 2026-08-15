@@ -10,6 +10,7 @@
 - [DbContext per Bounded Context](#dbcontext-per-bounded-context)
 - [How Contexts Communicate](#how-contexts-communicate)
 - [APIs and Application Services](#apis-and-application-services)
+- [Graph Boundary Contract Direction](#graph-boundary-contract-direction)
 - [Domain Events and Pub-Sub](#domain-events-and-pub-sub)
 - [Dependency Rule](#dependency-rule)
 - [Namespaces and Physical Separation](#namespaces-and-physical-separation)
@@ -291,19 +292,19 @@ Where immediate atomic consistency is not required, deliberate contracts and dom
 
 Bounded contexts should communicate through **deliberate contracts** rather than directly accessing one another's repositories, tables, or internal entities.
 
-Two primary communication styles are expected:
+Three directions are useful to distinguish:
 
 ```text
-Direct request / response
-        -> API or application-service contract
-
-Something happened
-        -> domain event / publish-subscribe
+Query   -> ask another context for information
+Command -> ask another context to perform an operation
+Event   -> announce that something has already happened
 ```
 
 A useful shorthand is:
 
-> **API = I need an answer or action now.**
+> **Query = I need an answer now.**
+>
+> **Command = I want this context to do something.**
 >
 > **Event = Something happened; whoever cares may react.**
 
@@ -334,9 +335,117 @@ public interface IGraphQueries
 
 Voting should use that public contract rather than directly depending on `NodeRepository`, ORM mappings, or Graph persistence tables.
 
+Graph may similarly expose a command-oriented contract for operations it owns. For example:
+
+```csharp
+public interface IGraphCommands
+{
+    Task AddRootAsync(Guid contextId, Guid nodeId, Guid actorId);
+}
+```
+
+The exact interface names and signatures are not decisions yet. These examples illustrate the direction: another bounded context asks Graph through a deliberate contract rather than manipulating `RootAssociation`, `NodeRelationship`, or other Graph internals itself.
+
 Similarly, Profiles might ask Graph for the Nodes exposed through a particular root Context without learning how Graph internally stores `RootAssociation` records.
 
-The contract should expose only the information another context genuinely needs.
+The contract should expose only the information or behavior another context genuinely needs.
+
+## Graph Boundary Contract Direction
+
+The architectural direction for Graph is now established well enough to continue planning without prematurely enumerating its entire future API.
+
+Conceptually, the Graph boundary has two kinds of input and one kind of output:
+
+```text
+                GRAPH
+       +-----------------------+
+Queries  ------>|             |
+Commands ------>|             |------> Domain Events
+       +-----------------------+
+```
+
+### Queries
+
+Queries ask Graph for information without asking another context to understand Graph persistence.
+
+Representative examples include:
+
+```text
+GetNode
+NodeExists
+GetChildren
+GetRoots
+GetRelationships
+```
+
+These are examples of the expected contract shape, not finalized method names or a complete API.
+
+### Commands
+
+Commands ask Graph to perform a Graph-owned operation and enforce Graph's rules while doing so.
+
+Representative examples include:
+
+```text
+CreateNode
+EditNode
+ConnectNodes
+WithdrawNode
+ChangeRequestedChildTypes
+```
+
+For example, Profiles should not directly insert a `RootAssociation`, and Voting should not directly alter a Graph-owned Node. The appropriate bounded context requests the operation through Graph's command/application surface.
+
+### Events
+
+Events are different from queries and commands because callers do not invoke them. They describe meaningful facts that Graph can publish **after an operation has successfully happened**.
+
+Representative Graph events include:
+
+```text
+NodeCreated
+NodeEdited
+NodeWithdrawn
+RelationshipCreated
+RelationshipRemoved
+```
+
+A concrete reason for Graph events is Notifications. When a Node is edited, Graph should not need to explicitly call notification delivery code. Instead:
+
+```text
+EditNode command
+      |
+      v
+Graph validates + persists the edit
+      |
+      v
+NodeEdited event
+      |
+      +----> Notifications may react
+      +----> Python analysis may react
+      +----> other future subscribers may react
+```
+
+Graph therefore does not need to know which subscribers exist. This keeps notification behavior and other reactions outside the Graph boundary.
+
+### Planning status
+
+This is intentionally a **direction decision rather than a finalized API specification**.
+
+For the current planning phase, it is sufficient to establish:
+
+```text
+Graph inputs  = queries + commands
+Graph outputs = domain events
+```
+
+Atlas should not invent every possible Graph method in advance. The exact contract surface should emerge from concrete [client-code/use-case sketches](client-code-use-case-sketches.md). For example, sketches for creating a Node, editing a Node, connecting Nodes, and loading roots will reveal which queries and commands callers actually need.
+
+This avoids prematurely designing a large interface based on hypothetical use cases while still giving the rewrite a clear architectural boundary.
+
+The current status is therefore:
+
+> **Graph contract direction decided; exact contract surface deferred until use-case sketches and implementation-oriented planning.**
 
 ## Domain Events and Pub-Sub
 
@@ -361,7 +470,7 @@ publishes NodeEdited
 
 The Graph context does not need to know which subscribers exist. It simply announces the meaningful fact that a Node was edited.
 
-Potential events might include:
+Potential events across Atlas might include:
 
 ```text
 NodeCreated
@@ -375,6 +484,8 @@ ProfileFollowed
 This is the **Observer / Publish-Subscribe** idea applied to domain behavior.
 
 Initially, events may be delivered in-process. If Atlas later introduces background workers, queues, or separate services, the same conceptual event boundaries can move onto asynchronous infrastructure without redesigning the domain concepts that produced them.
+
+The exact event dispatch mechanism is a separate architecture decision from deciding that domain events form part of the boundary.
 
 ## Dependency Rule
 
@@ -393,7 +504,7 @@ Prefer:
 
 ```text
 Voting
-   -> Graph contract
+   -> Graph query/command contract
 
 Graph
    -> publishes events
@@ -498,8 +609,8 @@ Related planning: [Application Architecture](application-architecture.md) and [T
 - [ ] Decide whether each bounded context begins as folders/namespaces within one C# project or as separate .NET projects within the same solution.
 - [x] Persistence direction: use a bounded-context-specific EF Core `DbContext` for each context while allowing them to point to the same physical SQL database.
 - [ ] Decide whether different bounded contexts should eventually use separate database credentials/permissions for stronger database-level enforcement.
-- [ ] Define the first public contract/API exposed by the Graph context.
-- [ ] Define the first set of domain events needed for the rewrite milestone.
+- [x] Establish the Graph boundary contract direction: Graph receives queries and commands and emits domain events. Exact methods/signatures are intentionally deferred to client-code/use-case sketches.
+- [x] Establish representative Graph domain-event categories (`NodeCreated`, `NodeEdited`, `NodeWithdrawn`, relationship changes) without prematurely finalizing the entire event catalog.
 - [ ] Decide how in-process events are dispatched initially.
 - [ ] Decide where transaction boundaries sit when an operation produces a domain event.
 - [ ] Define which concepts belong in a truly shared kernel, if any. Keep this area intentionally small.
