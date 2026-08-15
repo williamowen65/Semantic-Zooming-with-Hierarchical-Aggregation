@@ -27,74 +27,12 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Build latest and commit-specific site
+      - name: Build static site
         shell: bash
         run: |
-          mkdir -p "_site/${GITHUB_SHA}"
-
-          assets=(
-            index.html
-            styles.css
-            theme-toolbar-fix.css
-            layer-context.css
-            leaf-end-state.css
-            node-text-cleanup.css
-            card-content-sizing.css
-            app.js
-            intentional-forest-data.js
-            node-labels-no-icons.js
-            descriptions.js
-            enhancements.js
-            camera-spacing-fix.js
-            semantic-icons.js
-            hierarchy-links.js
-            theme-picker.js
-            layer-context.js
-            scroll-to-card.js
-            leaf-end-state.js
-            hierarchy-overview.js
-            overview-gap-spacing.js
-            url-state.js
-            dense-layer-test.js
-            layer-kind-toggle.js
-            layer-kind-state.js
-            layer-kind-filter.js
-            layer-kind-api.js
-            layer-kind-actions.js
-            root-layer-label.js
-            layer-kind-clicks.js
-            card-stack-layer-kind-bridge.js
-            card-stack-controls-v2.js
-            solution-four-way-toggle.js
-            relationship-connections.js
-            document-flow-scroll.js
-          )
-
-          cp "${assets[@]}" _site/
-          cp "${assets[@]}" "_site/${GITHUB_SHA}/"
-
-          for page in "_site/index.html" "_site/${GITHUB_SHA}/index.html"; do
-            if ! grep -q 'node-text-cleanup.css' "$page"; then
-              sed -i "s#</head>#  <link rel=\"stylesheet\" href=\"node-text-cleanup.css\" />\n</head>#" "$page"
-            fi
-
-            if ! grep -q 'card-content-sizing.css' "$page"; then
-              sed -i "s#</head>#  <link rel=\"stylesheet\" href=\"card-content-sizing.css\" />\n</head>#" "$page"
-            fi
-
-            if ! grep -q 'card-stack-layer-kind-bridge.js' "$page"; then
-              sed -i "s#</body>#  <script src=\"card-stack-layer-kind-bridge.js\"></script>\n</body>#" "$page"
-            fi
-
-            sed -i '/card-stack-controls\.js/d' "$page"
-            if ! grep -q 'card-stack-controls-v2.js' "$page"; then
-              sed -i "s#</body>#  <script src=\"card-stack-controls-v2.js\"></script>\n</body>#" "$page"
-            fi
-
-            # Cache-bust every local JavaScript and stylesheet reference with the
-            # exact deployed commit SHA. External CDN URLs are left untouched.
-            sed -E -i "s#(href|src)=\"([^\":?]+\.(css|js))(\?v=[^\"]*)?\"#\1=\"\2?v=${GITHUB_SHA}\"#g" "$page"
-          done
+          mkdir -p _site
+          cp index.html styles.css data.js diagram.js app.js _site/
+          sed -E -i "s#(href|src)=\"([^\":?]+\.(css|js))(\?[^\"]*)?\"#\1=\"\2?v=${GITHUB_SHA}\"#g" _site/index.html
 
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@v4
