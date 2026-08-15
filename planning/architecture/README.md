@@ -3,6 +3,7 @@
 ## Table of Contents
 
 - [Application Architecture](application-architecture.md)
+- [Codebase Structure and Bounded Contexts](codebase-structure-and-bounded-contexts.md)
 - [Technology Stack](technology-stack.md)
 - [Infrastructure and Deployment](infrastructure-and-deployment.md)
 
