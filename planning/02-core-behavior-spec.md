@@ -21,7 +21,6 @@ Describe what Atlas must do independently of framework, database, or UI implemen
 ## Child Categories
 - [ ] Requested child categories remain visible when their count is zero.
 - [ ] Existing unrequested child types appear when contributions of that type exist.
-- [ ] Define whether questions or other conversational types are universally addable.
 
 ## Navigation
 - [ ] Define hierarchy traversal behavior.
