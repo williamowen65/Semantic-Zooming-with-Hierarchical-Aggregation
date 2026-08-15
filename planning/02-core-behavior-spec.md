@@ -14,6 +14,7 @@ Describe what Atlas must do independently of framework, database, or UI implemen
 
 ## Node Behavior
 - [ ] A Node can have zero or many children.
+- [ ] A Node can have zero, one, or many parents through explicit `NodeRelationship` edges.
 - [ ] A Node can request particular child types.
 - [ ] Users can create flexible type vocabulary dynamically.
 - [ ] Requested child types may change as a conversation develops.
@@ -23,9 +24,14 @@ Describe what Atlas must do independently of framework, database, or UI implemen
 - [ ] Existing unrequested child types appear when contributions of that type exist.
 
 ## Navigation
-- [ ] Define hierarchy traversal behavior.
-- [ ] Define shared/cross-branch Node navigation.
-- [ ] Define what context is preserved while moving between branches.
+- [ ] Define ordinary hierarchy traversal behavior.
+- [x] Shared/cross-branch Nodes are represented as ordinary Nodes that may have multiple parents through explicit relationship edges.
+- [ ] When a Node has multiple parents, define how the UI exposes the available parent contexts/routes.
+- [ ] Define what context is preserved when switching from one parent route to another.
+- [ ] Keep primary hierarchical traversal acyclic where practical so navigation cannot recurse indefinitely.
+- [ ] If non-hierarchical relationships are allowed to form cycles, traversal/rendering must detect already-visited Nodes and prevent infinite expansion.
+
+A multi-parent Node should not be duplicated merely because it appears through different routes. The route determines the current context; the underlying Node identity remains the same.
 
 ## Roots
 - [ ] Multiple roots can exist on a profile.
@@ -43,5 +49,6 @@ Use the prototype as behavioral evidence, not as an implementation template.
 
 ## Open Questions
 - [ ] What is permitted versus merely solicited?
-- [ ] Can one Node participate in multiple parent contexts?
+- [x] Can one Node participate in multiple parent contexts? **Yes. A Node can have 0..* parents through `NodeRelationship` edges and remains one underlying Node.**
+- [ ] How should users choose between multiple parent contexts when viewing a shared Node?
 - [ ] Which behaviors belong to the model versus only the presentation layer?
