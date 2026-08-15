@@ -5,7 +5,9 @@
 - [Domain Model and UML](domain-model-and-uml.md)
 - [Core Behavior Specification](core-behavior-spec.md)
 - [Persistence Model](persistence-model.md)
+- [Permissions and Ownership](permissions-and-ownership.md)
 - [Request and Navigation Flows](request-flows.md)
+- [Open Decisions](open-decisions.md)
 
 ## Scope
 
