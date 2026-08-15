@@ -1,41 +1,81 @@
 (() => {
-  const layerKindByParent = new Map();
-  const solutionKinds = ['challenge', 'implementation', 'yay', 'nay', 'connection'];
-  const issueKinds = ['issue', 'solution', 'connection'];
-  const semanticKind = node => node?.semanticKind || node?.kind;
-  const hierarchyKind = node => node?.relationshipContentKind || semanticKind(node);
-  const modeForKind = kind => kind === 'relationship' ? 'connection' : kind;
+  // Dynamic response model: every node is fundamentally the same kind of object.
+  // A parent node decides which response relationships it solicits through
+  // `responseTypes`, and each child appearance declares its `responseType`.
+  const responseTypeByParent = new Map();
+  const legacyModeForKind = kind => kind === 'relationship' ? 'connection' : kind;
+  const semanticKind = node => node?.semanticKind || node?.kind || 'node';
+  const hierarchyKind = node => node?.relationshipContentKind || semanticKind(node); // compatibility only
 
-  function kindCounts(parent) {
-    const counts = { issues: 0, solutions: 0, challenges: 0, implementations: 0, yays: 0, nays: 0, connections: 0 };
+  const titleCase = value => String(value || '').replace(/[-_]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  function normalizeDefinition(def) {
+    if (typeof def === 'string') return { id:def, label:titleCase(def), singular:def, plural:`${def}s` };
+    const id = String(def?.id || def?.type || def?.key || 'response');
+    const singular = def?.singular || def?.labelSingular || def?.label || titleCase(id);
+    const plural = def?.plural || def?.labelPlural || (String(singular).endsWith('s') ? singular : `${singular}s`);
+    return { ...def, id, label:def?.label || plural, singular, plural };
+  }
+
+  function responseTypeForChild(child) {
+    return child?.responseType || child?.responseRole || child?.edgeType || legacyModeForKind(semanticKind(child));
+  }
+
+  function inferredDefinitions(parent) {
+    const seen = new Set();
+    const defs = [];
     (parent?.children || []).forEach(child => {
-      const kind = semanticKind(child);
-      if (kind === 'solution') counts.solutions += 1;
-      else if (kind === 'challenge') counts.challenges += 1;
-      else if (kind === 'implementation') counts.implementations += 1;
-      else if (kind === 'yay') counts.yays += 1;
-      else if (kind === 'nay') counts.nays += 1;
-      else if (kind === 'relationship') counts.connections += 1;
-      else counts.issues += 1;
+      const id = responseTypeForChild(child);
+      if (!id || seen.has(id)) return;
+      seen.add(id);
+      defs.push(normalizeDefinition(id));
+    });
+    return defs;
+  }
+
+  function responseDefinitionsFor(parent) {
+    const explicit = Array.isArray(parent?.responseTypes) ? parent.responseTypes : [];
+    return (explicit.length ? explicit : inferredDefinitions(parent)).map(normalizeDefinition);
+  }
+
+  function responseCounts(parent) {
+    const counts = Object.create(null);
+    responseDefinitionsFor(parent).forEach(def => { counts[def.id] = 0; });
+    (parent?.children || []).forEach(child => {
+      const id = responseTypeForChild(child);
+      if (!id) return;
+      counts[id] = (counts[id] || 0) + 1;
     });
     return counts;
   }
 
-  function countForMode(counts, mode) {
-    return counts[`${mode}s`] || 0;
-  }
-
-  function modesFor(parent) {
-    return hierarchyKind(parent) === 'solution' ? solutionKinds : issueKinds;
-  }
+  function countForMode(counts, mode) { return counts?.[mode] || 0; }
+  function modesFor(parent) { return responseDefinitionsFor(parent).map(def => def.id); }
+  function definitionFor(parent, id) { return responseDefinitionsFor(parent).find(def => def.id === id) || normalizeDefinition(id); }
 
   function availableMode(parent, preferred = null) {
-    const counts = kindCounts(parent);
-    const modes = modesFor(parent);
-    const requested = modeForKind(preferred || layerKindByParent.get(parent?.id) || modes[0]);
-    if (modes.includes(requested) && countForMode(counts, requested)) return requested;
-    return modes.find(mode => countForMode(counts, mode)) || modes[0];
+    const defs = responseDefinitionsFor(parent);
+    if (!defs.length) return null;
+    const counts = responseCounts(parent);
+    const requested = preferred || responseTypeByParent.get(parent?.id) || defs[0].id;
+    if (defs.some(def => def.id === requested)) return requested;
+    return defs.find(def => countForMode(counts, def.id))?.id || defs[0].id;
   }
 
-  window.__atlasLayerKinds = { layerKindByParent, kindCounts, countForMode, modesFor, availableMode, semanticKind, hierarchyKind, modeForKind };
+  window.__atlasLayerKinds = {
+    // New names.
+    responseTypeByParent,
+    responseDefinitionsFor,
+    responseTypeForChild,
+    responseCounts,
+    definitionFor,
+    // Compatibility aliases for the existing UI modules and URL state.
+    layerKindByParent: responseTypeByParent,
+    kindCounts: responseCounts,
+    countForMode,
+    modesFor,
+    availableMode,
+    semanticKind,
+    hierarchyKind,
+    modeForKind: legacyModeForKind
+  };
 })();
