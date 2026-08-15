@@ -1,22 +1,20 @@
 # Atlas Rewrite Planning
 
+This folder is the planning workspace for the Atlas rewrite. Planning is organized by **domain area / bounded context** rather than forcing every feature into the graph model or requiring every area to have the same set of documents.
+
 ## Table of Contents
 
-1. [Domain Model and UML](01-domain-model-and-uml.md)
-2. [Core Behavior Specification](02-core-behavior-spec.md)
-3. [Persistence Model](03-persistence-model.md)
-4. [Application Architecture](04-application-architecture.md)
-5. [Request and Application Flows](05-request-flows.md)
-6. [Security and Permissions](06-security-and-permissions.md)
-7. [Page and Screen Map](07-page-and-screen-map.md)
-8. [Old Code Salvage Review](08-old-code-salvage.md)
-9. [Existing Test Suite Review](09-test-suite-review.md)
-10. [Technology Stack](10-technology-stack.md)
-11. [Infrastructure and Deployment](11-infrastructure-and-deployment.md)
-12. [Minimum Rewrite Milestone](12-minimum-rewrite-milestone.md)
+- [Graph and Content Model](graph/README.md) — Nodes, emergent types, requested child types, relationships, multi-parent structure, traversal, and persistence of the core graph.
+- [Voting](voting/README.md) — Voting and scoring behavior. Placeholder until this domain is explored in detail.
+- [Profiles and Identity](profiles-and-identity/README.md) — Users, profiles, ownership, roots shown on profiles, and identity-related domain rules.
+- [Moderation](moderation/README.md) — Moderation, abuse handling, content governance, and related workflows.
+- [Architecture](architecture/README.md) — Application boundaries, C# / Python responsibilities, technology stack, and infrastructure.
+- [Security](security/README.md) — Cross-cutting authorization, validation, application security, and service-to-service security.
+- [Product Experience](product-experience/README.md) — Pages, screens, and user-facing application surfaces.
+- [Rewrite Execution](rewrite/README.md) — Old-code salvage, test-suite review, and minimum rewrite milestones.
 
-## Purpose
+## How to use this planning structure
 
-These documents are the pre-rewrite design workspace for Atlas. The goal is to make the important decisions explicit before implementation while avoiding an attempt to design every future feature in advance.
+Not every area needs the same number of documents. The graph/content model is unusually central and complex, so it already has several focused planning documents. Other domains can begin with a single README and gain additional documents only when their rules become complex enough to justify them.
 
-Each document should evolve independently as the corresponding part of the design becomes clearer. This README is the master navigation page.
+The goal is to keep each bounded context understandable on its own while making the top-level planning folder a map of the entire rewrite.
