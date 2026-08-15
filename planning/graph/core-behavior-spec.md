@@ -5,6 +5,7 @@
 - [Node Behavior](#node-behavior)
 - [Child Categories](#child-categories)
 - [Navigation](#navigation)
+- [Strategy Seams](#strategy-seams)
 - [Roots](#roots)
 - [Prototype Behaviors to Preserve](#prototype-behaviors-to-preserve)
 - [Open Questions](#open-questions)
@@ -33,6 +34,33 @@ Describe what Atlas must do independently of framework, database, or UI implemen
 
 A multi-parent Node should not be duplicated merely because it appears through different routes. The route determines the current context; the underlying Node identity remains the same.
 
+## Strategy Seams
+
+Some graph behaviors are likely to evolve algorithmically and are good candidates for the **Strategy pattern** rather than being hard-coded into Node logic.
+
+Potential examples include:
+
+- graph traversal policies;
+- ordering/ranking of child Nodes;
+- related-node recommendations;
+- discovery and prioritization algorithms.
+
+The domain rules should define what is valid and what must remain true. A strategy can decide *how* a valid algorithmic choice is made.
+
+Conceptually:
+
+```text
+Graph / Recommendation Service
+            |
+            v
+       IGraphStrategy
+          /     \
+         /       \
+Default policy   Future policy
+```
+
+This is intended as an extension seam, not a requirement to implement multiple strategies immediately.
+
 ## Roots
 - [ ] Multiple roots can exist on a profile.
 - [ ] Multiple roots can exist on the public Atlas.
@@ -52,3 +80,4 @@ Use the prototype as behavioral evidence, not as an implementation template.
 - [x] Can one Node participate in multiple parent contexts? **Yes. A Node can have 0..* parents through `NodeRelationship` edges and remains one underlying Node.**
 - [ ] How should users choose between multiple parent contexts when viewing a shared Node?
 - [ ] Which behaviors belong to the model versus only the presentation layer?
+- [ ] Which graph behaviors should be fixed domain rules versus interchangeable strategies?
