@@ -8,7 +8,7 @@
 - [Caching with a Repository Decorator](#caching-with-a-repository-decorator)
 - [Node Version History](#node-version-history)
 - [Graph Storage](#graph-storage)
-- [Root Associations](#root-associations)
+- [Root Associations and Context](#root-associations-and-context)
 - [Deletion and Withdrawal](#deletion-and-withdrawal)
 - [Indexes and Queries](#indexes-and-queries)
 - [Open Questions](#open-questions)
@@ -30,6 +30,7 @@ Node
 NodeRelationship / ParentChild
 RequestedChildType
 NodeVersion
+Context
 RootAssociation
 User
 Vote
@@ -143,7 +144,7 @@ Most of the graph persistence shape is now conceptually straightforward.
 - [x] **Requested child types are persisted as part of the Node's configuration/state.** They describe the types that Node is actively soliciting rather than defining a globally fixed ontology.
 - [x] **A Node's own semantic `type` is user-defined vocabulary.** Contributors can use an existing requested or known type, or define a new type in context.
 - [x] **Semantic type values should be indexed for lookup/search.** The vocabulary does not currently need a separate normalized ontology table merely in order to be searchable.
-- [x] **Root entry points use a generalized `RootAssociation` table.** A root is contextual metadata pointing to an ordinary Node, not a special `RootNode` class.
+- [x] **Root entry points use a generalized `RootAssociation` linked to a first-class `Context`.** A root is contextual metadata pointing to an ordinary Node, not a special `RootNode` class.
 - [x] Define the default deletion model at a conceptual level: preserve graph integrity and contribution history through soft deletion/withdrawal once other content depends on a Node.
 
 The important distinction is that a multi-parent Node is still an ordinary Node. Multi-parent behavior emerges from the number of incoming `NodeRelationship` records rather than from a special subclass or extra parent array stored directly on the Node row.
@@ -159,13 +160,101 @@ Node D ------/
 
 The database represents that shape as several relationship records with the same child Node identifier.
 
-## Root Associations
+## Root Associations and Context
 
-Atlas expects root Nodes to appear in several kinds of contexts, not only user profiles and the public Atlas. Future contexts may include communities, organizations, projects, collections, or other groupings.
+Atlas expects root Nodes to appear in several kinds of contexts, including profiles, the public Atlas, communities, organizations, and potentially projects, collections, teams, or other future containers.
 
-Because the set of root contexts is expected to expand, use one generalized polymorphic association table rather than creating a separate `ProfileRoot`, `OrganizationRoot`, `CommunityRoot`, and similar table for every new context.
+The preferred persistence design is to introduce a first-class **`Context` entity** and have root-bearing application entities reference it. `RootAssociation` then points to that one common Context table.
 
 Conceptually:
+
+```text
+Context
+- id
+- type
+
+Profile
+- id
+- contextId -> Context.id
+
+Organization
+- id
+- contextId -> Context.id
+
+Community
+- id
+- contextId -> Context.id
+
+RootAssociation
+- id
+- nodeId    -> Node.id
+- contextId -> Context.id
+```
+
+A public Atlas context can likewise be represented by a real `Context` row rather than requiring a special nullable `contextId` convention.
+
+Example data:
+
+```text
+Context
+id | type
+---+-------------
+1  | public
+2  | profile
+3  | organization
+4  | community
+
+Profile
+id | contextId
+---+----------
+42 | 2
+
+Organization
+id | contextId
+---+----------
+7  | 3
+
+Community
+id | contextId
+---+----------
+19 | 4
+
+RootAssociation
+id | nodeId | contextId
+---+--------+----------
+1  | 101    | 2
+2  | 205    | 2
+3  | 101    | 1
+4  | 310    | 3
+5  | 205    | 4
+```
+
+This means Node 101 is a root in Profile 42's context and also in the public Atlas context; Node 205 is a root in Profile 42's context and Community 19's context; and Node 310 is a root in Organization 7's context.
+
+The Node itself does **not** need fields such as `isProfileRoot`, `isPublicRoot`, or a list of root contexts. Root placement is derived through the association:
+
+```text
+Node
+  |
+  | nodeId
+  v
+RootAssociation
+  |
+  | contextId
+  v
+Context
+  ^
+  |
+Profile / Organization / Community / other context-bearing entity
+```
+
+In practical terms, the combination of the Node's identity and the `RootAssociation.contextId` answers **which Node is an entry point and in which Context it belongs**. The entity that references that Context tells Atlas what real application surface the Context represents—for example, a particular profile, organization, or community.
+
+A single Node may have any number of `RootAssociation` rows, so the same underlying Node can be an entry point in many different contexts without duplicating the Node.
+
+### Why use a Context entity?
+
+The earlier polymorphic idea was:
 
 ```text
 RootAssociation
@@ -175,74 +264,31 @@ RootAssociation
 - contextId
 ```
 
-Example data:
+That is compact and extensible, but `contextId` changes meaning depending on `contextType`. A conventional relational foreign key cannot make one column point to `Profile`, `Organization`, `Community`, and other tables at the same time.
+
+Introducing `Context` preserves the extensibility of one generalized `RootAssociation` table while restoring ordinary relational integrity:
+
+- `RootAssociation.nodeId` can have a foreign key to `Node.id`;
+- `RootAssociation.contextId` can have a foreign key to `Context.id`;
+- `Profile.contextId`, `Organization.contextId`, `Community.contextId`, and future context-bearing entities can each have foreign keys to `Context.id`;
+- deleting or changing referenced data can use normal database constraints and deliberate cascade/restrict rules;
+- Atlas does not need a separate root-association table for every future context type.
+
+This is the main reason for choosing the Context entity rather than either separate root tables or an unchecked polymorphic `contextType + contextId` pair.
+
+The `Context.type` value can still make the context's broad semantic category explicit, while the concrete Profile, Organization, Community, or other record supplies that context's domain-specific information.
+
+### Extensibility
+
+If Atlas later adds another root-bearing concept, such as a Project, it can follow the same pattern:
 
 ```text
-id | nodeId | contextType  | contextId
----+--------+--------------+----------
-1  | 101    | profile      | 42
-2  | 205    | profile      | 42
-3  | 101    | public       | NULL
-4  | 310    | organization | 7
-5  | 205    | community    | 19
+Project
+- id
+- contextId -> Context.id
 ```
 
-This means:
-
-```text
-Node 101
-- is a root on Profile 42
-- is also a public Atlas root
-
-Node 205
-- is a root on Profile 42
-- is also a root for Community 19
-
-Node 310
-- is a root for Organization 7
-```
-
-The Node itself does **not** need fields such as `isProfileRoot`, `isPublicRoot`, or a list of root contexts. Root placement is derived by combining:
-
-```text
-nodeId + contextType + contextId
-```
-
-The three values together answer the practical question: **which Node should be exposed as an entry point, and in which context should it appear?**
-
-Typical lookups become straightforward:
-
-```text
-All roots for Profile 42:
-WHERE contextType = 'profile'
-  AND contextId = 42
-
-All roots for Organization 7:
-WHERE contextType = 'organization'
-  AND contextId = 7
-
-All public Atlas roots:
-WHERE contextType = 'public'
-```
-
-A single Node can have any number of `RootAssociation` records, so the same underlying content can legitimately be an entry point in several contexts without duplication.
-
-### Why use the generalized table?
-
-The main reason is extensibility. Atlas is expected to grow beyond profiles and public roots into additional contexts such as communities and organizations. A generalized table allows new root contexts to be introduced without creating a new association table and persistence model every time.
-
-The tradeoff is weaker conventional foreign-key enforcement for `contextId`. The meaning of `contextId` depends on `contextType`: for example, `42` may identify a Profile when the type is `profile`, while `7` may identify an Organization when the type is `organization`.
-
-Because a single SQL foreign key cannot directly point one column at several possible context tables, the application/repository layer must validate that:
-
-- the `contextType` is supported;
-- the corresponding context exists when a `contextId` is required;
-- the user is authorized to expose the Node in that context;
-- duplicate root associations are prevented where appropriate.
-
-This is a deliberate tradeoff: Atlas accepts some application-level validation in exchange for an extensible root-context model that does not require a schema migration and new association entity for every future context type.
-
-Indexes should support at least `(contextType, contextId)` for retrieving a context's roots and `nodeId` for finding every context in which a Node is exposed as a root.
+Existing `RootAssociation` storage does not change. The Project simply receives a Context, and Nodes can then be associated with it as roots.
 
 ## Deletion and Withdrawal
 
@@ -296,8 +342,9 @@ Withdrawal itself should be recorded as part of the durable history so the Node 
 - [ ] Identify graph lookup queries.
 - [ ] Identify indexes needed for parent, child, type, owner, and visibility lookups.
 - [x] Index semantic Node `type` values so the emergent vocabulary remains searchable.
-- [x] Index `RootAssociation(contextType, contextId)` for retrieving roots by context.
-- [x] Index `RootAssociation.nodeId` for finding all root contexts associated with a Node.
+- [x] Index `RootAssociation.contextId` for retrieving roots in a Context.
+- [x] Index `RootAssociation.nodeId` for finding all Contexts in which a Node is exposed as a root.
+- [x] Use foreign keys from `RootAssociation` to both `Node` and `Context` so root associations retain database-enforced referential integrity.
 - [ ] Consider how analysis results from Python are stored or cached.
 - [ ] Identify which repository reads are safe and valuable to cache.
 - [ ] Define cache invalidation requirements around Node edits, relationship changes, and version creation.
@@ -305,8 +352,8 @@ Withdrawal itself should be recorded as part of the durable history so the Node 
 ## Open Questions
 - [ ] PostgreSQL or another relational database?
 - [ ] Exact schema for `NodeRelationship` and whether relationship vocabulary needs any separate indexing/normalization.
-- [x] Exact persistence model for profile/public/future root associations: **use `RootAssociation(id, nodeId, contextType, contextId)` so root status remains contextual and extensible.**
-- [ ] Decide whether the global `public` context uses a nullable `contextId`, a dedicated public-context identifier, or another small convention.
+- [x] Exact persistence model for profile/public/future root associations: **use a first-class `Context` entity plus `RootAssociation(id, nodeId, contextId)`. Context-bearing entities such as Profile, Organization, and Community reference their Context, preserving extensibility and normal SQL foreign-key integrity.**
+- [ ] Decide the exact lifecycle/uniqueness rules for `Context` records—for example, whether each Profile, Organization, or Community owns exactly one Context.
 - [ ] Snapshot-based Node versions or another revision representation?
 - [ ] Which Node-related changes are versioned together versus separately?
 - [ ] Exact hard-delete eligibility rules before Atlas requires withdrawal instead.
