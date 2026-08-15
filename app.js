@@ -47,7 +47,13 @@
 
   function layerFor(node,{root=false}={}){const layer=document.createElement('section');layer.className='layer';const heading=document.createElement('div');heading.className='layer-heading';const left=document.createElement('span');let items=[];if(root){items=data.rootIds.map(id=>nodes.get(id)).filter(Boolean);left.textContent='Root nodes · all types shown together';}else{const type=effectiveType(node);items=children(node).filter(child=>child.type===type);const option=requested(node).find(o=>o.type===type);left.textContent=option?option.label:type||'Responses';}const right=document.createElement('span');right.textContent=`${items.length} node${items.length===1?'':'s'}`;heading.append(left,right);layer.append(heading);const visual=document.createElement('div');layer.append(visual);requestAnimationFrame(()=>window.renderAtlasDiagram(visual,items,{emptyText:'Nothing has been added here yet. The category remains visible because this node is asking for this kind of response.',onSelect:item=>selectChild(node?.id,item.id,root)}));return layer;}
 
-  function selectChild(parentId,childId,root){if(root){path=[childId];}else{const parentIndex=path.indexOf(parentId);path=(parentIndex>=0?path.slice(0,parentIndex+1):[]).concat(childId);}render();requestAnimationFrame(()=>document.querySelector(`[data-card-id="${CSS.escape(childId)}"]`)?.scrollIntoView({block:'center',behavior:'smooth'}));}
+  function selectChild(parentId,childId,root){
+    collapsedLayers.add(root?'__roots':parentId);
+    if(root){path=[childId];}
+    else{const parentIndex=path.indexOf(parentId);path=(parentIndex>=0?path.slice(0,parentIndex+1):[]).concat(childId);}
+    render();
+    requestAnimationFrame(()=>document.querySelector(`[data-card-id="${CSS.escape(childId)}"]`)?.scrollIntoView({block:'center',behavior:'smooth'}));
+  }
 
   function findPath(targetId){if(data.rootIds.includes(targetId))return [targetId];const queue=data.rootIds.map(id=>[id]);const seen=new Set();while(queue.length){const current=queue.shift(),id=current[current.length-1];if(seen.has(id))continue;seen.add(id);for(const childId of childrenByParent.get(id)||[]){const next=[...current,childId];if(childId===targetId)return next;queue.push(next);}}return [targetId];}
   function navigateTo(id){path=findPath(id);render();requestAnimationFrame(()=>document.querySelector(`[data-card-id="${CSS.escape(id)}"]`)?.scrollIntoView({block:'center',behavior:'auto'}));}
