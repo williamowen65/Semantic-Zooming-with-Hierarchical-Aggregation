@@ -10,6 +10,7 @@ This folder is the planning workspace for the Atlas rewrite. Planning is organiz
 - [Voting](voting/README.md)
 - [Profiles and Identity](profiles-and-identity/README.md)
 - [Moderation](moderation/README.md)
+- [Notifications](notifications/README.md)
 - [Architecture](architecture/README.md)
 - [Security](security/README.md)
 - [Product Experience](product-experience/README.md)
@@ -22,11 +23,12 @@ This dashboard is a **documentation coverage / design-attention metric**, not a 
 
 | Area | Coverage | Status | Current read |
 |---|---:|:---:|---|
-| [Graph and Content Model](graph/README.md) | ~65% | 🟢 | Most-developed domain. Core Node model, emergent ontology, requested child types, relationships, multi-parent convergence, and several navigation decisions have been explored. Persistence and some behavioral edge cases still need work. |
-| [Voting](voting/README.md) | ~15% | 🔴 | Recognized as a domain, but the meaning of votes, scoring, persistence, abuse handling, and flows are mostly unexplored. |
+| [Graph and Content Model](graph/README.md) | ~70% | 🟢 | Most-developed domain. Core Node model, emergent ontology, requested child types, relationships, multi-parent convergence, repository/caching direction, version-history requirements, and several navigation decisions have been explored. Some persistence and behavioral edge cases remain. |
+| [Voting](voting/README.md) | ~20% | 🔴 | Recognized as a domain and now has a strategy-pattern seam for scoring/ranking, but the meaning of votes, scoring rules, persistence, abuse handling, and flows are mostly unexplored. |
 | [Profiles and Identity](profiles-and-identity/README.md) | ~20% | 🔴 | Multiple profile roots and contextual root status are known. Ownership, identity rules, privacy, and profile behavior need substantial design. |
 | [Moderation](moderation/README.md) | ~10% | 🔴 | Mostly a planning scaffold. Governance, moderation states, authority, reporting, auditability, and shared-node consequences remain open. |
-| [Architecture](architecture/README.md) | ~40% | 🟡 | Direction exists around ASP.NET Core/C# plus a separate Python analysis service and possible Terraform/cloud changes. Boundaries, contracts, deployment, and operational details need refinement. |
+| [Notifications](notifications/README.md) | ~30% | 🟡 | Initial domain model exists. Domain events, Observer/Publish-Subscribe, delivery adapters, key flows, and persistence questions are documented, but recipient rules, preferences, grouping, retry/idempotency, and milestone scope remain open. |
+| [Architecture](architecture/README.md) | ~50% | 🟡 | Direction exists around ASP.NET Core/C#, a separate Python analysis service, domain events, adapter boundaries, and possible Terraform/cloud changes. Contracts, durable messaging, deployment, and operational details need refinement. |
 | [Security](security/README.md) | ~20% | 🔴 | Important concerns have been identified, but the rewrite's concrete authorization, validation, service security, threat model, and abuse protections are not yet designed in depth. |
 | [Product Experience](product-experience/README.md) | ~35% | 🟡 | The prototype produced substantial interaction knowledge, but it has not yet been systematically converted into rewrite-oriented screen and behavior specifications. |
 | [Rewrite Execution](rewrite/README.md) | ~35% | 🟡 | Clean-rewrite strategy, old-code salvage, test review, and minimum-milestone thinking exist. Exact first milestone and migration/salvage decisions still need to be finalized. |
@@ -35,7 +37,7 @@ This dashboard is a **documentation coverage / design-attention metric**, not a 
 
 **Most documented:** 🟢 Graph and Content Model
 
-**Partially explored:** 🟡 Architecture, Product Experience, Rewrite Execution
+**Partially explored:** 🟡 Architecture, Product Experience, Rewrite Execution, Notifications
 
 **Largest documentation gaps:** 🔴 Voting, Profiles and Identity, Moderation, Security
 
