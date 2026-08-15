@@ -7,6 +7,7 @@
 - [Concrete Graph Folder Example](#concrete-graph-folder-example)
 - [Proposed Codebase Shape](#proposed-codebase-shape)
 - [What Belongs Inside a Context](#what-belongs-inside-a-context)
+- [DbContext per Bounded Context](#dbcontext-per-bounded-context)
 - [How Contexts Communicate](#how-contexts-communicate)
 - [APIs and Application Services](#apis-and-application-services)
 - [Domain Events and Pub-Sub](#domain-events-and-pub-sub)
@@ -63,6 +64,7 @@ src/
       TraversalService.cs
 
     Persistence/
+      GraphDbContext.cs
       INodeRepository.cs
       NodeRepository.cs
       CachedNodeRepository.cs
@@ -76,7 +78,7 @@ This example is intentionally concrete because it makes the bounded-context idea
 
 - `Domain/` contains the core Graph concepts and rules.
 - `Application/` contains use cases and coordination logic involving those concepts.
-- `Persistence/` contains the Graph-owned database abstraction and implementations. `CachedNodeRepository` can decorate the database repository without putting caching logic into `Node`.
+- `Persistence/` contains the Graph-owned database abstraction and implementations. `GraphDbContext` exposes only the persistence model Graph owns, and `CachedNodeRepository` can decorate the database repository without putting caching logic into `Node`.
 - `Events/` contains meaningful facts that Graph can publish for other contexts to observe, such as `NodeCreated` and `NodeEdited`.
 
 This is an illustrative starting point rather than a requirement that these exact classes or folders exist. For example, `Context`, additional relationship classes, contracts, strategies, version-history persistence, and other files can be added as their responsibilities become concrete.
@@ -95,6 +97,7 @@ src/
     Domain/
     Application/
     Persistence/
+      GraphDbContext.cs
     Contracts/
     Events/
 
@@ -102,6 +105,7 @@ src/
     Domain/
     Application/
     Persistence/
+      VotingDbContext.cs
     Contracts/
     Events/
 
@@ -109,6 +113,7 @@ src/
     Domain/
     Application/
     Persistence/
+      ProfilesDbContext.cs
     Contracts/
     Events/
 
@@ -116,6 +121,7 @@ src/
     Domain/
     Application/
     Persistence/
+      NotificationsDbContext.cs
     Contracts/
     Events/
     Adapters/
@@ -124,6 +130,7 @@ src/
     Domain/
     Application/
     Persistence/
+      ModerationDbContext.cs
     Contracts/
     Events/
 
@@ -160,12 +167,125 @@ Typical categories include:
 
 - **Domain** — entities, aggregate roots, value objects, domain rules, and domain-specific interfaces.
 - **Application** — use cases and services that coordinate domain operations.
-- **Persistence** — repository implementations, ORM mappings, and domain-specific database queries.
+- **Persistence** — repository implementations, ORM mappings, domain-specific database queries, and the bounded context's EF Core `DbContext`.
 - **Contracts** — the intentional public surface other contexts may use.
 - **Events** — domain events published when meaningful changes occur.
 - **Adapters** — implementations for external systems where appropriate.
 
 Not every context needs every folder. The structure should remain proportional to the actual complexity of that domain.
+
+## DbContext per Bounded Context
+
+The preferred persistence direction is **one EF Core `DbContext` per bounded context while still using one shared physical SQL database**.
+
+Conceptually:
+
+```text
+GraphDbContext -----------\
+VotingDbContext -----------\
+ProfilesDbContext ----------> same Atlas SQL database
+NotificationsDbContext ----/
+ModerationDbContext -------/
+```
+
+This does **not** mean separate databases. Each `DbContext` is the EF Core model/view of the database that belongs to that bounded context.
+
+For example:
+
+```text
+Atlas SQL database
+
+Tables:
+- Nodes
+- NodeRelationships
+- RequestedChildTypes
+- Votes
+- Profiles
+- Notifications
+```
+
+while the code-facing persistence models may be:
+
+```text
+GraphDbContext
+- Nodes
+- NodeRelationships
+- RequestedChildTypes
+- RootAssociations
+
+VotingDbContext
+- Votes
+
+ProfilesDbContext
+- Profiles
+
+NotificationsDbContext
+- Notifications
+```
+
+`GraphDbContext` therefore would not normally expose `Votes`, even though the `Votes` table exists in the same database. Graph code should not update votes by reaching through its own persistence model. If Graph needs voting information or behavior, it should communicate through Voting's contract or react to Voting events.
+
+This reinforces the bounded-context boundary at the ORM layer:
+
+```text
+Graph
+  -> GraphDbContext
+     -> Graph-owned database model
+
+Voting
+  -> VotingDbContext
+     -> Voting-owned database model
+
+Profiles
+  -> ProfilesDbContext
+     -> Profile-owned database model
+```
+
+### Shared database does not mean singleton connection
+
+The actual SQL connection should **not** be a single application-wide singleton connection. In ASP.NET Core, EF Core `DbContext` instances are typically scoped to a unit of work such as an HTTP request, while the underlying database provider manages real SQL connections through connection pooling.
+
+Conceptually:
+
+```text
+HTTP request
+    |
+    +--> scoped GraphDbContext
+    +--> scoped VotingDbContext
+    |
+    v
+connection pool
+    |
+    v
+shared SQL database
+```
+
+The contexts may share the same database server, database name, connection configuration, and connection pool infrastructure without sharing one permanently open `SqlConnection` instance.
+
+### About "views"
+
+A context-specific `DbContext` can be thought of as a **logical view/model of the shared database**, but this does not require SQL `VIEW` objects. The separation can be achieved simply because each EF Core model maps only the tables/entities that context owns.
+
+Actual SQL views can still be introduced later for specific read/query needs, reporting, denormalized projections, or security purposes, but they are not required merely to implement bounded-context persistence.
+
+### Why use separate DbContexts?
+
+Benefits include:
+
+- making data ownership visible in code;
+- reducing accidental cross-domain table access;
+- keeping EF mappings and migrations conceptually tied to the owning domain;
+- allowing repositories to remain domain-specific;
+- making context boundaries stronger than folders alone;
+- making later extraction into separate projects/services easier if it ever becomes useful.
+
+This is primarily an architectural boundary, not an absolute security barrier. If every context uses the same database credentials, raw SQL could technically bypass the EF model. Atlas should rely on code structure and review initially, with the option to add separate database users/permissions later if stronger enforcement becomes valuable.
+
+### Cross-context transactions
+
+Because all contexts may use the same physical database, operations that truly require a single SQL transaction across contexts are technically possible. However, cross-context transactions should be uncommon rather than the default.
+
+Where immediate atomic consistency is not required, deliberate contracts and domain events are generally preferable because they preserve context independence.
 
 ## How Contexts Communicate
 
@@ -376,6 +496,8 @@ Related planning: [Application Architecture](application-architecture.md) and [T
 ## Open Decisions
 
 - [ ] Decide whether each bounded context begins as folders/namespaces within one C# project or as separate .NET projects within the same solution.
+- [x] Persistence direction: use a bounded-context-specific EF Core `DbContext` for each context while allowing them to point to the same physical SQL database.
+- [ ] Decide whether different bounded contexts should eventually use separate database credentials/permissions for stronger database-level enforcement.
 - [ ] Define the first public contract/API exposed by the Graph context.
 - [ ] Define the first set of domain events needed for the rewrite milestone.
 - [ ] Decide how in-process events are dispatched initially.
