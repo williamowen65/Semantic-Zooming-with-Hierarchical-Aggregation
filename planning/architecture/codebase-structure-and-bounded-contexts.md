@@ -4,6 +4,7 @@
 
 - [Purpose](#purpose)
 - [Bounded Contexts Are Architectural Boundaries](#bounded-contexts-are-architectural-boundaries)
+- [Concrete Graph Folder Example](#concrete-graph-folder-example)
 - [Proposed Codebase Shape](#proposed-codebase-shape)
 - [What Belongs Inside a Context](#what-belongs-inside-a-context)
 - [How Contexts Communicate](#how-contexts-communicate)
@@ -43,6 +44,44 @@ Graph
 The folder or namespace is a practical way to make that boundary visible, but the folder itself is not what makes something a bounded context. The important rule is that the context **owns its internal model and behavior**.
 
 Other contexts should interact with it through deliberate contracts rather than directly manipulating its internals.
+
+## Concrete Graph Folder Example
+
+A concrete first-pass representation of the Graph bounded context could look like this:
+
+```text
+src/
+  Graph/
+    Domain/
+      Node.cs
+      NodeRelationship.cs
+      RequestedChildType.cs
+      RootAssociation.cs
+
+    Application/
+      NodeService.cs
+      TraversalService.cs
+
+    Persistence/
+      INodeRepository.cs
+      NodeRepository.cs
+      CachedNodeRepository.cs
+
+    Events/
+      NodeCreated.cs
+      NodeEdited.cs
+```
+
+This example is intentionally concrete because it makes the bounded-context idea easier to visualize. `Graph/` is the boundary, while the folders underneath it organize the different responsibilities inside that boundary.
+
+- `Domain/` contains the core Graph concepts and rules.
+- `Application/` contains use cases and coordination logic involving those concepts.
+- `Persistence/` contains the Graph-owned database abstraction and implementations. `CachedNodeRepository` can decorate the database repository without putting caching logic into `Node`.
+- `Events/` contains meaningful facts that Graph can publish for other contexts to observe, such as `NodeCreated` and `NodeEdited`.
+
+This is an illustrative starting point rather than a requirement that these exact classes or folders exist. For example, `Context`, additional relationship classes, contracts, strategies, version-history persistence, and other files can be added as their responsibilities become concrete.
+
+The important architectural idea is that these pieces remain visibly grouped around the Graph domain while other bounded contexts communicate with Graph through intentional contracts or events instead of directly manipulating these internal classes.
 
 ## Proposed Codebase Shape
 
