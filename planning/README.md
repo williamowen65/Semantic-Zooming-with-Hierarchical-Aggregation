@@ -4,6 +4,8 @@ This folder is the planning workspace for the Atlas rewrite. Planning is organiz
 
 ## Table of Contents
 
+- [Planning Coverage Dashboard](#planning-coverage-dashboard)
+- [How to Read the Dashboard](#how-to-read-the-dashboard)
 - [Graph and Content Model](graph/README.md)
 - [Voting](voting/README.md)
 - [Profiles and Identity](profiles-and-identity/README.md)
@@ -12,8 +14,44 @@ This folder is the planning workspace for the Atlas rewrite. Planning is organiz
 - [Security](security/README.md)
 - [Product Experience](product-experience/README.md)
 - [Rewrite Execution](rewrite/README.md)
+- [Minimum Design Package for a Domain Area](#minimum-design-package-for-a-domain-area)
 
-## Minimum design package for a domain area
+## Planning Coverage Dashboard
+
+This dashboard is a **documentation coverage / design-attention metric**, not a claim that an idea is correct, final, or implementation-ready. Percentages are intentionally approximate. They answer: **How much deliberate planning attention has this area received so far?**
+
+| Area | Coverage | Status | Current read |
+|---|---:|:---:|---|
+| [Graph and Content Model](graph/README.md) | ~65% | 🟢 | Most-developed domain. Core Node model, emergent ontology, requested child types, relationships, multi-parent convergence, and several navigation decisions have been explored. Persistence and some behavioral edge cases still need work. |
+| [Voting](voting/README.md) | ~15% | 🔴 | Recognized as a domain, but the meaning of votes, scoring, persistence, abuse handling, and flows are mostly unexplored. |
+| [Profiles and Identity](profiles-and-identity/README.md) | ~20% | 🔴 | Multiple profile roots and contextual root status are known. Ownership, identity rules, privacy, and profile behavior need substantial design. |
+| [Moderation](moderation/README.md) | ~10% | 🔴 | Mostly a planning scaffold. Governance, moderation states, authority, reporting, auditability, and shared-node consequences remain open. |
+| [Architecture](architecture/README.md) | ~40% | 🟡 | Direction exists around ASP.NET Core/C# plus a separate Python analysis service and possible Terraform/cloud changes. Boundaries, contracts, deployment, and operational details need refinement. |
+| [Security](security/README.md) | ~20% | 🔴 | Important concerns have been identified, but the rewrite's concrete authorization, validation, service security, threat model, and abuse protections are not yet designed in depth. |
+| [Product Experience](product-experience/README.md) | ~35% | 🟡 | The prototype produced substantial interaction knowledge, but it has not yet been systematically converted into rewrite-oriented screen and behavior specifications. |
+| [Rewrite Execution](rewrite/README.md) | ~35% | 🟡 | Clean-rewrite strategy, old-code salvage, test review, and minimum-milestone thinking exist. Exact first milestone and migration/salvage decisions still need to be finalized. |
+
+### Current focus signal
+
+**Most documented:** 🟢 Graph and Content Model
+
+**Partially explored:** 🟡 Architecture, Product Experience, Rewrite Execution
+
+**Largest documentation gaps:** 🔴 Voting, Profiles and Identity, Moderation, Security
+
+The percentages should be updated as planning conversations produce concrete decisions, diagrams, rules, flows, or persistence designs. Simply creating placeholder files should **not** materially increase coverage.
+
+## How to Read the Dashboard
+
+- 🟢 **Developed** — substantial design work exists and the area is becoming coherent. This does not mean finished.
+- 🟡 **In progress** — meaningful ideas exist, but important pieces are still undocumented or unresolved.
+- 🔴 **Early / sparse** — mostly placeholders, initial context, or unanswered questions.
+- ⚪ **Not started** — recognized as relevant but essentially no design work has been done yet.
+- ❓ **Unclear / needs reconsideration** — planning exists, but assumptions conflict or the direction itself needs to be revisited.
+
+The percentage measures **planning coverage**, not implementation progress, confidence, quality, or feature completeness. A 70% area can still contain major unresolved decisions; it simply means considerably more of its design surface has been examined and recorded than a 10% area.
+
+## Minimum Design Package for a Domain Area
 
 A substantive domain area should eventually contain, at minimum:
 
