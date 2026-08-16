@@ -10,6 +10,7 @@
 - [Open-Ended Child Types](#open-ended-child-types)
 - [Emergent Ontology](#emergent-ontology)
 - [Node Relationships and Multiple Parents](#node-relationships-and-multiple-parents)
+- [Relationship Semantics and Cardinality](#relationship-semantics-and-cardinality)
 - [Cycles and Traversal](#cycles-and-traversal)
 - [Multiple Roots](#multiple-roots)
 - [Open Questions](#open-questions)
@@ -200,7 +201,7 @@ AI may later help identify similar vocabulary, aliases, overlapping concepts, or
 
 Atlas should use an explicit relationship/edge object to describe how Nodes are connected.
 
-A shared or converging Node is still an ordinary Node. It does **not** become a special subclass merely because it has more than one parent. The semantic meaning of each connection belongs on the relationship between the Nodes.
+A shared or converging Node is still an ordinary Node. It does **not** become a special subclass merely because it has more than one parent.
 
 Conceptually:
 
@@ -218,55 +219,44 @@ Conceptually:
                0..*        0..*
 Node ------------------------------- Node
           via NodeRelationship
-
-+----------------------------------+
-|        NodeRelationship          |
-+----------------------------------+
-| id                               |
-| parentNodeId                     |
-| childNodeId                      |
-| type                             |
-| label                            |
-+----------------------------------+
 ```
 
-A Node can therefore have **zero, one, two, or many parents** if the graph calls for it.
+A Node can therefore have **zero, one, two, or potentially many parents** if the graph and the relationship semantics call for it. Multiple parents are a property of the graph rather than a special content subclass.
+
+## Relationship Semantics and Cardinality
+
+The current design direction is that when several parent Nodes participate in **one relationship**, that relationship has **one semantic keyword/type shared by the participants**. The parents should not automatically receive unrelated per-edge meanings such as one parent being `supports` while another is `complicates` within what is supposed to be the same relationship.
 
 For example:
 
 ```text
-Parent A --[relates to]------\
-                              > Shared Child
-Parent B --[helps address]---/
-Parent C --[supports]--------/
+Relationship type: contradiction
+
+Parent A ─┐
+          ├── Relationship / convergent Node
+Parent B ─┘
 ```
 
-The Shared Child remains one underlying Node. Each parent relationship can have different semantic vocabulary.
+The relationship vocabulary remains open-ended and can participate in Atlas's emergent ontology. Examples might include `contradiction`, `similarity`, `shared cause`, `collectively supports`, or other user-defined terms. These examples are suggestions, not privileged schema values.
 
-This is especially useful for Atlas because two contributions from completely different routes through the graph may converge on the same idea. The shared child can then continue normally with its own requested child types and descendants.
+This raises an important **cardinality** question. Not every relationship concept naturally supports the same number of participants. A relationship such as `contradiction` may make the most sense as exactly two participants, while concepts such as `similarity`, `alternatives`, or `shared cause` may sensibly include two or more.
 
-The relationship vocabulary can itself participate in the emergent ontology. Examples might include:
+A promising direction is therefore for a relationship type/schema to eventually be able to describe its allowed participant count or cardinality, for example:
 
 ```text
-relates to
-helps address
-implemented by
-supports
-depends on
-contradicts
+contradiction
+participants: exactly 2
+
+similarity
+participants: 2+
+
+shared cause
+participants: 2+
 ```
 
-but Atlas should not require those exact terms in advance.
+This is **not yet a finalized implementation decision**. In particular, Atlas still needs to settle the exact persistence model for a multi-participant relationship and how user-defined relationship vocabulary acquires constraints such as cardinality. The important current rule is that the UI and model should **not assume every relationship type can accept arbitrary numbers of parents**.
 
-### Why the relationship is not a Node subclass
-
-The default rule is:
-
-> **Node = content. NodeRelationship = meaning of the connection.**
-
-A Node should not inherit from a special `RelatedNode`, `MultiParentNode`, or similar class merely because of its graph position. Multiple parents are a property of the graph, not a different kind of content object.
-
-If a relationship someday needs substantial first-class content of its own—such as a description, votes, discussion, requested child types, or its own descendants—that may justify representing that relationship as a first-class Node. That should be treated as a separate modeling decision rather than making all shared relationships subclasses by default.
+The Create Node UX can expose this progressively: ordinary creation begins with its contextual parent, and `+ Add another parent` can reveal the relationship/convergence controls. Once multiple participants are selected, the user defines the shared relationship keyword/type for that relationship rather than assigning independent meanings to every parent.
 
 ## Cycles and Traversal
 
@@ -286,7 +276,9 @@ A root is not a special Node class. User profiles can expose multiple root Nodes
 ## Open Questions
 - [ ] Is `RequestedChildType.order` needed?
 - [x] Which child types, if any, are globally available regardless of solicitation? **Current decision: none need to be hard-coded as globally privileged. Contributors can use requested types, existing ontology vocabulary, or define a new type in context.**
-- [x] How are cross-branch/shared-node relationships represented? **Current decision: use explicit `NodeRelationship` edges. A Node can have 0..* parents; multi-parent Nodes remain ordinary Nodes.**
+- [x] How are cross-branch/shared-node relationships represented at a high level? **Current decision: a Node can have multiple parents and remains an ordinary Node rather than becoming a special subclass.**
+- [ ] What is the exact persistence/domain representation of one relationship involving multiple parent Nodes?
+- [ ] How does a user-defined relationship type declare or acquire cardinality constraints such as exactly 2 versus 2+ participants?
 - [x] Is Node body content a single description string? **Current decision: no. Node body content is an ordered collection of typed `ContentBlock` values. Simple text remains a basic block, while images, video, polls, graph integrations, and future tools can use block-specific schemas.**
 - [ ] Which content blocks belong in the first rewrite milestone beyond Text, Image, and Video?
 - [ ] What is the persistence representation for heterogeneous ContentBlocks?
