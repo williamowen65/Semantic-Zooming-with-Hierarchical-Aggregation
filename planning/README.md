@@ -27,7 +27,7 @@ Each dashboard **Area** link and **Next planning** link goes directly to that ar
 
 | Area | Coverage | Status | Current read / next planning |
 |---|---:|:---:|---|
-| [Graph and Content Model](graph/README.md#next-planning-actions) | ~75% | 🟢 | Most-developed domain. Core Node model, emergent ontology, requested child types, relationships, multi-parent convergence, repository/caching direction, version history, navigation, permission boundaries, and the broader Graph security surface have been explored. **Next planning:** [resolve Graph authorization/security, persistence, and remaining model decisions](graph/README.md#next-planning-actions). |
+| [Graph and Content Model](graph/README.md#next-planning-actions) | ~80% | 🟢 | Most-developed domain. Core Node model, emergent ontology, requested child types, relationships, multi-parent convergence, repository/caching direction, version history, navigation, permission boundaries, and the broader Graph security surface have been explored. Authorization and relationship-permission rules now have substantial concrete direction, including ownership transfer, relationship removal authority, optional approval states, and cycle handling. **Next planning:** [resolve the remaining Graph security, concurrency, visibility, persistence, event, cache, and model decisions](graph/README.md#next-planning-actions). |
 | [Voting](voting/README.md#next-planning-actions) | ~20% | 🔴 | Strategy-pattern direction exists for scoring/ranking, but the meaning of votes, scoring rules, persistence, abuse handling, and flows remain sparse. **Next planning:** [define the voting model, behavior, storage, permissions, and core flows](voting/README.md#next-planning-actions). |
 | [Profiles and Identity](profiles-and-identity/README.md#next-planning-actions) | ~20% | 🔴 | Multiple profile roots and contextual root status are known. Ownership, identity rules, privacy, and profile behavior need substantial design. **Next planning:** [define the identity/profile model, authority boundaries, persistence, and key flows](profiles-and-identity/README.md#next-planning-actions). |
 | [Moderation](moderation/README.md#next-planning-actions) | ~10% | 🔴 | Mostly a planning scaffold. Governance, moderation states, authority, reporting, auditability, and shared-node consequences remain open. **Next planning:** [define moderation entities, authority, governance behavior, auditability, and resolution flows](moderation/README.md#next-planning-actions). |
@@ -57,7 +57,7 @@ The percentages should be updated as planning conversations produce concrete dec
 - ⚪ **Not started** — recognized as relevant but essentially no design work has been done yet.
 - ❓ **Unclear / needs reconsideration** — planning exists, but assumptions conflict or the direction itself needs to be revisited.
 
-The percentage measures **planning coverage**, not implementation progress, confidence, quality, or feature completeness. A 75% area can still contain major unresolved decisions; it simply means considerably more of its design surface has been examined and recorded than a 10% area.
+The percentage measures **planning coverage**, not implementation progress, confidence, quality, or feature completeness. An 80% area can still contain major unresolved decisions; it simply means considerably more of its design surface has been examined and recorded than a 10% area.
 
 ## How Coverage Is Scored
 
