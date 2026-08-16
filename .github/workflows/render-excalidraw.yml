@@ -1,0 +1,64 @@
+name: Render Excalidraw previews
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'planning/**/*.excalidraw'
+      - '.github/workflows/render-excalidraw.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Excalidraw exporter
+        run: npm install --global excalidraw_export@1.1.0
+
+      - name: Render SVG previews
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          while IFS= read -r -d '' file; do
+            # Placeholder scenes in this repo currently have no elements.
+            # Skip them until they contain an actual drawing.
+            if ! node -e "const f=require('./' + process.argv[1]); process.exit(Array.isArray(f.elements) && f.elements.length > 0 ? 0 : 1)" "$file"; then
+              echo "Skipping empty scene: $file"
+              rm -f "${file%.excalidraw}.svg" "${file}.svg"
+              continue
+            fi
+
+            echo "Rendering $file"
+            excalidraw_export "$file"
+
+            # excalidraw_export writes <name>.excalidraw.svg; keep the
+            # friendlier <name>.svg next to the editable source file.
+            mv -f "${file}.svg" "${file%.excalidraw}.svg"
+          done < <(find planning -type f -name '*.excalidraw' -print0)
+
+      - name: Commit updated previews
+        shell: bash
+        run: |
+          if git diff --quiet -- '*.svg'; then
+            echo "No SVG preview changes to commit."
+            exit 0
+          fi
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add planning/**/*.svg
+          git commit -m 'chore: render Excalidraw previews'
+          git push
