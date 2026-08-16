@@ -22,7 +22,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '20'
 
       - name: Install Excalidraw exporter
         run: npm install --global excalidraw_export@1.1.0
@@ -33,8 +33,6 @@ jobs:
           set -euo pipefail
 
           while IFS= read -r -d '' file; do
-            # Placeholder scenes in this repo currently have no elements.
-            # Skip them until they contain an actual drawing.
             if ! node -e "const f=require('./' + process.argv[1]); process.exit(Array.isArray(f.elements) && f.elements.length > 0 ? 0 : 1)" "$file"; then
               echo "Skipping empty scene: $file"
               rm -f "${file%.excalidraw}.svg" "${file}.svg"
@@ -43,9 +41,6 @@ jobs:
 
             echo "Rendering $file"
             excalidraw_export "$file"
-
-            # excalidraw_export writes <name>.excalidraw.svg; keep the
-            # friendlier <name>.svg next to the editable source file.
             mv -f "${file}.svg" "${file%.excalidraw}.svg"
           done < <(find planning -type f -name '*.excalidraw' -print0)
 
