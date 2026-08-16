@@ -54,10 +54,20 @@ The Generic Node experience has at least two interchangeable presentation modes 
 
 Users should be able to switch between these representations. The purpose is partly explanatory: the conventional feed makes Atlas approachable like other social platforms, while the graphical representation helps users understand that the feed is actually one layer of a nested graph.
 
-On a Node's own page, the upper portion contains the Node's user-defined type, title, stats/metadata, and its ordered typed content blocks. Beneath that is the same dynamic, user-defined child-type toggle used by the graphical view. In feed mode, selecting a child type replaces the lower area with a ranked feed of child Nodes of that type rather than a graphical/tiled visualization.
+### Feed-card navigation
+
+A card in Feed mode should expose two distinct navigation choices rather than forcing the user into one interpretation of the card:
+
+1. **Graph children** — keep that Node as the selected context and open its child layer in the graphical/tiled representation. This lets a user move directly from a conventional feed into the spatial representation of that Node's descendants.
+2. **Open Node page** — navigate to the Node's full page for its user-defined type, title, stats/metadata, ordered typed content blocks, and child-type navigation.
+
+This means a feed card is both a normal social-feed item and an entry point into the graph. The graphical action is not a different object or data path; it is another projection of the same Node and its relationships.
+
+On a Node's own page, the upper portion contains the Node's user-defined type, title, stats/metadata, and its ordered typed content blocks. Beneath that is the same dynamic, user-defined child-type toggle used by the graphical view. In feed mode, selecting a child type replaces the lower area with a ranked feed of child Nodes of that type rather than a graphical/tiled visualization. Child cards in that feed should retain the same **Graph children** and **Open Node page** choices, allowing users to move fluidly between detail, feed, and graphical representations at any depth.
 
 ## Open Questions
 - [ ] Is create/edit inline, modal, or separate-page behavior?
 - [ ] What does a profile need to expose initially?
 - [ ] Which prototype diagram interactions are part of the Node screen versus later enhancement?
 - [ ] Which ranking signals and strategy determine ordering in feed mode versus visual weight in graph mode?
+- [ ] Does clicking the non-button body of a feed card default to the Node page, do nothing, or use another interaction while the two explicit actions remain available?
