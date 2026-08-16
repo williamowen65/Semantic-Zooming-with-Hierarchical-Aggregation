@@ -8,6 +8,7 @@
 - [How the Graph Knows Who Is Acting](#how-the-graph-knows-who-is-acting)
 - [Graph-Owned Authorization Rules](#graph-owned-authorization-rules)
 - [Cross-Context Authorization](#cross-context-authorization)
+- [Authorization and Relationship Permission Decisions](#authorization-and-relationship-permission-decisions)
 - [Graph-Specific Security Surface](#graph-specific-security-surface)
 - [Security Request Flow](#security-request-flow)
 - [Known Requirements](#known-requirements)
@@ -95,6 +96,7 @@ This UML intentionally shows only the pieces relevant to Graph permissions and o
 | parentNodeId                     |
 | childNodeId                      |
 | createdByUserId                  |
+| approvalState?                   |
 | ...other fields omitted...       |
 +----------------------------------+
 
@@ -183,7 +185,7 @@ Graph should own rules that depend on Graph concepts and Graph state.
 Examples:
 
 ```text
-Is actorId the author of this Node?
+Is actorId the author or current owner of this Node?
 
 Is this Node still eligible for hard deletion,
 or must it be withdrawn because dependent Graph content exists?
@@ -239,6 +241,89 @@ GraphActor
 
 The important constraint is to avoid turning `GraphActor` into a duplicate User/Profile object. It should carry only information needed to perform the current Graph authorization decision.
 
+## Authorization and Relationship Permission Decisions
+
+This section records the current business-rule direction for the Graph permission model. The goal is to write rules clearly enough that they can later become tests and implementation policies.
+
+### Node editing and ownership
+
+- The person who creates a Node has ordinary edit authority over that Node.
+- Node authorship/ownership is meaningful Graph metadata and should be represented through stable IDs rather than by loading full User/Profile objects into Graph.
+- The design should allow for future shared editing/collaboration, but the exact collaborator/steward persistence model does not need to be finalized for the first rewrite milestone.
+- Ownership transfer is expected to be supported. A transfer should not complete until the intended recipient explicitly accepts it.
+- Ownership/authorship changes should be auditable rather than silently rewriting history.
+
+A likely future distinction is between **original authorship**, **current ownership**, and **editing permission**. These may eventually require more than a single `authorUserId` field—for example, a separate access/ownership association—but that schema decision remains open.
+
+### Relationship creation
+
+The current direction is permissive: ordinary users should generally be able to propose/create relationships between Nodes rather than requiring ownership of the parent Node.
+
+Creating a relationship does **not** transfer ownership of either Node.
+
+Relationship creation still needs Graph validation for structural correctness and abuse protection. In particular, traversal and relationship logic must safely handle cyclic graph shapes rather than assuming a strict tree.
+
+Cycles are not necessarily treated as invalid domain data. If a relationship creates a circular route, the application should detect that condition during traversal/rendering and represent it safely to the user rather than recursing indefinitely or crashing.
+
+### Relationship removal
+
+The owner of a parent Node should **not automatically gain the right to remove relationships created by other contributors** merely because those relationships point from or through the owner's Node.
+
+This is intentional. Unwanted or low-quality contributed relationships should primarily be handled through community voting/ranking rather than allowing a Node owner to unilaterally erase contributions they dislike.
+
+The current preferred ordinary removal authorities are:
+
+- the user who created the relationship; and
+- a moderator with applicable authority.
+
+This makes `createdByUserId` useful relationship metadata for permission and history decisions.
+
+The exact interaction with later Voting and Moderation rules is still open. In particular, a sufficiently downvoted relationship may become hidden/de-emphasized without being physically removed.
+
+### Optional relationship approval workflow
+
+Relationship approval should be **configurable rather than universal**.
+
+A Node or Context may opt into an approval requirement. By default, approval can be off so that ordinary collaborative linking remains lightweight.
+
+If either involved Node/context requires approval, a newly proposed relationship may need an explicit state such as:
+
+```text
+Pending
+Approved
+Rejected
+```
+
+The exact scope of the setting is still open: it may live on a Node, a Context, or another policy object. The important rule is that approval can be enabled selectively rather than forcing all Atlas relationships through moderation.
+
+Moderators are expected to be able to participate in relationship approval where the relevant Context gives them that authority.
+
+### Moderation authority
+
+Moderator authority exists as an override path for Graph relationships and potentially shared/community-owned content, but its exact scope is not yet decided.
+
+Open scope questions include whether moderator authority is:
+
+- global;
+- Context-specific;
+- community-specific;
+- organization-specific; or
+- some combination of these.
+
+Graph should consume the relevant authority fact through an explicit contract or trusted application-layer result rather than owning community/moderator membership data itself.
+
+### Concurrent editing
+
+Shared editing should be possible in the future, and the UX may eventually become collaborative enough that more than one user can edit the same Node.
+
+The immediate persistence requirement is simpler: Node writes should avoid silent lost updates. Optimistic concurrency/version checks are the current preferred direction even if real-time collaborative editing is deferred.
+
+### Author identity detachment / anonymization
+
+A Node may need to survive even when the relationship to its original author is removed or anonymized—for example, because the Node has dependent community content or because a privacy/moderation action requires identity removal while preserving graph structure.
+
+This is different from deleting the Node itself. The exact rules for when author identity can be detached, anonymized, or redacted remain open and should be coordinated with Moderation, Privacy, and version-history planning.
+
 ## Graph-Specific Security Surface
 
 Authentication itself is outside Graph, but Graph still has a meaningful security surface because it owns user-generated graph data and the operations that can mutate it.
@@ -264,17 +349,18 @@ Validation rules should be part of the Graph/application boundary rather than le
 
 ### Relationship authorization
 
-Creating a relationship is itself a protected Graph write operation. Atlas should not assume that a user may connect any two Nodes merely because both IDs exist.
+Creating a relationship is itself a protected Graph write operation. The current direction is that authenticated/eligible contributors may generally create relationships between visible Nodes without owning the parent Node, subject to Graph validation, approval policy when enabled, and later abuse/rate controls.
 
-The final rules still need to be decided, but Graph should explicitly authorize:
+Graph should explicitly authorize and distinguish:
 
 ```text
 create relationship
 remove relationship
+approve/reject relationship
 change relationship type/metadata
 ```
 
-and consider whether authorization depends on authorship, Context, moderation authority, or the ownership of the involved Nodes.
+The creator and applicable moderators have special authority over relationship removal; the parent Node owner does not automatically receive removal authority over somebody else's relationship.
 
 ### Graph resource abuse
 
@@ -391,6 +477,10 @@ Graph should not own passwords, login flows, sessions, token issuance, or accoun
 - Graph traversal and relationship APIs must be designed with computational abuse and pathological graph shapes in mind.
 - Node version history should be protected from ordinary destructive rewriting.
 - Caching must preserve authorization and visibility boundaries.
+- Parent Node ownership does not imply unilateral control over relationships created by other contributors.
+- Relationship creators retain ordinary removal authority over their own relationships; moderation can provide an override where authorized.
+- Relationship approval may be enabled selectively rather than imposed globally.
+- Ownership transfers require recipient acceptance.
 
 ## Current Decisions
 
@@ -401,25 +491,46 @@ Graph should not own passwords, login flows, sessions, token issuance, or accoun
 - [x] Graph must never trust an arbitrary `actorId` supplied by the browser as proof of identity.
 - [x] Graph owns authorization rules that can be answered from Graph state, such as matching an actor ID to a Node's author ID.
 - [x] Graph uses contracts/application coordination when an authorization decision requires facts owned by another bounded context.
+- [x] The Node creator has ordinary edit authority over the Node.
+- [x] Node ownership may be transferred, but the recipient must accept before the transfer becomes effective.
+- [x] Ordinary users may generally propose/create relationships between Nodes without owning the parent Node, subject to validation and any enabled approval policy.
+- [x] A parent Node owner does **not** automatically have authority to remove relationships created by other users.
+- [x] The relationship creator has ordinary authority to remove that relationship.
+- [x] Applicable moderators may remove or approve/reject relationships according to later moderation-scope rules.
+- [x] Relationship approval is optional/configurable rather than universal; `Pending`, `Approved`, and `Rejected` are candidate states.
+- [x] Cycles are not assumed impossible. Traversal/rendering must detect and represent cyclic routes safely rather than recursing indefinitely.
 - [x] SQL/database access should use parameterized ORM operations rather than dynamic SQL composed from user content.
 - [x] Graph authorization and validation must be enforced server-side even if the UI also performs validation.
 - [x] Graph domain events represent authorized Graph operations and should be produced by the Graph boundary.
 - [x] Version history is append-oriented from the perspective of ordinary editing; exceptional redaction is a separate moderation/security concern.
+- [x] Shared editing is a future capability, but Node persistence should at minimum protect against silent lost updates through optimistic concurrency/version checks.
 
 ## Questions to Resolve
 
 ### Ownership and authorization
 
-- [ ] Who can edit a Node after other users have contributed beneath it?
-- [ ] Who can change requested child types?
-- [ ] Who can add a `NodeRelationship`?
-- [ ] Who can remove a `NodeRelationship`, particularly when the relationship was created by another contributor?
-- [ ] Is `authorUserId` sufficient for Node ownership, or does Graph eventually need collaborators/stewards in addition to the original author?
-- [ ] Should relationship records persist `createdByUserId` for ownership/history/permission decisions?
+- [x] Who can edit a Node? **The creator/current owner has ordinary edit authority. Future shared editors/collaborators may be added.**
+- [ ] Who can change requested child types? Current assumption: this follows Node editing authority, but confirm whether collaborators/moderators can also do so.
+- [x] Who can add a `NodeRelationship`? **Ordinary eligible users may generally create/propose relationships without owning the parent Node, subject to validation and optional approval policy.**
+- [x] Who can remove a `NodeRelationship`? **The relationship creator and an applicable moderator. Parent Node ownership alone does not grant removal authority.**
+- [ ] Define whether original authorship and current ownership are stored separately once ownership transfer is implemented.
+- [ ] Define the future collaborator/steward/editor model and whether it requires a `NodeAccess`-style association table.
+- [x] Should relationship records persist `createdByUserId`? **Yes, it is useful for ownership/history/permission decisions.**
+- [ ] Define exact ownership-transfer history/event semantics beyond recipient acceptance.
 - [ ] What happens to shared Nodes that appear under multiple parents if one context or relationship is removed?
 - [ ] Which elevated authorization facts should Graph ask other contexts for rather than receive pre-resolved from the application layer?
 - [ ] When Communities and Organizations are designed in detail, which context owns membership and role checks?
+- [ ] Define exact moderator scope: global, Context-specific, community-specific, organization-specific, or mixed.
 - [ ] Which Graph authorization decisions should also create auditable domain events or version-history entries?
+- [ ] Define when/why author identity may be detached or anonymized while preserving the Node and its graph structure.
+
+### Relationship approval
+
+- [x] Approval is optional rather than universal.
+- [x] Candidate approval states are `Pending`, `Approved`, and `Rejected`.
+- [ ] Decide where the approval requirement is configured: Node, Context, policy object, or some combination.
+- [ ] Define the exact rule when both involved Nodes/Contexts have different approval settings. Current direction: if either relevant policy requires approval, the relationship should require approval.
+- [ ] Define who can approve/reject in each type of moderated Context.
 
 ### Content security
 
@@ -429,18 +540,20 @@ Graph should not own passwords, login flows, sessions, token issuance, or accoun
 
 ### Relationship and graph-abuse protection
 
-- [ ] What authorization rule permits a user to connect two existing Nodes?
+- [x] What authorization rule permits a user to connect two existing Nodes? **Ordinary eligible users may generally create/propose the connection; ownership of either Node is not required by default.**
 - [ ] Are there practical limits on parent count, child count, or relationship creation rate?
 - [ ] What traversal depth/result-size limits should public APIs enforce?
-- [ ] How should traversal APIs behave when cycles exist?
-- [ ] Should the primary hierarchy reject cycles even if richer cross-links are allowed elsewhere?
+- [x] How should traversal APIs behave when cycles exist? **They must detect cycles, stop recursive expansion safely, and represent the circular route to the user rather than failing or looping indefinitely.**
+- [ ] Decide whether any specific relationship subtype should reject cycles even though the general Graph model can represent them.
 
 ### Concurrency and history
 
-- [ ] What optimistic-concurrency/version mechanism should Node edits use?
-- [ ] What should the client experience be when a Node changed after the editor loaded it?
+- [ ] Choose the exact optimistic-concurrency/version mechanism for Node edits.
+- [ ] Define the client experience when a Node changed after the editor loaded it.
+- [ ] Define how future real-time/shared editing relates to optimistic concurrency.
 - [ ] Which historical fields remain visible after withdrawal?
 - [ ] Which exceptional conditions allow moderation/security to redact historical content?
+- [ ] Define how authorship/ownership transfer appears in version history.
 
 ### Events and caching
 
