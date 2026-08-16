@@ -1,13 +1,13 @@
 {
   "type": "excalidraw",
   "version": 2,
-  "source": "atlas-planning",
+  "source": "https://marketplace.visualstudio.com/items?itemName=pomdtr.excalidraw-editor",
   "elements": [
     {
       "id": "atlas-home-box",
       "type": "rectangle",
-      "x": 140,
-      "y": 100,
+      "x": 148.10617516731196,
+      "y": 94.27711102364424,
       "width": 300,
       "height": 140,
       "angle": 0,
@@ -20,21 +20,24 @@
       "opacity": 100,
       "groupIds": [],
       "frameId": null,
-      "roundness": { "type": 3 },
+      "roundness": {
+        "type": 3
+      },
       "seed": 101,
-      "version": 1,
-      "versionNonce": 201,
+      "version": 123,
+      "versionNonce": 1060573672,
       "isDeleted": false,
       "boundElements": [],
-      "updated": 1,
+      "updated": 1786845557923,
       "link": null,
-      "locked": false
+      "locked": false,
+      "index": "a0"
     },
     {
       "id": "atlas-home-title",
       "type": "text",
-      "x": 205,
-      "y": 145,
+      "x": 213.46833419799805,
+      "y": 143.5749053955078,
       "width": 170,
       "height": 32,
       "angle": 0,
@@ -49,11 +52,11 @@
       "frameId": null,
       "roundness": null,
       "seed": 102,
-      "version": 1,
-      "versionNonce": 202,
+      "version": 8,
+      "versionNonce": 842148389,
       "isDeleted": false,
-      "boundElements": null,
-      "updated": 1,
+      "boundElements": [],
+      "updated": 1786846446546,
       "link": null,
       "locked": false,
       "fontSize": 28,
@@ -64,7 +67,8 @@
       "containerId": null,
       "originalText": "Atlas Home",
       "autoResize": true,
-      "lineHeight": 1.25
+      "lineHeight": 1.25,
+      "index": "a1"
     },
     {
       "id": "node-circle",
@@ -85,21 +89,22 @@
       "frameId": null,
       "roundness": null,
       "seed": 103,
-      "version": 1,
-      "versionNonce": 203,
+      "version": 2,
+      "versionNonce": 614662376,
       "isDeleted": false,
       "boundElements": [],
-      "updated": 1,
+      "updated": 1786845521891,
       "link": null,
-      "locked": false
+      "locked": false,
+      "index": "a2"
     },
     {
       "id": "node-label",
       "type": "text",
-      "x": 242,
-      "y": 348,
-      "width": 96,
-      "height": 25,
+      "x": 199.26620048802613,
+      "y": 203.76007600580272,
+      "width": 214.43748338813685,
+      "height": 55.843094632327265,
       "angle": 0,
       "strokeColor": "#1e1e1e",
       "backgroundColor": "transparent",
@@ -112,14 +117,14 @@
       "frameId": null,
       "roundness": null,
       "seed": 104,
-      "version": 3,
-      "versionNonce": 404,
+      "version": 404,
+      "versionNonce": 1103917797,
       "isDeleted": false,
-      "boundElements": null,
-      "updated": 3,
+      "boundElements": [],
+      "updated": 1786846456998,
       "link": null,
       "locked": false,
-      "fontSize": 20,
+      "fontSize": 44.67447570586181,
       "fontFamily": 1,
       "text": "PNG Test Node",
       "textAlign": "center",
@@ -127,7 +132,8 @@
       "containerId": null,
       "originalText": "PNG Test Node",
       "autoResize": true,
-      "lineHeight": 1.25
+      "lineHeight": 1.25,
+      "index": "a3"
     },
     {
       "id": "home-to-node",
@@ -146,26 +152,40 @@
       "opacity": 100,
       "groupIds": [],
       "frameId": null,
-      "roundness": { "type": 2 },
+      "roundness": {
+        "type": 2
+      },
       "seed": 105,
-      "version": 1,
-      "versionNonce": 205,
+      "version": 2,
+      "versionNonce": 1969398760,
       "isDeleted": false,
-      "boundElements": null,
-      "updated": 1,
+      "boundElements": [],
+      "updated": 1786845521891,
       "link": null,
       "locked": false,
-      "points": [[0, 0], [0, 80]],
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          80
+        ]
+      ],
       "lastCommittedPoint": null,
       "startBinding": null,
       "endBinding": null,
       "startArrowhead": null,
       "endArrowhead": "arrow",
-      "elbowed": false
+      "elbowed": false,
+      "index": "a4"
     }
   ],
   "appState": {
     "gridSize": 20,
+    "gridStep": 5,
+    "gridModeEnabled": false,
     "viewBackgroundColor": "#ffffff"
   },
   "files": {}
