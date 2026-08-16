@@ -3,6 +3,8 @@
 ## Table of Contents
 - [Purpose](#purpose)
 - [Core Node Model](#core-node-model)
+- [Composable Node Content](#composable-node-content)
+- [Content Block Validation and Extensibility](#content-block-validation-and-extensibility)
 - [Requested Child Types](#requested-child-types)
 - [Children and Visible Types](#children-and-visible-types)
 - [Open-Ended Child Types](#open-ended-child-types)
@@ -24,13 +26,15 @@ Define the things Atlas fundamentally stores and how they relate, without tying 
 | id                               |
 | type                             |
 | title                            |
-| description                      |
+| contentBlocks[]                  |
 | requestedChildTypes              |
 | children                         |
 +----------------------------------+
 
 Node
   ├── type: flexible semantic label
+  ├── title: short human-readable heading
+  ├── contentBlocks: ordered composable body content
   ├── requestedChildTypes: types the author is soliciting
   └── children: 0..* Node
 ```
@@ -38,6 +42,114 @@ Node
 Everything is a Node. Issue, solution, question, challenge, implementation, evidence, objection, support, cause, example, and future vocabulary are semantic `type` values rather than separate application classes.
 
 The conceptual `children` collection describes graph traversal from a Node. The persistence model may represent those connections through relationship records rather than storing literal nested Node arrays.
+
+The earlier idea of a single free-form `description` field is no longer the preferred conceptual model. A Node body should instead be represented as an ordered set of typed content blocks. A simple paragraph is still easy to express—it is just a text block—but richer posts do not require continually adding unrelated fields directly to `Node`.
+
+## Composable Node Content
+
+A Node's body should behave more like a lightweight block-based/no-code document editor than one large text field.
+
+Conceptually:
+
+```text
++----------------------------------+
+|               Node               |
++----------------------------------+
+| id                               |
+| title                            |
+| ...                              |
++----------------------------------+
+| contentBlocks: 0..*              |
++----------------------------------+
+                 |
+                 | ordered
+                 v
++----------------------------------+
+|          ContentBlock            |
++----------------------------------+
+| id                               |
+| nodeId                           |
+| position                         |
+| blockType                        |
+| block-specific structured data   |
++----------------------------------+
+```
+
+For example:
+
+```text
+Node
+ ├── TextBlock
+ ├── ImageBlock
+ ├── TextBlock
+ ├── PollBlock
+ └── GraphBlock
+```
+
+The first useful primitives can remain deliberately small:
+
+```text
+TextBlock
+ImageBlock
+VideoBlock
+```
+
+Future tools can add richer blocks without changing the fundamental Node abstraction, for example:
+
+```text
+PollBlock
+GraphBlock
+QuoteBlock
+EmbedBlock
+DatasetBlock
+```
+
+The order of the blocks is part of the Node's content. Users should eventually be able to add, remove, and reorder blocks in a toolbox/editor experience similar to a no-code page builder.
+
+This is a **domain-model decision**, not only a UI feature. Product Experience can later define how the block editor feels, but Graph owns the fact that Node content is ordered, composable, and typed.
+
+## Content Block Validation and Extensibility
+
+Each block type should have a defined structure and validation policy rather than accepting arbitrary untyped data.
+
+Examples:
+
+```text
+TextBlock
+- bounded text length
+- supported formatting model
+- sanitization / safe rendering rules
+
+ImageBlock
+- media reference
+- valid media type / size constraints
+- optional caption / alt text
+
+VideoBlock
+- accepted media/provider reference
+- media-specific validation
+
+PollBlock
+- question
+- bounded option count
+- bounded option length
+
+GraphBlock
+- graph-specific structured configuration
+```
+
+Atlas can also impose Node-level limits such as:
+
+- maximum title length;
+- maximum number of content blocks;
+- maximum aggregate content/media size;
+- per-block limits for expensive or complex block types.
+
+This makes input validation more precise than attempting to sanitize one giant `description` field. The server should validate the declared `blockType` and the structure expected for that type.
+
+The implementation should **not yet be forced** into literal C# inheritance such as `TextBlock : ContentBlock`. Possible implementation shapes include subclasses, discriminated records, or a `blockType + structured payload` representation. The conceptual requirement is the stable part: **ordered typed blocks with block-specific validation**.
+
+Adding a new content tool should generally mean adding a new supported block type, rather than expanding `Node` with fields such as `imageUrl`, `videoUrl`, `pollOptions`, and `graphConfig` that are irrelevant to most Nodes.
 
 ## Requested Child Types
 
@@ -99,7 +211,7 @@ Conceptually:
 | id                               |
 | type                             |
 | title                            |
-| description                      |
+| contentBlocks[]                  |
 | requestedChildTypes              |
 +----------------------------------+
 
@@ -175,6 +287,10 @@ A root is not a special Node class. User profiles can expose multiple root Nodes
 - [ ] Is `RequestedChildType.order` needed?
 - [x] Which child types, if any, are globally available regardless of solicitation? **Current decision: none need to be hard-coded as globally privileged. Contributors can use requested types, existing ontology vocabulary, or define a new type in context.**
 - [x] How are cross-branch/shared-node relationships represented? **Current decision: use explicit `NodeRelationship` edges. A Node can have 0..* parents; multi-parent Nodes remain ordinary Nodes.**
+- [x] Is Node body content a single description string? **Current decision: no. Node body content is an ordered collection of typed `ContentBlock` values. Simple text remains a basic block, while images, video, polls, graph integrations, and future tools can use block-specific schemas.**
+- [ ] Which content blocks belong in the first rewrite milestone beyond Text, Image, and Video?
+- [ ] What is the persistence representation for heterogeneous ContentBlocks?
+- [ ] What Node-level and per-block size/count limits should be enforced?
 - [ ] Where exactly should Atlas draw the line between structural hierarchy edges and non-hierarchical cross-links?
 - [ ] Must every stored relationship be acyclic, or only the primary parent/child hierarchy?
 - [ ] Which additional domain objects are truly required: votes, moderation records, permissions, etc.?
